@@ -2,13 +2,11 @@ import { watchDebounced } from '@vueuse/core'
 import { call } from 'frappe-ui'
 import { computed, InjectionKey, reactive, ref, toRefs } from 'vue'
 import { useRouter } from 'vue-router'
-import useChart from '../charts/chart'
 import { handleOldXAxisConfig, handleOldYAxisConfig, setDimensionNames } from '../charts/helpers'
-import useDashboard from '../dashboard/dashboard'
-import { getUniqueId, safeJSONParse, showErrorToast, wheneverChanges } from '../helpers'
+import { getUniqueId, safeJSONParse, showErrorToast, waitUntil, wheneverChanges } from '../helpers'
 import { confirmDialog } from '../helpers/confirm_dialog'
 import useDocumentResource from '../helpers/resource'
-import useQuery, { getCachedQuery } from '../query/query'
+import useQuery, { getCachedQuery, newQuery } from '../query/query'
 import session from '../session'
 import { Join, Source } from '../types/query.types'
 import type {
@@ -25,55 +23,37 @@ export default function useWorkbook(name: string) {
 		window.location.replace(href)
 	})
 
-	wheneverChanges(
-		() => workbook.doc,
-		() => {
-			// load & cache queries, charts and dashboards
-
-			// fix: dicarding workbook changes doesn't reset the query/chart/dashboard doc
-			// this is because, when the workbook doc is updated,
-			// the reference to the workbook.doc.queries/charts/dashboards is lost
-			// so we need to update the references to the new queries/charts/dashboards
-			workbook.doc.queries.forEach((q) => (useQuery(q).doc = q))
-			workbook.doc.charts.forEach((c) => (useChart(c).doc = c))
-			workbook.doc.dashboards.forEach((d) => (useDashboard(d).doc = d))
-		}
-	)
-
 	const router = useRouter()
-	function setActiveTab(type: 'query' | 'chart' | 'dashboard' | '', idx: number) {
+	function setActiveTab(type: 'query' | 'chart' | 'dashboard' | '', name: string) {
 		router.replace(
-			type ? `/workbook/${workbook.name}/${type}/${idx}` : `/workbook/${workbook.name}`
+			type ? `/workbook/${workbook.name}/${type}/${name}` : `/workbook/${workbook.name}`
 		)
 	}
-	function isActiveTab(type: 'query' | 'chart' | 'dashboard', idx: number) {
+	function isActiveTab(type: 'query' | 'chart' | 'dashboard', name: string) {
 		const url = router.currentRoute.value.path
-		const regex = new RegExp(`/workbook/${workbook.name}/${type}/${idx}`)
+		const regex = new RegExp(`/workbook/${workbook.name}/${type}/${name}`)
 		return regex.test(url)
 	}
 
-	function addQuery() {
-		const idx = workbook.doc.queries.length
-		workbook.doc.queries.push({
-			name: getUniqueId(),
-			title: `Query ${idx + 1}`,
-			use_live_connection: true,
-			operations: [],
-			is_builder_query: false,
-			is_native_query: false,
-			is_script_query: false,
-		})
-		setActiveTab('query', idx)
+	async function addQuery() {
+		const query = newQuery()
+		query.doc.title = 'New Query'
+		query.doc.workbook = workbook.doc.name
+		query.doc.use_live_connection = true
+		query
+			.insert()
+			.then(() => workbook.load())
+			.then(() => setActiveTab('query', query.doc.name))
 	}
 
-	function removeQuery(queryName: string) {
+	function removeQuery(name: string) {
 		function _remove() {
-			const idx = workbook.doc.queries.findIndex((row) => row.name === queryName)
-			if (idx === -1) return
-			workbook.doc.queries.splice(idx, 1)
-			if (isActiveTab('query', idx)) {
-				setActiveTab('', 0)
-			}
+			const query = useQuery(name)
+			query.delete().then(() => workbook.load())
+
+			let idx = workbook.doc.queries.findIndex((row) => row.name === name)
+			idx = Math.max(0, idx - 1)
+			setActiveTab('query', workbook.doc.queries[idx]?.name)
 		}
 
 		confirmDialog({
@@ -242,7 +222,7 @@ export default function useWorkbook(name: string) {
 export type Workbook = ReturnType<typeof useWorkbook>
 export const workbookKey = Symbol() as InjectionKey<Workbook>
 
-function getWorkbookResource(name: string) {
+export function getWorkbookResource(name: string) {
 	const doctype = 'Insights Workbook'
 	const workbook = useDocumentResource<InsightsWorkbook>(doctype, name, {
 		initialDoc: {
@@ -254,6 +234,8 @@ function getWorkbookResource(name: string) {
 			charts: [],
 			dashboards: [],
 		},
+		enableAutoSave: true,
+		disableLocalStorage: true,
 		transform(doc: any) {
 			doc.queries = safeJSONParse(doc.queries) || []
 			doc.charts = safeJSONParse(doc.charts) || []

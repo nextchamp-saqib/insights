@@ -37,11 +37,30 @@ class InsightsWorkbook(Document):
         self.fix_json_fields()
         self.enqueue_update_dashboard_previews()
 
+    def on_trash(self):
+        frappe.db.delete("Insights Query v3", {"workbook": self.name})
+
     def fix_json_fields(self):
         # fix: json field value cannot be a list (see: base_document.py:get_valid_dict)
         self.queries = frappe.as_json(frappe.parse_json(self.queries))
         self.charts = frappe.as_json(frappe.parse_json(self.charts))
         self.dashboards = frappe.as_json(frappe.parse_json(self.dashboards))
+
+    def as_dict(self, *args, **kwargs):
+        d = super().as_dict(*args, **kwargs)
+        d.queries = frappe.get_all(
+            "Insights Query v3",
+            filters={"workbook": self.name},
+            fields=[
+                "name",
+                "title",
+                "is_native_query",
+                "is_builder_query",
+                "is_script_query",
+            ],
+            order_by="creation asc",
+        )
+        return d
 
     @frappe.whitelist()
     def track_view(self):

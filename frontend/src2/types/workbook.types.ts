@@ -26,6 +26,19 @@ export type InsightsWorkbook = {
 	enable_auto_save?: boolean
 }
 
+export type InsightsQueryv3 = {
+	doctype: 'Insights Query v3'
+	name: string
+	owner: string
+	title: string
+	workbook: string
+	operations: Operation[]
+	use_live_connection?: boolean
+	is_native_query?: boolean
+	is_script_query?: boolean
+	is_builder_query?: boolean
+}
+
 export type WorkbookQuery = {
 	name: string
 	title?: string

@@ -5,10 +5,10 @@ const section = defineProps<{
 	emptyMessage: string
 	items: any[]
 	itemKey: string
-	isActive: (idx: number) => boolean
+	isActive: (item: any) => boolean
 	add: () => void
 	remove: (item: any) => void
-	route: (idx: number) => string
+	route: (item: any) => string
 }>()
 
 function setDraggedItem(event: DragEvent, row: any) {
@@ -44,12 +44,12 @@ function setDraggedItem(event: DragEvent, row: any) {
 				v-for="(row, idx) in section.items"
 				:key="row[section.itemKey]"
 				class="group w-full cursor-pointer rounded transition-all hover:bg-gray-100"
-				:class="section.isActive(idx) ? ' bg-gray-100' : ' hover:border-gray-300'"
+				:class="section.isActive(row) ? ' bg-gray-100' : ' hover:border-gray-300'"
 				draggable="true"
 				@dragstart="setDraggedItem($event, row)"
 			>
 				<router-link
-					:to="route(idx)"
+					:to="route(row)"
 					class="flex h-7.5 items-center justify-between rounded pl-1.5 text-sm"
 				>
 					<div class="flex gap-1.5 overflow-hidden">

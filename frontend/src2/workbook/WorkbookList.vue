@@ -5,7 +5,7 @@ import { computed, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { WorkbookListItem } from '../types/workbook.types'
 import useUserStore from '../users/users'
-import { newWorkbookName } from './workbook'
+import { getWorkbookResource, newWorkbookName } from './workbook'
 import useWorkbooks from './workbooks'
 import { wheneverChanges } from '../helpers'
 import AvatarGroup from './AvatarGroup.vue'
@@ -107,8 +107,11 @@ const listOptions = ref({
 })
 
 function openNewWorkbook() {
-	const newName = newWorkbookName()
-	router.push(`/workbook/${newName}`)
+	getWorkbookResource(newWorkbookName())
+		.insert()
+		.then((doc) => {
+			router.push(`/workbook/${doc.name}`)
+		})
 }
 
 watchEffect(() => {

@@ -1,0 +1,98 @@
+{
+ "actions": [],
+ "autoname": "autoincrement",
+ "creation": "2025-01-17 16:09:42.376694",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "workbook",
+  "column_break_gamr",
+  "use_live_connection",
+  "is_script_query",
+  "is_builder_query",
+  "is_native_query",
+  "section_break_cuka",
+  "operations"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "operations",
+   "fieldtype": "JSON",
+   "label": "Operations"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_live_connection",
+   "fieldtype": "Check",
+   "label": "Use Live Connection"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_script_query",
+   "fieldtype": "Check",
+   "label": "Is Script Query"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_builder_query",
+   "fieldtype": "Check",
+   "label": "Is Builder Query"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_native_query",
+   "fieldtype": "Check",
+   "label": "Is Native Query"
+  },
+  {
+   "fieldname": "workbook",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Workbook",
+   "options": "Insights Workbook"
+  },
+  {
+   "fieldname": "column_break_gamr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_cuka",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-01-20 18:24:28.753167",
+ "modified_by": "Administrator",
+ "module": "Insights",
+ "name": "Insights Query v3",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}

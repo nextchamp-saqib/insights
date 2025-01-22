@@ -8,6 +8,7 @@ import { createToast } from './toasts'
 type DocumentResourceOptions<T> = {
 	initialDoc: T
 	transform?: (doc: T) => T
+	enableAutoSave?: boolean
 	disableLocalStorage?: boolean
 }
 export default function useDocumentResource<T extends object>(
@@ -33,6 +34,8 @@ export default function useDocumentResource<T extends object>(
 		loading: name && !name.startsWith('new-'),
 		saving: false,
 		deleting: false,
+
+		autoSave: options.enableAutoSave,
 
 		onBeforeInsert: (fn: Function) => beforeInsertFns.add(fn),
 		async insert() {
@@ -183,6 +186,25 @@ export default function useDocumentResource<T extends object>(
 			{ debounce: 500, immediate: true }
 		)
 	}
+
+	let stopAutoSaveWatcher: any
+	watchDebounced(
+		() => resource.autoSave,
+		() => {
+			if (!resource.autoSave && stopAutoSaveWatcher) {
+				stopAutoSaveWatcher()
+				stopAutoSaveWatcher = null
+			}
+			if (resource.autoSave && !stopAutoSaveWatcher) {
+				stopAutoSaveWatcher = watchDebounced(
+					() => resource.isdirty || resource.islocal,
+					(shouldSave) => shouldSave && resource.save(),
+					{ immediate: true, debounce: 2000 }
+				)
+			}
+		},
+		{ immediate: true }
+	)
 
 	return resource
 }

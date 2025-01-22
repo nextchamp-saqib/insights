@@ -1,9 +1,9 @@
-import { useDebouncedRefHistory, UseRefHistoryReturn } from '@vueuse/core'
+import { useDebouncedRefHistory, UseRefHistoryReturn, watchOnce } from '@vueuse/core'
 import { call } from 'frappe-ui'
-import { computed, reactive } from 'vue'
-import { copy, showErrorToast, wheneverChanges } from '../helpers'
+import { computed, reactive, toRefs } from 'vue'
+import { copy, safeJSONParse, showErrorToast, wheneverChanges } from '../helpers'
 import { confirmDialog } from '../helpers/confirm_dialog'
-import { createToast } from '../helpers/toasts'
+import useDocumentResource from '../helpers/resource'
 import {
 	CodeArgs,
 	ColumnDataType,
@@ -24,9 +24,9 @@ import {
 	SourceArgs,
 	SQLArgs,
 	SummarizeArgs,
-	UnionArgs
+	UnionArgs,
 } from '../types/query.types'
-import { WorkbookQuery } from '../types/workbook.types'
+import { InsightsQueryv3 } from '../types/workbook.types'
 import {
 	cast,
 	code,
@@ -47,7 +47,7 @@ import {
 	source,
 	sql,
 	summarize,
-	union
+	union,
 } from './helpers'
 
 const queries = new Map<string, Query>()
@@ -55,18 +55,20 @@ export function getCachedQuery(name: string): Query | undefined {
 	return queries.get(name)
 }
 
-export default function useQuery(workbookQuery: WorkbookQuery) {
-	const existingQuery = queries.get(workbookQuery.name)
+export default function useQuery(name: string) {
+	const existingQuery = queries.get(name)
 	if (existingQuery) return existingQuery
 
-	const query = makeQuery(workbookQuery)
-	queries.set(workbookQuery.name, query)
+	const query = makeQuery(name)
+	queries.set(name, query)
 	return query
 }
 
-export function makeQuery(workbookQuery: WorkbookQuery) {
+export function makeQuery(name: string) {
+	const resource = getQueryResource(name)
+
 	const query = reactive({
-		doc: workbookQuery,
+		...toRefs(resource),
 
 		activeOperationIdx: -1,
 		activeEditIndex: -1,
@@ -119,10 +121,6 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 		getDimension,
 		getMeasure,
 
-		addMeasure,
-		updateMeasure,
-		removeMeasure,
-
 		reorderOperations,
 		reset,
 
@@ -137,18 +135,15 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 		},
 	})
 
-	query.activeOperationIdx = query.doc.operations.length - 1
+	watchOnce(() => query.doc.owner, () => {
+		query.activeOperationIdx = query.doc.operations.length - 1
+	})
 
 	// @ts-ignore
 	query.dimensions = computed(() => getDimensions(query.result.columns))
 
 	// @ts-ignore
-	query.measures = computed(() => {
-		return [
-			...getMeasures(query.result.columns),
-			...Object.values(query.doc.calculated_measures || {}),
-		]
-	})
+	query.measures = computed(() => getMeasures(query.result.columns))
 
 	// @ts-ignore
 	query.source = computed(() => {
@@ -673,22 +668,6 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 		return query.measures.find((m) => m.measure_name === column_name)
 	}
 
-	function addMeasure(measure: Measure) {
-		query.doc.calculated_measures = {
-			...query.doc.calculated_measures,
-			[measure.measure_name]: measure,
-		}
-	}
-	function updateMeasure(column_name: string, measure: Measure) {
-		if (!query.doc.calculated_measures) query.doc.calculated_measures = {}
-		delete query.doc.calculated_measures[column_name]
-		query.doc.calculated_measures[measure.measure_name] = measure
-	}
-	function removeMeasure(column_name: string) {
-		if (!query.doc.calculated_measures) return
-		delete query.doc.calculated_measures[column_name]
-	}
-
 	function getSQLOperation() {
 		if (!query.doc.is_native_query) return ''
 		return query.doc.operations.find((op) => op.type === 'sql')
@@ -719,9 +698,8 @@ export function makeQuery(workbookQuery: WorkbookQuery) {
 		}
 	}
 
-	const originalQuery = copy(workbookQuery)
 	function reset() {
-		query.doc = copy(originalQuery)
+		query.doc = resource.originalDoc
 		query.activeOperationIdx = -1
 		query.autoExecute = true
 		query.executing = false
@@ -766,3 +744,36 @@ const EMPTY_RESULT = {
 } as QueryResult
 
 export type Query = ReturnType<typeof makeQuery>
+
+function getQueryResource(name: string) {
+	const doctype = 'Insights Query v3'
+	const query = useDocumentResource<InsightsQueryv3>(doctype, name, {
+		initialDoc: {
+			doctype,
+			name,
+			owner: '',
+			title: '',
+			workbook: '',
+			operations: [],
+		},
+		enableAutoSave: true,
+		disableLocalStorage: true,
+		transform(doc: any) {
+			doc.operations = safeJSONParse(doc.operations) || []
+			if (
+				doc.is_native_query === undefined &&
+				doc.is_script_query === undefined &&
+				doc.is_builder_query === undefined
+			) {
+				doc.is_builder_query = true
+			}
+			return doc
+		},
+	})
+	return query
+}
+
+
+export function newQuery() {
+	return getQueryResource('new-query-' + Date.now())
+}

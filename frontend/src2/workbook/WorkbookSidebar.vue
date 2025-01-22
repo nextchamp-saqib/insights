@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Braces, LayoutPanelTop, ScrollText, Table2 } from 'lucide-vue-next'
+import { Braces, ScrollText, Table2 } from 'lucide-vue-next'
 import { computed, inject } from 'vue'
 import { useRoute } from 'vue-router'
-import ChartIcon from '../charts/components/ChartIcon.vue'
 import WorkbookSidebarListSection from './WorkbookSidebarListSection.vue'
 import { workbookKey } from './workbook'
 
@@ -28,10 +27,10 @@ const activeQueryName = computed(() => {
 				emptyMessage: 'No queries',
 				items: workbook.doc.queries,
 				itemKey: 'name',
-				isActive: (idx: number) => workbook.isActiveTab('query', idx),
 				add: workbook.addQuery,
 				remove: (query) => workbook.removeQuery(query.name),
-				route: (idx: number) => `/workbook/${workbook.name}/query/${idx}`,
+				isActive: (query) => workbook.isActiveTab('query', query.name),
+				route: (query) => `/workbook/${workbook.name}/query/${query.name}`,
 			}"
 		>
 			<template #item-icon="{ item }">
@@ -48,7 +47,7 @@ const activeQueryName = computed(() => {
 				<Table2 v-else class="h-4 w-4 text-gray-700" stroke-width="1.5" />
 			</template>
 		</WorkbookSidebarListSection>
-
+		<!--
 		<WorkbookSidebarListSection
 			v-bind="{
 				title: 'Charts',
@@ -81,6 +80,6 @@ const activeQueryName = computed(() => {
 			<template #item-icon>
 				<LayoutPanelTop class="h-4 w-4 text-gray-700" stroke-width="1.5" />
 			</template>
-		</WorkbookSidebarListSection>
+		</WorkbookSidebarListSection> -->
 	</div>
 </template>
