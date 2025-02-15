@@ -300,17 +300,25 @@ function makeChart(workbookChart: WorkbookChart) {
 	}
 
 	function updateGranularity(column_name: string, granularity: GranularityType) {
-		Object.entries(chart.doc.config).forEach(([_, value]) => {
-			if (Array.isArray(value)) {
-				const index = value.findIndex((v) => v.dimension_name === column_name)
-				if (index > -1) {
-					value[index].granularity = granularity
+		if ('x_axis' in chart.doc.config) {
+			if (chart.doc.config.x_axis?.dimension?.dimension_name === column_name) {
+				chart.doc.config.x_axis.dimension.granularity = granularity
+			}
+		}
+
+		if ('date_column' in chart.doc.config) {
+			if (chart.doc.config.date_column?.dimension_name === column_name) {
+				chart.doc.config.date_column.granularity = granularity
+			}
+		}
+
+		if ('rows' in chart.doc.config) {
+			chart.doc.config.rows.forEach((row) => {
+				if (row.dimension_name === column_name) {
+					row.granularity = granularity
 				}
-			}
-			if (value && value.dimension_name === column_name) {
-				value.granularity = granularity
-			}
-		})
+			})
+		}
 	}
 
 	function setChartFilters() {
@@ -337,29 +345,30 @@ function makeChart(workbookChart: WorkbookChart) {
 	}
 
 	function getDependentQueries() {
-		const dependentQueries = new Set<string>()
-		dependentQueries.add(chart.doc.query)
-		getLinkedQueries(chart.doc.query).forEach((query) => dependentQueries.add(query))
-		return Array.from(dependentQueries)
+		return [chart.doc.query, ...getLinkedQueries(chart.doc.query)]
 	}
 
 	function getDependentQueryColumns() {
 		return getDependentQueries()
-			.flatMap((query) => {
-				const q = getCachedQuery(query)
-				if (!q) return []
-				if (!q.result.executedSQL) {
-					q.execute()
+			.map((q) => getCachedQuery(q))
+			.filter(Boolean)
+			.map((q) => {
+				const query = q!
+				if (!query.result.executedSQL) {
+					query.execute()
 				}
-				return q.result.columnOptions.map((c) => {
-					return {
-						...c,
-						query_title: q.doc.title,
-						value: `${query}.${c.value}`,
-					}
-				})
+				return {
+					group: query.doc.title,
+					items: query.result.columnOptions.map((c) => {
+						const sep = '`'
+						const value = `${sep}${query.doc.name}${sep}.${sep}${c.value}${sep}`
+						return {
+							...c,
+							value,
+						}
+					}),
+				}
 			})
-			.flatMap((column) => column as ColumnOption & { query_title: string })
 	}
 
 	chart.history = useDebouncedRefHistory(
