@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useMagicKeys, watchDebounced, whenever } from '@vueuse/core'
+import { Badge } from 'frappe-ui'
 import { ImageDown, RefreshCcw, Share2, XIcon } from 'lucide-vue-next'
 import { onBeforeUnmount, provide, ref } from 'vue'
 import InlineFormControlLabel from '../components/InlineFormControlLabel.vue'
 import LoadingOverlay from '../components/LoadingOverlay.vue'
 import { downloadImage } from '../helpers'
-import { WorkbookChart, WorkbookQuery } from '../types/workbook.types'
+import { DropdownOption } from '../types/query.types'
 import useChart from './chart'
 import ChartBuilderTable from './components/ChartBuilderTable.vue'
 import ChartConfigForm from './components/ChartConfigForm.vue'
@@ -16,11 +17,10 @@ import ChartShareDialog from './components/ChartShareDialog.vue'
 import ChartSortConfig from './components/ChartSortConfig.vue'
 import ChartTypeSelector from './components/ChartTypeSelector.vue'
 import CollapsibleSection from './components/CollapsibleSection.vue'
-import { Badge } from 'frappe-ui'
 
-const props = defineProps<{ chart: WorkbookChart; queries: WorkbookQuery[] }>()
+const props = defineProps<{ chart_name: string; queries: DropdownOption[] }>()
 
-const chart = useChart(props.chart)
+const chart = useChart(props.chart_name)
 provide('chart', chart)
 window.chart = chart
 
@@ -79,7 +79,7 @@ const showShareDialog = ref(false)
 					:chart_type="chart.doc.chart_type"
 					:config="chart.doc.config"
 					:operations="chart.doc.operations || chart.dataQuery.doc.operations || []"
-					:use_live_connection="chart.doc.use_live_connection"
+					:use_live_connection="Boolean(chart.doc.use_live_connection)"
 					:result="chart.dataQuery.result"
 					:loading="chart.dataQuery.executing"
 				/>
@@ -109,7 +109,7 @@ const showShareDialog = ref(false)
 				</template>
 				<ChartFilterConfig
 					v-model="chart.doc.config.filters"
-					:column-options="chart.baseQuery.result?.columnOptions || []"
+					:column-options="chart.baseQuery.result.columnOptions || []"
 				/>
 			</CollapsibleSection>
 

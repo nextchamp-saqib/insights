@@ -20,6 +20,19 @@ wheneverChanges(searchQuery, () => workbookStore.getWorkbooks(searchQuery.value)
 	immediate: true,
 })
 
+const creatingWorkbook = ref(false)
+function openNewWorkbook() {
+	creatingWorkbook.value = true
+	getWorkbookResource(newWorkbookName())
+		.insert()
+		.then((doc) => {
+			router.push(`/workbook/${doc.name}`)
+		})
+		.finally(() => {
+			creatingWorkbook.value = false
+		})
+}
+
 const userStore = useUserStore()
 const listOptions = ref({
 	columns: [
@@ -101,18 +114,11 @@ const listOptions = ref({
 				label: 'New Workbook',
 				variant: 'solid',
 				onClick: openNewWorkbook,
+				loading: creatingWorkbook,
 			},
 		},
 	},
 })
-
-function openNewWorkbook() {
-	getWorkbookResource(newWorkbookName())
-		.insert()
-		.then((doc) => {
-			router.push(`/workbook/${doc.name}`)
-		})
-}
 
 watchEffect(() => {
 	document.title = 'Workbooks | Insights'
@@ -123,7 +129,12 @@ watchEffect(() => {
 	<header class="flex h-12 items-center justify-between border-b py-2.5 pl-5 pr-2">
 		<Breadcrumbs :items="[{ label: 'Workbooks', route: '/workbook' }]" />
 		<div class="flex items-center gap-2">
-			<Button label="New Workbook" variant="solid" @click="openNewWorkbook">
+			<Button
+				label="New Workbook"
+				variant="solid"
+				@click="openNewWorkbook"
+				:loading="creatingWorkbook"
+			>
 				<template #prefix>
 					<PlusIcon class="w-4" />
 				</template>

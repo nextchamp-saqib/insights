@@ -684,7 +684,7 @@ export function getDrillDownQuery(
 		}
 	}
 
-	const query = useQuery({ name: getUniqueId(), operations: [] })
+	const query = useQuery('new-query' + getUniqueId())
 	query.autoExecute = false
 	query.doc.use_live_connection = use_live_connection
 

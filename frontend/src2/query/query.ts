@@ -1,6 +1,6 @@
 import { useDebouncedRefHistory, UseRefHistoryReturn, watchOnce } from '@vueuse/core'
 import { call } from 'frappe-ui'
-import { computed, reactive, toRefs } from 'vue'
+import { computed, reactive, toRefs, unref } from 'vue'
 import { copy, safeJSONParse, showErrorToast, wheneverChanges } from '../helpers'
 import { confirmDialog } from '../helpers/confirm_dialog'
 import useDocumentResource from '../helpers/resource'
@@ -51,16 +51,14 @@ import {
 } from './helpers'
 
 const queries = new Map<string, Query>()
-export function getCachedQuery(name: string): Query | undefined {
-	return queries.get(name)
-}
 
 export default function useQuery(name: string) {
-	const existingQuery = queries.get(name)
+	const key = String(name)
+	const existingQuery = queries.get(key)
 	if (existingQuery) return existingQuery
 
 	const query = makeQuery(name)
-	queries.set(name, query)
+	queries.set(key, query)
 	return query
 }
 
@@ -135,9 +133,12 @@ export function makeQuery(name: string) {
 		},
 	})
 
-	watchOnce(() => query.doc.owner, () => {
-		query.activeOperationIdx = query.doc.operations.length - 1
-	})
+	watchOnce(
+		() => query.doc.owner,
+		() => {
+			query.activeOperationIdx = query.doc.operations.length - 1
+		}
+	)
 
 	// @ts-ignore
 	query.dimensions = computed(() => getDimensions(query.result.columns))
@@ -180,7 +181,7 @@ export function makeQuery(name: string) {
 
 	wheneverChanges(
 		() => query.currentOperations,
-		() => query.autoExecute && execute(),
+		() => query.autoExecute && query.execute(),
 		{ deep: true }
 	)
 
@@ -190,18 +191,6 @@ export function makeQuery(name: string) {
 		}
 
 		let _operations = copy(query.currentOperations)
-		for (const op of _operations) {
-			if (op.type !== 'source' && op.type !== 'join' && op.type !== 'union') continue
-			if (op.table.type !== 'query') continue
-
-			const queryTable = getCachedQuery(op.table.query_name)
-			if (!queryTable) {
-				const message = `Query ${op.table.query_name} not found`
-				throw new Error(message)
-			}
-
-			op.table.operations = queryTable.getOperationsForExecution()
-		}
 
 		if (query.dashboardFilters.filters?.length) {
 			_operations.push(filter_group(query.dashboardFilters))
@@ -221,7 +210,7 @@ export function makeQuery(name: string) {
 		const operations = query.getOperationsForExecution()
 		const limit = operations.find((op) => op.type === 'limit')?.limit
 		return call('insights.api.workbooks.fetch_query_results', {
-			use_live_connection: query.doc.use_live_connection,
+			use_live_connection: Boolean(query.doc.use_live_connection),
 			operations,
 			limit,
 		})
@@ -302,10 +291,8 @@ export function makeQuery(name: string) {
 			}
 
 			if (args.table.type == 'query') {
-				const sourceQuery = getCachedQuery(args.table.query_name)
-				if (sourceQuery) {
-					query.doc.use_live_connection = sourceQuery.doc.use_live_connection
-				}
+				const sourceQuery = useQuery(args.table.query_name)
+				query.doc.use_live_connection = unref(sourceQuery.doc.use_live_connection)
 			}
 		}
 		if (!query.doc.operations.length || editingSource) {
@@ -701,7 +688,6 @@ export function makeQuery(name: string) {
 	function reset() {
 		query.doc = resource.originalDoc
 		query.activeOperationIdx = -1
-		query.autoExecute = true
 		query.executing = false
 		query.result = {} as QueryResult
 	}
@@ -772,7 +758,6 @@ function getQueryResource(name: string) {
 	})
 	return query
 }
-
 
 export function newQuery() {
 	return getQueryResource('new-query-' + Date.now())

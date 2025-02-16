@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useMagicKeys, watchOnce, whenever } from '@vueuse/core'
+import { useMagicKeys, whenever } from '@vueuse/core'
 import { AlertOctagon } from 'lucide-vue-next'
-import { computed, provide, watchEffect } from 'vue'
+import { provide, watchEffect } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import useWorkbook, { workbookKey } from './workbook'
 import WorkbookNavbar from './WorkbookNavbar.vue'
@@ -25,16 +25,11 @@ workbook.onAfterLoad(() => {
 	if (workbook.doc.queries.length === 0) {
 		workbook.addQuery()
 	}
-})
 
-const tabExists = computed(() => {
-	const tabType = route.name?.toString().replace('Workbook', '').toLowerCase()
-	const tabIndex = parseInt(route.params.index.toString())
-	return (
-		(tabType === 'query' && workbook.doc.queries[tabIndex]) ||
-		(tabType === 'chart' && workbook.doc.charts[tabIndex]) ||
-		(tabType === 'dashboard' && workbook.doc.dashboards[tabIndex])
-	)
+	if (route.name === 'Workbook' && workbook.doc.queries.length) {
+		const query = workbook.doc.queries[0]
+		router.replace(`/workbook/${workbook.doc.name}/query/${query.name}`)
+	}
 })
 
 onBeforeRouteLeave(() => {

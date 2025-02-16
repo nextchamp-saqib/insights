@@ -7,7 +7,7 @@ import { joinTypes } from '../../helpers/constants'
 import { JoinArgs } from '../../types/query.types'
 import { workbookKey } from '../../workbook/workbook'
 import { column, expression, query_table, table } from '../helpers'
-import { getCachedQuery, Query } from '../query'
+import useQuery, { Query } from '../query'
 import InlineExpression from './InlineExpression.vue'
 import { handleOldProps, useTableColumnOptions, useTableOptions } from './join_utils'
 
@@ -170,8 +170,7 @@ const groupedTableOptions = computed(() => {
 
 const queryTableColumnOptions = computed(() => {
 	if (join.table.type !== 'query') return []
-	const query = getCachedQuery(join.table.query_name)
-	if (!query) return []
+	const query = useQuery(join.table.query_name)
 	return query.result.columnOptions
 })
 

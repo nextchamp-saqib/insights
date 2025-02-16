@@ -200,7 +200,7 @@ export default function useDocumentResource<T extends object>(
 				stopAutoSaveWatcher()
 				stopAutoSaveWatcher = null
 			}
-			if (resource.autoSave && !stopAutoSaveWatcher) {
+			if (resource.autoSave && !resource.islocal && !stopAutoSaveWatcher) {
 				stopAutoSaveWatcher = watchDebounced(
 					() => resource.isdirty || resource.islocal,
 					(shouldSave) => shouldSave && resource.save(),

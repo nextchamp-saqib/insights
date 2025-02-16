@@ -1,57 +1,52 @@
 import { useDebouncedRefHistory, UseRefHistoryReturn } from '@vueuse/core'
-import { computed, reactive, ref, unref, watch } from 'vue'
-import { areDeeplyEqual, copy, getUniqueId, waitUntil, wheneverChanges } from '../helpers'
+import { computed, reactive, ref, toRefs, unref, watch } from 'vue'
+import { areDeeplyEqual, copy, safeJSONParse, waitUntil, wheneverChanges } from '../helpers'
 import { GranularityType } from '../helpers/constants'
+import useDocumentResource from '../helpers/resource'
 import { createToast } from '../helpers/toasts'
 import { column, count, query_table } from '../query/helpers'
-import { getCachedQuery, makeQuery, Query } from '../query/query'
+import useQuery, { Query } from '../query/query'
 import {
 	AXIS_CHARTS,
 	AxisChartConfig,
 	DonutChartConfig,
 	NumberChartConfig,
-	TableChartConfig
+	TableChartConfig,
 } from '../types/chart.types'
-import { FilterArgs, Measure, Operation } from '../types/query.types'
-import { WorkbookChart } from '../types/workbook.types'
+import { FilterArgs, Operation } from '../types/query.types'
+import { InsightsChartv3 } from '../types/workbook.types'
 import { getLinkedQueries } from '../workbook/workbook'
+import { handleOldXAxisConfig, handleOldYAxisConfig, setDimensionNames } from './helpers'
 
 const charts = new Map<string, Chart>()
 
-export default function useChart(workbookChart: WorkbookChart) {
-	const existingChart = charts.get(workbookChart.name)
+export default function useChart(name: string) {
+	const key = String(name)
+	const existingChart = charts.get(key)
 	if (existingChart) return existingChart
 
-	const chart = makeChart(workbookChart)
-	charts.set(workbookChart.name, chart)
+	const chart = makeChart(name)
+	charts.set(key, chart)
 	return chart
 }
 
-export function getCachedChart(name: string) {
-	return charts.get(name)
-}
+function makeChart(name: string) {
+	const resource = getChartResource(name)
 
-function makeChart(workbookChart: WorkbookChart) {
 	const chart = reactive({
-		doc: workbookChart,
+		...toRefs(resource),
 
 		baseQuery: computed(() => {
-			if (!workbookChart.query) return {} as Query
-			return getCachedQuery(workbookChart.query) as Query
+			if (!resource.doc.query) return {} as Query
+			return useQuery(resource.doc.query)
 		}),
-		dataQuery: makeQuery({
-			name: getUniqueId(),
-			operations: [],
-		}),
+		dataQuery: useQuery('new-query-' + Date.now()),
 
 		refresh,
 		updateGranularity,
 		resetConfig,
 
 		getShareLink,
-
-		updateMeasure,
-		removeMeasure,
 
 		getDependentQueries,
 		getDependentQueryColumns,
@@ -65,7 +60,7 @@ function makeChart(workbookChart: WorkbookChart) {
 	)
 
 	function resetConfig() {
-		chart.doc.config = {} as WorkbookChart['config']
+		chart.doc.config = {} as InsightsChartv3['config']
 		chart.doc.config.order_by = []
 		chart.doc.config.limit = 100
 		chart.dataQuery.reset()
@@ -114,7 +109,7 @@ function makeChart(workbookChart: WorkbookChart) {
 	}
 
 	async function refresh(filters?: FilterArgs[], force = false) {
-		if (!workbookChart.query) return
+		if (!chart.doc.query) return
 		if (!chart.doc.chart_type) return
 		if (chart.baseQuery.executing) {
 			await waitUntil(() => !chart.baseQuery.executing)
@@ -266,11 +261,9 @@ function makeChart(workbookChart: WorkbookChart) {
 		chart.dataQuery.setOperations([])
 		chart.dataQuery.setSource({
 			table: query_table({
-				query_name: workbookChart.query,
+				query_name: chart.doc.query,
 			}),
 		})
-		chart.doc.use_live_connection = chart.baseQuery.doc.use_live_connection
-		chart.dataQuery.doc.use_live_connection = chart.baseQuery.doc.use_live_connection
 	}
 	function setCustomFilters(filters: FilterArgs[]) {
 		const _filters = new Set(filters)
@@ -327,21 +320,7 @@ function makeChart(workbookChart: WorkbookChart) {
 	}
 
 	function getShareLink() {
-		return (
-			chart.doc.share_link || `${window.location.origin}/insights/shared/chart/${chart.doc.name}`
-		)
-	}
-
-	function updateMeasure(measure: Measure) {
-		if (!chart.doc.calculated_measures) chart.doc.calculated_measures = {}
-		chart.doc.calculated_measures = {
-			...chart.doc.calculated_measures,
-			[measure.measure_name]: measure,
-		}
-	}
-	function removeMeasure(measure: Measure) {
-		if (!chart.doc.calculated_measures) return
-		delete chart.doc.calculated_measures[measure.measure_name]
+		return `${window.location.origin}/insights/shared/chart/${chart.doc.name}`
 	}
 
 	function getDependentQueries() {
@@ -350,7 +329,7 @@ function makeChart(workbookChart: WorkbookChart) {
 
 	function getDependentQueryColumns() {
 		return getDependentQueries()
-			.map((q) => getCachedQuery(q))
+			.map((q) => useQuery(q))
 			.filter(Boolean)
 			.map((q) => {
 				const query = q!
@@ -388,3 +367,58 @@ function makeChart(workbookChart: WorkbookChart) {
 }
 
 export type Chart = ReturnType<typeof makeChart>
+
+function getChartResource(name: string) {
+	const doctype = 'Insights Chart v3'
+	const chart = useDocumentResource<InsightsChartv3>(doctype, name, {
+		initialDoc: {
+			doctype,
+			name,
+			owner: '',
+			title: '',
+			workbook: '',
+			query: '',
+			chart_type: '',
+			is_public: false,
+			config: {} as InsightsChartv3['config'],
+			operations: [],
+		},
+		enableAutoSave: true,
+		disableLocalStorage: true,
+		transform(doc: any) {
+			doc.config = safeJSONParse(doc.config) || {}
+			doc.operations = safeJSONParse(doc.operations) || []
+
+			doc.config.filters = doc.config.filters?.filters?.length
+				? doc.config.filters
+				: {
+						filters: [],
+						logical_operator: 'And',
+				  }
+			doc.config.order_by = doc.config.order_by || []
+			doc.config.limit = doc.config.limit || 100
+
+			if ('x_axis' in doc.config && doc.config.x_axis) {
+				// @ts-ignore
+				doc.config.x_axis = handleOldXAxisConfig(doc.config.x_axis)
+			}
+			if ('y_axis' in doc.config && Array.isArray(doc.config.y_axis)) {
+				// @ts-ignore
+				doc.config.y_axis = handleOldYAxisConfig(doc.config.y_axis)
+			}
+			if (doc.chart_type === 'Funnel') {
+				// @ts-ignore
+				doc.config.label_position = doc.config.label_position || 'left'
+			}
+
+			doc.config = setDimensionNames(doc.config)
+
+			return doc
+		},
+	})
+	return chart
+}
+
+export function newChart() {
+	return getChartResource('new-chart-' + Date.now())
+}

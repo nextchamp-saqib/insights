@@ -93,8 +93,12 @@ class IbisQueryBuilder:
                 use_live_connection=self.use_live_connection,
             )
         if table_args.type == "query":
+            operations = frappe.db.get_value(
+                "Insights Query v3", table_args.query_name, "operations"
+            )
+            operations = frappe.parse_json(operations)
             _table = IbisQueryBuilder().build(
-                table_args.operations,
+                operations,
                 use_live_connection=self.use_live_connection,
             )
 

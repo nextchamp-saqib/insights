@@ -15,6 +15,27 @@ export type WorkbookListItem = {
 	shared_with_organization?: boolean
 }
 
+
+export type WorkbookQuery = {
+	name: string
+	title: string
+	is_native_query?: boolean
+	is_script_query?: boolean
+	is_builder_query?: boolean
+}
+
+export type WorkbookChart = {
+	name: string
+	title: string
+	query: string
+	chart_type: ChartType
+}
+
+export type WorkbookDashboard = {
+	name: string
+	title: string
+}
+
 export type InsightsWorkbook = {
 	doctype: 'Insights Workbook'
 	name: string
@@ -39,38 +60,32 @@ export type InsightsQueryv3 = {
 	is_builder_query?: boolean
 }
 
-export type WorkbookQuery = {
+export type InsightsChartv3 = {
+	doctype: 'Insights Chart v3'
 	name: string
-	title?: string
+	owner: string
+	title: string
+	workbook: string
+	query: string
+	chart_type: ChartType
+	is_public: boolean
 	operations: Operation[]
 	use_live_connection?: boolean
-	calculated_measures?: Record<string, Measure>
-	is_native_query?: boolean
-	is_script_query?: boolean
-	is_builder_query?: boolean
-}
-
-export type WorkbookChart = {
-	name: string
-	title: string
-	query: string
-	is_public: boolean
-	share_link?: string
-	chart_type: ChartType
 	config: ChartConfig & {
 		order_by: OrderByArgs[]
 		filters?: FilterGroupArgs
 		limit?: number
 	}
-	operations: Operation[]
-	use_live_connection?: boolean
-	calculated_measures?: Record<string, Measure>
 }
 
-export type WorkbookDashboard = {
+export type InsightsDashboardv3 = {
+	doctype: 'Insights Dashboard v3'
 	name: string
+	owner: string
 	title: string
+	workbook: string
 	items: WorkbookDashboardItem[]
+	preview_image?: string
 	is_public?: boolean
 	share_link?: string
 }

@@ -45,13 +45,13 @@ const routes = [
 			},
 			{
 				props: true,
-				path: 'chart/:index',
+				path: 'chart/:chart_name',
 				name: 'WorkbookChart',
 				component: () => import('./workbook/WorkbookChart.vue'),
 			},
 			{
 				props: true,
-				path: 'dashboard/:index',
+				path: 'dashboard/:dashboard_name',
 				name: 'WorkbookDashboard',
 				component: () => import('./workbook/WorkbookDashboard.vue'),
 			},

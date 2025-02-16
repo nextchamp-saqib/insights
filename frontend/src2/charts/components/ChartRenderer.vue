@@ -10,7 +10,7 @@ import {
 	NumberChartConfig,
 } from '../../types/chart.types'
 import { Operation, QueryResult, QueryResultColumn, QueryResultRow } from '../../types/query.types'
-import { WorkbookChart } from '../../types/workbook.types'
+import { InsightsChartv3 } from '../../types/workbook.types'
 import {
 	getBarChartOptions,
 	getDonutChartOptions,
@@ -25,7 +25,7 @@ import TableChart from './TableChart.vue'
 const props = defineProps<{
 	title: string
 	chart_type: ChartType
-	config: WorkbookChart['config']
+	config: InsightsChartv3['config']
 	operations: Operation[]
 	use_live_connection?: boolean
 	result: QueryResult

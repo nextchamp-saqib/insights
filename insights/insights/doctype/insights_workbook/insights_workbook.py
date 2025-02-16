@@ -39,6 +39,8 @@ class InsightsWorkbook(Document):
 
     def on_trash(self):
         frappe.db.delete("Insights Query v3", {"workbook": self.name})
+        frappe.db.delete("Insights Chart v3", {"workbook": self.name})
+        frappe.db.delete("Insights Dashboard v3", {"workbook": self.name})
 
     def fix_json_fields(self):
         # fix: json field value cannot be a list (see: base_document.py:get_valid_dict)
@@ -60,6 +62,26 @@ class InsightsWorkbook(Document):
             ],
             order_by="creation asc",
         )
+        d.charts = frappe.get_all(
+            "Insights Chart v3",
+            filters={"workbook": self.name},
+            fields=[
+                "name",
+                "title",
+                "chart_type",
+                "query",
+            ],
+            order_by="creation asc",
+        )
+        d.dashboards = frappe.get_all(
+            "Insights Dashboard v3",
+            filters={"workbook": self.name},
+            fields=["name", "title"],
+            order_by="creation asc",
+        )
+        d.queries = frappe.as_json(d.queries)
+        d.charts = frappe.as_json(d.charts)
+        d.dashboards = frappe.as_json(d.dashboards)
         return d
 
     @frappe.whitelist()

@@ -1,0 +1,109 @@
+{
+ "actions": [],
+ "autoname": "autoincrement",
+ "creation": "2025-02-15 19:26:42.921771",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "workbook",
+  "query",
+  "column_break_mgwd",
+  "chart_type",
+  "is_public",
+  "use_live_connection",
+  "section_break_vmvi",
+  "config",
+  "operations"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title"
+  },
+  {
+   "fieldname": "query",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Query",
+   "options": "Insights Query v3"
+  },
+  {
+   "fieldname": "column_break_mgwd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "chart_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Chart Type"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_public",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Public"
+  },
+  {
+   "fieldname": "section_break_vmvi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "config",
+   "fieldtype": "JSON",
+   "label": "Config"
+  },
+  {
+   "fieldname": "workbook",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Workbook",
+   "options": "Insights Workbook",
+   "search_index": 1
+  },
+  {
+   "fieldname": "operations",
+   "fieldtype": "JSON",
+   "label": "Operations"
+  },
+  {
+   "default": "0",
+   "fieldname": "use_live_connection",
+   "fieldtype": "Check",
+   "label": "Use Live Connection"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-02-15 21:35:39.116783",
+ "modified_by": "Administrator",
+ "module": "Insights",
+ "name": "Insights Chart v3",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "workbook, query",
+ "show_title_field_in_link": 1,
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title"
+}

@@ -3,7 +3,7 @@ import { watchDebounced } from '@vueuse/core'
 import { AlertTriangle, Maximize } from 'lucide-vue-next'
 import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getCachedChart } from '../charts/chart'
+import useChart from '../charts/chart'
 import ChartRenderer from '../charts/components/ChartRenderer.vue'
 import { wheneverChanges } from '../helpers'
 import { WorkbookDashboardChart } from '../types/workbook.types'
@@ -14,7 +14,7 @@ const props = defineProps<{ item: WorkbookDashboardChart }>()
 
 const chart = computed(() => {
 	if (!props.item.chart) return null
-	return getCachedChart(props.item.chart)
+	return useChart(props.item.chart)
 })
 
 const dashboard = inject<Dashboard>('dashboard')!
@@ -55,7 +55,7 @@ wheneverChanges(
 		:chart_type="chart.doc.chart_type"
 		:config="chart.doc.config"
 		:operations="chart.doc.operations"
-		:use_live_connection="chart.doc.use_live_connection"
+		:use_live_connection="Boolean(chart.doc.use_live_connection)"
 		:result="chart.dataQuery.result"
 		:loading="chart.dataQuery.executing"
 	/>
@@ -89,7 +89,7 @@ wheneverChanges(
 					:chart_type="chart.doc.chart_type"
 					:config="chart.doc.config"
 					:operations="chart.doc.operations"
-					:use_live_connection="chart.doc.use_live_connection"
+					:use_live_connection="Boolean(chart.doc.use_live_connection)"
 					:result="chart.dataQuery.result"
 					:loading="chart.dataQuery.executing"
 				/>

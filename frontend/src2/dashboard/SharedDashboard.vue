@@ -2,12 +2,12 @@
 import { call } from 'frappe-ui'
 import { ref } from 'vue'
 import SharedChart from '../charts/SharedChart.vue'
-import { WorkbookDashboard } from '../types/workbook.types'
+import { InsightsDashboardv3 } from '../types/workbook.types'
 import VueGridLayout from './VueGridLayout.vue'
 
 const props = defineProps<{ dashboard_name: string }>()
 
-const dashboard = ref<WorkbookDashboard>()
+const dashboard = ref<InsightsDashboardv3>()
 
 dashboard.value = await call('insights.api.dashboards.fetch_workbook_dashboard', {
 	dashboard_name: props.dashboard_name,

@@ -25,12 +25,9 @@ function setDraggedItem(event: DragEvent, row: any) {
 				<div class="text-sm font-medium">{{ section.title }}</div>
 			</div>
 			<div>
-				<button
-					class="cursor-pointer rounded p-1 transition-colors hover:bg-gray-100"
-					@click="section.add()"
-				>
+				<Button class="!h-fit !p-1" variant="ghost" @click="section.add()">
 					<Plus class="h-4 w-4 text-gray-700" stroke-width="1.5" />
-				</button>
+				</Button>
 			</div>
 		</div>
 		<div
