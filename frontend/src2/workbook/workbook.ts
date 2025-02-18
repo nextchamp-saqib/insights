@@ -3,6 +3,7 @@ import { call } from 'frappe-ui'
 import { computed, InjectionKey, reactive, ref, toRefs } from 'vue'
 import { useRouter } from 'vue-router'
 import useChart, { newChart } from '../charts/chart'
+import useDashboard, { newDashboard } from '../dashboard/dashboard'
 import { getUniqueId, safeJSONParse, showErrorToast, wheneverChanges } from '../helpers'
 import { confirmDialog } from '../helpers/confirm_dialog'
 import useDocumentResource from '../helpers/resource'
@@ -10,18 +11,21 @@ import useQuery, { newQuery } from '../query/query'
 import session from '../session'
 import type {
 	InsightsWorkbook,
-	WorkbookSharePermission as WorkbookUserPermission
+	WorkbookSharePermission as WorkbookUserPermission,
 } from '../types/workbook.types'
-import useDashboard, { newDashboard } from '../dashboard/dashboard'
 
 export default function useWorkbook(name: string) {
 	const workbook = getWorkbookResource(name)
 
 	wheneverChanges(
-		() => workbook.doc.queries,
-		() => {
-			workbook.doc.queries.forEach((query) => useQuery(query.name))
-		}
+		() => workbook.doc.queries.map((q) => q.name),
+		() => workbook.doc.queries.forEach((q) => useQuery(q.name)),
+		{ deep: true }
+	)
+	wheneverChanges(
+		() => workbook.doc.charts.map((c) => c.name),
+		() => workbook.doc.charts.forEach((c) => useChart(c.name)),
+		{ deep: true }
 	)
 
 	const router = useRouter()

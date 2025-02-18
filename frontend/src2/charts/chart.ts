@@ -1,6 +1,6 @@
 import { useDebouncedRefHistory, UseRefHistoryReturn } from '@vueuse/core'
 import { computed, reactive, ref, toRefs, unref, watch } from 'vue'
-import { areDeeplyEqual, copy, safeJSONParse, waitUntil, wheneverChanges } from '../helpers'
+import { areDeeplyEqual, copy, getUniqueId, safeJSONParse, waitUntil, wheneverChanges } from '../helpers'
 import { GranularityType } from '../helpers/constants'
 import useDocumentResource from '../helpers/resource'
 import { createToast } from '../helpers/toasts'
@@ -13,7 +13,7 @@ import {
 	NumberChartConfig,
 	TableChartConfig,
 } from '../types/chart.types'
-import { FilterArgs, Operation } from '../types/query.types'
+import { AdhocFilters, Operation } from '../types/query.types'
 import { InsightsChartv3 } from '../types/workbook.types'
 import { getLinkedQueries } from '../workbook/workbook'
 import { handleOldXAxisConfig, handleOldYAxisConfig, setDimensionNames } from './helpers'
@@ -40,7 +40,7 @@ function makeChart(name: string) {
 			if (!resource.doc.query) return {} as Query
 			return useQuery(resource.doc.query)
 		}),
-		dataQuery: useQuery('new-query-' + Date.now()),
+		dataQuery: useQuery('new-query-' + getUniqueId()),
 
 		refresh,
 		updateGranularity,
@@ -54,10 +54,12 @@ function makeChart(name: string) {
 		history: {} as UseRefHistoryReturn<any, any>,
 	})
 
-	wheneverChanges(
-		() => chart.doc.query,
-		() => refresh()
-	)
+	resource.onAfterLoad(() => {
+		wheneverChanges(
+			() => chart.doc.query,
+			() => refresh()
+		)
+	})
 
 	function resetConfig() {
 		chart.doc.config = {} as InsightsChartv3['config']
@@ -81,9 +83,27 @@ function makeChart(name: string) {
 		}
 	)
 
-	function prepareDataQuery(filters?: FilterArgs[]) {
+	type ChartRefreshArgs = {
+		force?: boolean
+		adhocFilters?: AdhocFilters
+	}
+	async function refresh(args: ChartRefreshArgs = {}) {
+		if (!chart.doc.query) return
+		if (!chart.doc.chart_type) return
+		if (chart.baseQuery.executing) {
+			await waitUntil(() => !chart.baseQuery.executing)
+		}
+
+		const prepared = prepareDataQuery()
+		if (prepared) {
+			if (shouldExecuteQuery(args.force) || args.adhocFilters) {
+				return executeQuery(args.adhocFilters)
+			}
+		}
+	}
+
+	function prepareDataQuery() {
 		resetDataQuery()
-		setCustomFilters(filters || [])
 		setChartFilters()
 		let prepared = false
 		if (AXIS_CHARTS.includes(chart.doc.chart_type)) {
@@ -106,21 +126,6 @@ function makeChart(name: string) {
 			applyLimit()
 		}
 		return prepared
-	}
-
-	async function refresh(filters?: FilterArgs[], force = false) {
-		if (!chart.doc.query) return
-		if (!chart.doc.chart_type) return
-		if (chart.baseQuery.executing) {
-			await waitUntil(() => !chart.baseQuery.executing)
-		}
-
-		const prepared = prepareDataQuery(filters)
-		if (prepared) {
-			if (shouldExecuteQuery(force)) {
-				return executeQuery()
-			}
-		}
 	}
 
 	function prepareAxisChartQuery(config: AxisChartConfig) {
@@ -265,30 +270,21 @@ function makeChart(name: string) {
 			}),
 		})
 	}
-	function setCustomFilters(filters: FilterArgs[]) {
-		const _filters = new Set(filters)
-		if (_filters.size) {
-			chart.dataQuery.addFilterGroup({
-				logical_operator: 'And',
-				filters: Array.from(_filters),
-			})
-		}
-	}
 
 	const lastExecutedQueryOperations = ref<Operation[]>([])
 	function shouldExecuteQuery(force = false) {
 		if (force) return true
 		return (
 			JSON.stringify(lastExecutedQueryOperations.value) !==
-			JSON.stringify(chart.dataQuery.currentOperations)
+				JSON.stringify(chart.dataQuery.doc.operations) &&
+			!areDeeplyEqual(lastExecutedQueryOperations.value, chart.dataQuery.doc.operations)
 		)
 	}
-	async function executeQuery() {
-		return chart.dataQuery.execute().then(() => {
-			lastExecutedQueryOperations.value = copy(chart.dataQuery.currentOperations)
-			if (!areDeeplyEqual(chart.doc.operations, chart.dataQuery.currentOperations)) {
-				chart.doc.operations = copy(chart.dataQuery.currentOperations)
-			}
+
+	async function executeQuery(adhocFilters?: AdhocFilters) {
+		chart.doc.operations = copy(chart.dataQuery.doc.operations)
+		return chart.dataQuery.execute(adhocFilters).then(() => {
+			lastExecutedQueryOperations.value = copy(chart.dataQuery.doc.operations)
 		})
 	}
 
@@ -328,26 +324,23 @@ function makeChart(name: string) {
 	}
 
 	function getDependentQueryColumns() {
-		return getDependentQueries()
-			.map((q) => useQuery(q))
-			.filter(Boolean)
-			.map((q) => {
-				const query = q!
-				if (!query.result.executedSQL) {
-					query.execute()
-				}
-				return {
-					group: query.doc.title,
-					items: query.result.columnOptions.map((c) => {
-						const sep = '`'
-						const value = `${sep}${query.doc.name}${sep}.${sep}${c.value}${sep}`
-						return {
-							...c,
-							value,
-						}
-					}),
-				}
-			})
+		return getDependentQueries().map((q) => {
+			const query = useQuery(q)
+			if (!query.result.executedSQL) {
+				query.execute()
+			}
+			return {
+				group: query.doc.title,
+				items: query.result.columnOptions.map((c) => {
+					const sep = '`'
+					const value = `${sep}${query.doc.name}${sep}.${sep}${c.value}${sep}`
+					return {
+						...c,
+						value,
+					}
+				}),
+			}
+		})
 	}
 
 	chart.history = useDebouncedRefHistory(
@@ -420,5 +413,5 @@ function getChartResource(name: string) {
 }
 
 export function newChart() {
-	return getChartResource('new-chart-' + Date.now())
+	return getChartResource('new-chart-' + getUniqueId())
 }

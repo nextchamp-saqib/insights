@@ -11,7 +11,6 @@ from frappe.model.document import Document
 from frappe.query_builder import Interval
 from frappe.query_builder.functions import Now
 
-from insights.api.workbooks import fetch_query_results
 from insights.utils import File
 
 
@@ -122,15 +121,17 @@ class InsightsWorkbook(Document):
                 "results": [],
             }
 
-        chart_query = self.query_map.get(chart["query"])
-        use_live_connection = chart_query.get("use_live_connection", True)
-        operations = self.resolve_query_tables(operations)
+        # TODO: fix this
+        results = []
+        # chart_query = self.query_map.get(chart["query"])
+        # use_live_connection = chart_query.get("use_live_connection", True)
+        # operations = self.resolve_query_tables(operations)
 
-        frappe.flags.ignore_insights_permissions = True
-        results = fetch_query_results(
-            operations, use_live_connection=use_live_connection
-        )
-        frappe.flags.ignore_insights_permissions = False
+        # frappe.flags.ignore_insights_permissions = True
+        # results = fetch_query_results(
+        #     operations, use_live_connection=use_live_connection
+        # )
+        # frappe.flags.ignore_insights_permissions = False
 
         return {
             "chart": chart,

@@ -3,14 +3,13 @@ import useChart from '../charts/chart'
 import { getUniqueId, safeJSONParse, store } from '../helpers'
 import useDocumentResource from '../helpers/resource'
 import { isFilterValid } from '../query/components/filter_utils'
-import { column } from '../query/helpers'
-import useQuery from '../query/query'
-import { FilterArgs, FilterOperator, FilterRule, FilterValue } from '../types/query.types'
+import { column, filter_group } from '../query/helpers'
+import { FilterArgs, FilterGroup, FilterOperator, FilterValue } from '../types/query.types'
 import {
 	InsightsDashboardv3,
 	WorkbookChart,
 	WorkbookDashboardFilter,
-	WorkbookDashboardItem
+	WorkbookDashboardItem,
 } from '../types/workbook.types'
 
 const dashboards = new Map<string, Dashboard>()
@@ -119,19 +118,26 @@ function makeDashboard(name: string) {
 			)
 
 			if (!filtersApplied.length) {
-				chart.refresh(undefined, true)
+				chart.refresh({ force: true })
 				return
 			}
 
-			const filtersByQuery = new Map<string, FilterRule[]>()
+			const filtersByQuery = {} as Record<string, FilterGroup>
+
+			function addFilterToQuery(query_name: string, filter: FilterArgs) {
+				if (!filtersByQuery[query_name]) {
+					filtersByQuery[query_name] = filter_group({
+						logical_operator: 'And',
+						filters: [],
+					})
+				}
+				filtersByQuery[query_name].filters.push(filter)
+			}
 
 			filtersApplied.forEach((item) => {
 				const filterItem = item as WorkbookDashboardFilter
 				const linkedColumn = dashboard.getColumnFromFilterLink(filterItem.links[chart_name])
 				if (!linkedColumn) return
-
-				const query = useQuery(linkedColumn.query)
-				if (!query) return
 
 				const filterState = dashboard.filterStates[filterItem.filter_name] || {}
 
@@ -142,21 +148,14 @@ function makeDashboard(name: string) {
 				}
 
 				if (isFilterValid(filter, filterItem.filter_type)) {
-					const filters = filtersByQuery.get(linkedColumn.query) || []
-					filters.push(filter)
-					filtersByQuery.set(linkedColumn.query, filters)
+					addFilterToQuery(linkedColumn.query, filter)
 				}
 			})
 
-			filtersByQuery.forEach((filters, query_name) => {
-				const query = useQuery(query_name)!
-				query.dashboardFilters = {
-					logical_operator: 'And',
-					filters,
-				}
+			chart.refresh({
+				force: true,
+				adhocFilters: filtersByQuery,
 			})
-
-			chart.refresh(undefined, true)
 		},
 
 		updateFilterState(filter_name: string, operator?: FilterOperator, value?: FilterValue) {
@@ -184,7 +183,9 @@ function makeDashboard(name: string) {
 			if (!item) return
 
 			const filterItem = item as WorkbookDashboardFilter
-			const filteredCharts = Object.keys(filterItem.links)
+			const filteredCharts = Object.keys(filterItem.links).filter(
+				(chart_name) => filterItem.links[chart_name]
+			)
 			filteredCharts.forEach((chart_name) => dashboard.refreshChart(chart_name))
 		},
 
@@ -258,5 +259,5 @@ function getDashboardResource(name: string) {
 }
 
 export function newDashboard() {
-	return getDashboardResource('new-dashboard-' + Date.now())
+	return getDashboardResource('new-dashboard-' + getUniqueId())
 }

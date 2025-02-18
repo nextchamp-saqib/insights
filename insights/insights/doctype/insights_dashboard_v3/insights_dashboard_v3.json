@@ -1,6 +1,5 @@
 {
  "actions": [],
- "autoname": "autoincrement",
  "creation": "2025-02-15 19:29:10.071168",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -62,11 +61,10 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-15 20:22:14.575293",
+ "modified": "2025-02-17 19:07:27.391960",
  "modified_by": "Administrator",
  "module": "Insights",
  "name": "Insights Dashboard v3",
- "naming_rule": "Autoincrement",
  "owner": "Administrator",
  "permissions": [
   {

@@ -138,7 +138,7 @@ const showShareDialog = ref(false)
 						Reset Options
 					</Button>
 
-					<Button @click="chart.refresh([], true)" class="w-full">
+					<Button @click="chart.refresh({ force: true })" class="w-full">
 						<template #prefix>
 							<RefreshCcw class="h-4 text-gray-700" stroke-width="1.5" />
 						</template>

@@ -16,7 +16,6 @@ class InsightsDashboardv3(Document):
 
         is_public: DF.Check
         items: DF.JSON | None
-        name: DF.Int | None
         preview_image: DF.Data | None
         share_link: DF.Data | None
         title: DF.Data | None

@@ -2,7 +2,7 @@ import { useStorage, watchDebounced } from '@vueuse/core'
 import { call } from 'frappe-ui'
 import { computed, reactive } from 'vue'
 import { confirmDialog } from '../helpers/confirm_dialog'
-import { copy, showErrorToast, waitUntil } from './index'
+import { areDeeplyEqual, copy, showErrorToast, waitUntil } from './index'
 import { createToast } from './toasts'
 
 type DocumentResourceOptions<T> = {
@@ -153,9 +153,7 @@ export default function useDocumentResource<T extends object>(
 	})
 
 	// @ts-ignore
-	resource.isdirty = computed(
-		() => JSON.stringify(resource.doc) !== JSON.stringify(resource.originalDoc)
-	)
+	resource.isdirty = computed(() => !areDeeplyEqual(resource.doc, resource.originalDoc))
 
 	resource.load().then(setupLocalStorage)
 
@@ -202,7 +200,7 @@ export default function useDocumentResource<T extends object>(
 			}
 			if (resource.autoSave && !resource.islocal && !stopAutoSaveWatcher) {
 				stopAutoSaveWatcher = watchDebounced(
-					() => resource.isdirty || resource.islocal,
+					() => resource.isdirty,
 					(shouldSave) => shouldSave && resource.save(),
 					{ immediate: true, debounce: 2000 }
 				)

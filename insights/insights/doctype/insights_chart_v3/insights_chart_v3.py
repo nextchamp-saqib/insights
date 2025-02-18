@@ -17,7 +17,6 @@ class InsightsChartv3(Document):
         chart_type: DF.Data | None
         config: DF.JSON | None
         is_public: DF.Check
-        name: DF.Int | None
         operations: DF.JSON | None
         query: DF.Link | None
         title: DF.Data | None

@@ -1,6 +1,5 @@
 {
  "actions": [],
- "autoname": "autoincrement",
  "creation": "2025-02-15 19:26:42.921771",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -80,11 +79,10 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-15 21:35:39.116783",
+ "modified": "2025-02-17 19:07:18.539531",
  "modified_by": "Administrator",
  "module": "Insights",
  "name": "Insights Chart v3",
- "naming_rule": "Autoincrement",
  "owner": "Administrator",
  "permissions": [
   {
