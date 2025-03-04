@@ -685,7 +685,6 @@ export function getDrillDownQuery(
 	}
 
 	const query = useQuery('new-query' + getUniqueId())
-	query.autoExecute = false
 	query.doc.use_live_connection = use_live_connection
 
 	query.setOperations(copy(operations))

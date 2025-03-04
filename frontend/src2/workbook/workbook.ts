@@ -14,7 +14,19 @@ import type {
 	WorkbookSharePermission as WorkbookUserPermission,
 } from '../types/workbook.types'
 
+const workbooks = new Map<string, Workbook>()
+
 export default function useWorkbook(name: string) {
+	name = String(name)
+	const existingWorkbook = workbooks.get(name)
+	if (existingWorkbook) return existingWorkbook
+
+	const workbook = makeWorkbook(name)
+	workbooks.set(name, workbook)
+	return workbook
+}
+
+function makeWorkbook(name: string) {
 	const workbook = getWorkbookResource(name)
 
 	wheneverChanges(
@@ -82,6 +94,7 @@ export default function useWorkbook(name: string) {
 		chart.doc.title = 'Chart ' + (workbook.doc.charts.length + 1)
 		chart.doc.workbook = workbook.doc.name
 		chart.doc.query = query_name || ''
+		chart.doc.chart_type = 'Bar'
 		chart.insert().then(() => {
 			workbook.doc.charts.push({
 				name: chart.doc.name,
@@ -252,7 +265,7 @@ export default function useWorkbook(name: string) {
 	})
 }
 
-export type Workbook = ReturnType<typeof useWorkbook>
+export type Workbook = ReturnType<typeof makeWorkbook>
 export const workbookKey = Symbol() as InjectionKey<Workbook>
 
 export function getWorkbookResource(name: string) {
@@ -290,7 +303,7 @@ export function getLinkedQueries(query_name: string): string[] {
 	const query = useQuery(query_name)
 	const linkedQueries = new Set<string>()
 
-	if (!query.doc.owner) {
+	if (!query.isloaded) {
 		console.log('Operations not loaded yet for query', query_name)
 	}
 

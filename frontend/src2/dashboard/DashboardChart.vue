@@ -5,21 +5,25 @@ import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import useChart from '../charts/chart'
 import ChartRenderer from '../charts/components/ChartRenderer.vue'
-import { wheneverChanges } from '../helpers'
+import { waitUntil, wheneverChanges } from '../helpers'
 import { WorkbookDashboardChart } from '../types/workbook.types'
 import { workbookKey } from '../workbook/workbook'
 import { Dashboard } from './dashboard'
 
 const props = defineProps<{ item: WorkbookDashboardChart }>()
+const dashboard = inject<Dashboard>('dashboard')!
 
 const chart = computed(() => {
 	if (!props.item.chart) return null
 	return useChart(props.item.chart)
 })
 
-const dashboard = inject<Dashboard>('dashboard')!
-if (props.item.chart && !chart.value?.dataQuery.result.executedSQL) {
-	dashboard.refreshChart(props.item.chart)
+if (props.item.chart) {
+	waitUntil(() => Boolean(chart.value?.isloaded)).then(() => {
+		if (!chart.value?.dataQuery.result.executedSQL) {
+			dashboard.refreshChart(props.item.chart)
+		}
+	})
 }
 
 watchDebounced(
@@ -39,10 +43,7 @@ wheneverChanges(
 	(editing: boolean) => {
 		if (!workbook) return
 		if (editing) {
-			const chartIndex = workbook.doc.charts.findIndex((c) => c.name === props.item.chart)
-			if (chartIndex !== -1) {
-				router.push(`/workbook/${workbook.doc.name}/chart/${chartIndex}`)
-			}
+			router.push(`/workbook/${workbook.doc.name}/chart/${props.item.chart}`)
 		}
 	}
 )

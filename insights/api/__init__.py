@@ -2,11 +2,13 @@
 # For license information, please see license.txt
 
 import frappe
+import frappe.client
 import ibis
 from frappe.defaults import get_user_default, set_user_default
 from frappe.integrations.utils import make_post_request
 from frappe.rate_limiter import rate_limit
 
+from insights.api.shared import is_shared
 from insights.decorators import insights_whitelist, validate_type
 from insights.insights.doctype.insights_data_source_v3.connectors.duckdb import (
     get_duckdb_connection,
@@ -161,3 +163,26 @@ def import_csv_data(filename: str):
         db.disconnect()
 
     InsightsTablev3.bulk_create(ds.name, [table_name])
+
+
+shared_doctypes = ["Insights Dashboard v3", "Insights Chart v3", "Insights Query v3"]
+
+
+@frappe.whitelist(allow_guest=True)
+def get_doc(doctype: str, name: str):
+    is_guest = frappe.session.user == "Guest"
+    if is_guest and doctype not in shared_doctypes and not is_shared(doctype, name):
+        frappe.throw("You don't have permission to access this document")
+
+    doc = frappe.get_doc(doctype, name)
+    if not is_guest:
+        doc.check_permission()
+        doc.apply_fieldlevel_read_permissions()
+    return doc.as_dict()
+
+
+@frappe.whitelist(allow_guest=True)
+def run_doc_method(*args, **kwargs):
+    from frappe.handler import run_doc_method as _run_doc_method
+
+    return _run_doc_method(*args, **kwargs)

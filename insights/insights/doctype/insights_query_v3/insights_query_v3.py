@@ -28,8 +28,10 @@ class InsightsQueryv3(Document):
         is_builder_query: DF.Check
         is_native_query: DF.Check
         is_script_query: DF.Check
+        linked_queries: DF.JSON | None
+        old_name: DF.Data | None
         operations: DF.JSON | None
-        title: DF.Data
+        title: DF.Data | None
         use_live_connection: DF.Check
         workbook: DF.Link | None
     # end: auto-generated types
@@ -37,7 +39,27 @@ class InsightsQueryv3(Document):
     def get_valid_dict(self, *args, **kwargs):
         if isinstance(self.operations, list):
             self.operations = frappe.as_json(self.operations)
+        if isinstance(self.linked_queries, list):
+            self.linked_queries = frappe.as_json(self.linked_queries)
         return super().get_valid_dict(*args, **kwargs)
+
+    def before_save(self):
+        self.set_linked_queries()
+
+    def set_linked_queries(self):
+        operations = frappe.parse_json(self.operations)
+        if not operations:
+            return
+
+        linked_queries = []
+        for operation in operations:
+            if (
+                operation.get("table")
+                and operation.get("table").get("type") == "query"
+                and operation.get("table").get("query_name")
+            ):
+                linked_queries.append(operation.get("table").get("query_name"))
+        self.linked_queries = linked_queries
 
     def build(self, active_operation_idx=None, use_live_connection=None):
         operations = frappe.parse_json(self.operations)
@@ -104,7 +126,7 @@ class InsightsQueryv3(Document):
 
     @insights_whitelist()
     def get_distinct_column_values(
-        self, active_operation_idx, column_name, search_term=None, limit=20
+        self, column_name, active_operation_idx=None, search_term=None, limit=20
     ):
         ibis_query = self.build(active_operation_idx)
         values_query = (

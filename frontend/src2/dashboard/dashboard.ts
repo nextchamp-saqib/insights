@@ -194,12 +194,20 @@ function makeDashboard(name: string) {
 			// `query`.`column`
 			const pattern = new RegExp(`^${sep}([^${sep}]+)${sep}\\.${sep}([^${sep}]+)${sep}$`)
 			const match = linkedColumn.match(pattern)
-			if (!match) return
+			if (!match || match.length < 3) return null
 
 			return {
 				query: match[1],
 				column: match[2],
 			}
+		},
+
+		getDistinctColumnValues(query: string, column: string, search_term?: string) {
+			return dashboard.call('get_distinct_column_values', {
+				query: query,
+				column_name: column,
+				search_term,
+			})
 		},
 
 		getShareLink() {
@@ -237,17 +245,19 @@ function makeDashboard(name: string) {
 
 export type Dashboard = ReturnType<typeof makeDashboard>
 
+const INITIAL_DOC: InsightsDashboardv3 = {
+	doctype: 'Insights Dashboard v3',
+	name: '',
+	owner: '',
+	title: '',
+	workbook: '',
+	items: [],
+}
+
 function getDashboardResource(name: string) {
 	const doctype = 'Insights Dashboard v3'
 	const dashboard = useDocumentResource<InsightsDashboardv3>(doctype, name, {
-		initialDoc: {
-			doctype,
-			name,
-			owner: '',
-			title: '',
-			workbook: '',
-			items: [],
-		},
+		initialDoc: { ...INITIAL_DOC, name },
 		enableAutoSave: true,
 		disableLocalStorage: true,
 		transform(doc: any) {

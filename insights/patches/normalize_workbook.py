@@ -27,6 +27,7 @@ def execute():
             new_doc = frappe.new_doc("Insights Query v3")
             new_doc.update(query)
             new_doc.workbook = workbook.name
+            new_doc.old_name = query["name"]
             new_doc.insert()
             query_name_to_doc[query["name"]] = new_doc
 
@@ -50,6 +51,7 @@ def execute():
                     op.table.query_name = query_name_to_doc[op.table.query_name].name
 
             new_doc.operations = frappe.as_json(chart.operations)
+            new_doc.old_name = chart["name"]
             new_doc.insert()
             chart_name_to_doc[chart["name"]] = new_doc
 
@@ -91,6 +93,7 @@ def execute():
                     item.links = new_links
 
             new_doc.items = frappe.as_json(dashboard["items"])
+            new_doc.old_name = dashboard["name"]
             new_doc.insert()
 
         for query in query_name_to_doc.values():

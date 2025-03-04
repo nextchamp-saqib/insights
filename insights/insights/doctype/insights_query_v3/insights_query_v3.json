@@ -12,15 +12,17 @@
   "is_builder_query",
   "is_native_query",
   "section_break_cuka",
-  "operations"
+  "operations",
+  "section_break_oujt",
+  "linked_queries",
+  "old_name"
  ],
  "fields": [
   {
    "fieldname": "title",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Title",
-   "reqd": 1
+   "label": "Title"
   },
   {
    "fieldname": "operations",
@@ -56,7 +58,8 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Workbook",
-   "options": "Insights Workbook"
+   "options": "Insights Workbook",
+   "search_index": 1
   },
   {
    "fieldname": "column_break_gamr",
@@ -65,11 +68,32 @@
   {
    "fieldname": "section_break_cuka",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "section_break_oujt",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "linked_queries",
+   "fieldtype": "JSON",
+   "label": "Linked Queries",
+   "read_only": 1
+  },
+  {
+   "fieldname": "old_name",
+   "fieldtype": "Data",
+   "label": "Old Name",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2025-02-17 19:07:06.031107",
+ "links": [
+  {
+   "link_doctype": "Insights Chart v3",
+   "link_fieldname": "data_query"
+  }
+ ],
+ "modified": "2025-03-03 15:37:48.635690",
  "modified_by": "Administrator",
  "module": "Insights",
  "name": "Insights Query v3",

@@ -1,6 +1,6 @@
 import { useDebouncedRefHistory } from '@vueuse/core'
 import { computed, reactive, ref, toRefs, unref } from 'vue'
-import { getUniqueId, safeJSONParse, showErrorToast, wheneverChanges } from '../helpers'
+import { getUniqueId, safeJSONParse, showErrorToast, waitUntil, wheneverChanges } from '../helpers'
 import { confirmDialog } from '../helpers/confirm_dialog'
 import useDocumentResource from '../helpers/resource'
 import {
@@ -98,10 +98,22 @@ export function makeQuery(name: string) {
 
 	const result = ref({ ...EMPTY_RESULT })
 	const executing = ref(false)
-	async function execute(adhocFilters?: AdhocFilters) {
+	let lastExecutionId = ''
+	async function execute(adhocFilters?: AdhocFilters, force: boolean = false) {
+		await waitUntil(() => query.isloaded)
+
 		if (!query.doc.operations.length) {
 			result.value = { ...EMPTY_RESULT }
 			return
+		}
+
+		const executionId = JSON.stringify({
+			operations: currentOperations.value,
+			adhoc_filters: adhocFilters,
+		})
+
+		if (!force && lastExecutionId === executionId) {
+			return Promise.resolve()
 		}
 
 		executing.value = true
@@ -111,7 +123,10 @@ export function makeQuery(name: string) {
 				adhoc_filters: adhocFilters,
 			})
 			.then((response: any) => {
+				lastExecutionId = executionId
+
 				if (!response) return
+
 				result.value.executedSQL = response.sql
 				result.value.columns = response.columns
 				result.value.rows = response.rows
@@ -493,13 +508,6 @@ export function makeQuery(name: string) {
 		}
 	}
 
-	function reset() {
-		query.doc = query.originalDoc
-		activeOperationIdx.value = -1
-		executing.value = false
-		result.value = {} as QueryResult
-	}
-
 	const history = useDebouncedRefHistory(
 		// @ts-ignore
 		computed({
@@ -523,19 +531,16 @@ export function makeQuery(name: string) {
 		}
 	)
 
-	const autoExecute = ref(true)
+	const autoExecute = ref(false)
 	let stopAutoExecute: Function
 	wheneverChanges(
 		autoExecute,
 		() => {
 			if (autoExecute.value && !stopAutoExecute) {
-				stopAutoExecute = wheneverChanges(
-					currentOperations,
-					() => {
-						autoExecute.value && execute()
-					},
-					{ deep: true }
-				)
+				stopAutoExecute = wheneverChanges(currentOperations, () => autoExecute.value && execute(), {
+					immediate: true,
+					deep: true,
+				})
 			} else {
 				stopAutoExecute?.()
 			}
@@ -595,8 +600,6 @@ export function makeQuery(name: string) {
 		getDimension,
 		getMeasure,
 
-		reset,
-
 		history,
 		canUndo() {
 			return !activeEditIndex.value && !executing.value
@@ -620,32 +623,36 @@ const EMPTY_RESULT = {
 
 export type Query = ReturnType<typeof makeQuery>
 
+const INITIAL_DOC: InsightsQueryv3 = {
+	doctype: 'Insights Query v3',
+	name: '',
+	owner: '',
+	title: '',
+	workbook: '',
+	operations: [],
+}
+
 function getQueryResource(name: string) {
 	const doctype = 'Insights Query v3'
 	const query = useDocumentResource<InsightsQueryv3>(doctype, name, {
-		initialDoc: {
-			doctype,
-			name,
-			owner: '',
-			title: '',
-			workbook: '',
-			operations: [],
-		},
+		initialDoc: { ...INITIAL_DOC, name },
 		enableAutoSave: true,
 		disableLocalStorage: true,
-		transform(doc: any) {
-			doc.operations = safeJSONParse(doc.operations) || []
-			if (
-				doc.is_native_query === undefined &&
-				doc.is_script_query === undefined &&
-				doc.is_builder_query === undefined
-			) {
-				doc.is_builder_query = true
-			}
-			return doc
-		},
+		transform: transformQueryDoc,
 	})
 	return query
+}
+
+function transformQueryDoc(doc: any) {
+	doc.operations = safeJSONParse(doc.operations) || []
+	if (
+		doc.is_native_query === undefined &&
+		doc.is_script_query === undefined &&
+		doc.is_builder_query === undefined
+	) {
+		doc.is_builder_query = true
+	}
+	return doc
 }
 
 export function newQuery() {

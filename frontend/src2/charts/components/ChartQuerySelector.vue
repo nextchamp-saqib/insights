@@ -5,20 +5,24 @@ import { wheneverChanges } from '../../helpers'
 import useQuery from '../../query/query'
 import { DropdownOption } from '../../types/query.types'
 
-const query = defineModel()
+const query = defineModel<string>()
 const props = defineProps<{ queries: DropdownOption[] }>()
 if (!query.value && props.queries.length) {
 	query.value = props.queries[0].value
 }
 
-wheneverChanges(query, (value: string) => {
-	if (value) {
-		const q = useQuery(value)
-		if (q && !q.result.executedSQL) {
-			q.execute()
+wheneverChanges(
+	query,
+	() => {
+		if (query.value) {
+			const q = useQuery(query.value)
+			if (q && !q.result.executedSQL) {
+				q.execute()
+			}
 		}
-	}
-})
+	},
+	{ immediate: true }
+)
 </script>
 
 <template>

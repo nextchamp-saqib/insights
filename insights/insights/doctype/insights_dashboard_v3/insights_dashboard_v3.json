@@ -11,7 +11,10 @@
   "workbook",
   "is_public",
   "section_break_lgpd",
-  "items"
+  "items",
+  "section_break_aocd",
+  "linked_charts",
+  "old_name"
  ],
  "fields": [
   {
@@ -57,11 +60,27 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Is Public"
+  },
+  {
+   "fieldname": "section_break_aocd",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "linked_charts",
+   "fieldtype": "JSON",
+   "label": "Linked Charts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "old_name",
+   "fieldtype": "Data",
+   "label": "Old Name",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-02-17 19:07:27.391960",
+ "modified": "2025-03-03 15:38:01.824264",
  "modified_by": "Administrator",
  "module": "Insights",
  "name": "Insights Dashboard v3",

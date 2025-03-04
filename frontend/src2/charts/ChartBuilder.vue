@@ -25,9 +25,6 @@ provide('chart', chart)
 window.chart = chart
 
 chart.refresh()
-if (chart.doc.query && !chart.baseQuery.result.executedSQL) {
-	chart.baseQuery.execute()
-}
 
 watchDebounced(
 	() => chart.doc.config,
@@ -67,7 +64,7 @@ const showShareDialog = ref(false)
 </script>
 
 <template>
-	<div v-if="chart" class="relative flex h-full w-full overflow-hidden">
+	<div v-if="chart.isloaded" class="relative flex h-full w-full overflow-hidden">
 		<div class="relative flex h-full w-full flex-col gap-4 overflow-hidden p-3 pt-4">
 			<LoadingOverlay v-if="chart.dataQuery.executing" />
 			<div
@@ -78,8 +75,8 @@ const showShareDialog = ref(false)
 					:title="chart.doc.title"
 					:chart_type="chart.doc.chart_type"
 					:config="chart.doc.config"
-					:operations="chart.doc.operations || chart.dataQuery.doc.operations || []"
-					:use_live_connection="Boolean(chart.doc.use_live_connection)"
+					:operations="chart.dataQuery.doc.operations || []"
+					:use_live_connection="Boolean(chart.dataQuery.doc.use_live_connection)"
 					:result="chart.dataQuery.result"
 					:loading="chart.dataQuery.executing"
 				/>
@@ -107,10 +104,7 @@ const showShareDialog = ref(false)
 						<span class="tnum"> {{ chart.doc.config.filters.filters.length }}</span>
 					</Badge>
 				</template>
-				<ChartFilterConfig
-					v-model="chart.doc.config.filters"
-					:column-options="chart.baseQuery.result.columnOptions || []"
-				/>
+				<ChartFilterConfig v-model="chart.doc.config.filters" />
 			</CollapsibleSection>
 
 			<CollapsibleSection title="Sort" collapsed>

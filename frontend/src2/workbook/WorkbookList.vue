@@ -1,14 +1,13 @@
 <script setup lang="tsx">
-import { Avatar, Breadcrumbs, ListView, Badge } from 'frappe-ui'
+import { Avatar, Breadcrumbs, ListView } from 'frappe-ui'
 import { Building2, Eye, Lock, PlusIcon, SearchIcon, Shield } from 'lucide-vue-next'
 import { computed, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
+import { wheneverChanges } from '../helpers'
 import { WorkbookListItem } from '../types/workbook.types'
 import useUserStore from '../users/users'
-import { getWorkbookResource, newWorkbookName } from './workbook'
+import useWorkbook, { newWorkbookName } from './workbook'
 import useWorkbooks from './workbooks'
-import { wheneverChanges } from '../helpers'
-import AvatarGroup from './AvatarGroup.vue'
 
 const router = useRouter()
 const workbookStore = useWorkbooks()
@@ -23,7 +22,8 @@ wheneverChanges(searchQuery, () => workbookStore.getWorkbooks(searchQuery.value)
 const creatingWorkbook = ref(false)
 function openNewWorkbook() {
 	creatingWorkbook.value = true
-	getWorkbookResource(newWorkbookName())
+	const workbook = useWorkbook(newWorkbookName())
+	workbook
 		.insert()
 		.then((doc) => {
 			router.push(`/workbook/${doc.name}`)
