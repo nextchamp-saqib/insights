@@ -139,18 +139,18 @@ const label = ref('')
 			<Popover>
 				<template #target="{ togglePopover, isOpen }">
 					<div class="w-full space-y-1.5">
-						<div v-if="props.label" class="text-xs text-gray-600">
+						<div v-if="props.label" class="text-xs text-ink-gray-5">
 							{{ props.label }}
 						</div>
 						<button
-							class="flex h-7 w-full items-center justify-between gap-2 rounded bg-gray-100 py-1 px-2 text-base transition-colors hover:bg-gray-200 focus:ring-2 focus:ring-gray-400"
+							class="flex h-7 w-full items-center justify-between gap-2 rounded bg-surface-gray-2 py-1 px-2 text-base transition-colors hover:bg-surface-gray-3 focus:ring-2 focus:ring-gray-400"
 							@click="() => togglePopover()"
 						>
 							<div class="flex flex-1 items-center gap-2 overflow-hidden truncate">
 								<span v-if="measure.measure_name">
 									{{ measure.measure_name }}
 								</span>
-								<span v-else class="text-gray-500"> Select a column </span>
+								<span v-else class="text-ink-gray-4"> Select a column </span>
 							</div>
 						</button>
 					</div>
@@ -158,12 +158,12 @@ const label = ref('')
 
 				<template #body="{ isOpen, togglePopover }">
 					<div
-						class="relative mt-1 overflow-hidden rounded-lg bg-white p-1.5 text-base shadow-2xl"
+						class="relative mt-1 overflow-hidden rounded-lg bg-surface-white p-1.5 text-base shadow-2xl"
 					>
 						<template v-if="columnMeasure && !expressionMeasure">
 							<span
 								v-if="!columnMeasure.aggregation"
-								class="block px-1.5 py-0.5 text-p-xs text-gray-600"
+								class="block px-1.5 py-0.5 text-p-xs text-ink-gray-5"
 							>
 								Select a Function
 							</span>
@@ -174,12 +174,12 @@ const label = ref('')
 								<Button class="!h-6 !w-6" @click.prevent.stop="resetMeasure">
 									<template #icon>
 										<ChevronLeft
-											class="h-4 w-4 text-gray-700"
+											class="h-4 w-4 text-ink-gray-6"
 											stroke-width="1.5"
 										/>
 									</template>
 								</Button>
-								<span class="block px-1.5 py-0.5 text-p-xs text-gray-600">
+								<span class="block px-1.5 py-0.5 text-p-xs text-ink-gray-5">
 									{{ getAggregationLabel(columnMeasure.aggregation) }}
 								</span>
 							</div>
@@ -188,7 +188,7 @@ const label = ref('')
 									<div
 										v-for="option in aggregationOptions"
 										:key="option.value"
-										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded px-2.5 text-base hover:bg-gray-100"
+										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded px-2.5 text-base hover:bg-surface-gray-2"
 										@click.prevent.stop="
 											columnMeasure.aggregation = option.value
 										"
@@ -196,7 +196,7 @@ const label = ref('')
 										<span>{{ option.label }}</span>
 										<span v-if="option.value === columnMeasure.aggregation">
 											<Check
-												class="h-4 w-4 text-gray-700"
+												class="h-4 w-4 text-ink-gray-6"
 												stroke-width="1.5"
 											/>
 										</span>
@@ -204,7 +204,7 @@ const label = ref('')
 								</template>
 
 								<template v-if="columnMeasure.aggregation">
-									<div class="sticky top-0 bg-white space-y-1 p-1">
+									<div class="sticky top-0 bg-surface-white space-y-1 p-1">
 										<TextInput
 											v-model="searchQuery"
 											placeholder="Search..."
@@ -214,7 +214,7 @@ const label = ref('')
 									<div
 										v-for="option in filteredColumnOptions"
 										:key="option.value"
-										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded px-2.5 text-base hover:bg-gray-100"
+										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded px-2.5 text-base hover:bg-surface-gray-2"
 										@click.prevent.stop="
 											() => {
 												;(measure as ColumnMeasure).column_name =
@@ -228,7 +228,7 @@ const label = ref('')
 										<span>{{ option.label }}</span>
 										<span v-if="option.value === columnMeasure.column_name">
 											<Check
-												class="h-4 w-4 text-gray-700"
+												class="h-4 w-4 text-ink-gray-6"
 												stroke-width="1.5"
 											/>
 										</span>
@@ -250,7 +250,7 @@ const label = ref('')
 								<template #prefix>
 									<component
 										:is="expressionMeasure ? Edit : Plus"
-										class="h-4 w-4 text-gray-700"
+										class="h-4 w-4 text-ink-gray-6"
 										stroke-width="1.5"
 									/>
 								</template>
@@ -264,7 +264,7 @@ const label = ref('')
 			<template #target="{ togglePopover }">
 				<Button @click="togglePopover">
 					<template #icon>
-						<Settings class="h-4 w-4 text-gray-700" stroke-width="1.5" />
+						<Settings class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 					</template>
 				</Button>
 			</template>
@@ -295,7 +295,7 @@ const label = ref('')
 		</Popover>
 		<Button v-else @click="emit('remove')">
 			<template #icon>
-				<XIcon class="h-4 w-4 text-gray-700" stroke-width="1.5" />
+				<XIcon class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 			</template>
 		</Button>
 	</div>

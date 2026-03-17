@@ -93,7 +93,7 @@ onMounted(() => {
 	if (!dialogElement) {
 		return
 	}
-	dialogElement.classList.remove('overflow-hidden', 'rounded-xl', 'bg-white')
+	dialogElement.classList.remove('overflow-hidden', 'rounded-xl', 'bg-surface-white')
 	dialogElement.children[0]?.classList.add('rounded-xl')
 
 	if (expression.value?.trim()) {
@@ -262,16 +262,16 @@ function setSignatureElementPosition() {
 		<div
 			ref="signatureElement"
 			v-show="currentFunctionSignature"
-			class="absolute z-10 flex h-fit max-h-[14rem] w-[25rem] flex-col gap-2 overflow-y-auto rounded-lg bg-white px-2.5 py-1.5 shadow-md transition-all"
+			class="absolute z-10 flex h-fit max-h-[14rem] w-[25rem] flex-col gap-2 overflow-y-auto rounded-lg bg-surface-white px-2.5 py-1.5 shadow-md transition-all"
 		>
 			<template v-if="currentFunctionSignature">
 				<p
 					v-if="currentFunctionSignature.definition"
 					v-html="currentFunctionSignature.definition"
-					class="font-mono text-p-sm text-gray-800"
+					class="font-mono text-p-sm text-ink-gray-8"
 				></p>
 				<hr v-if="currentFunctionSignature.definition" />
-				<div class="whitespace-pre-wrap font-mono text-p-sm text-gray-800">
+				<div class="whitespace-pre-wrap font-mono text-p-sm text-ink-gray-8">
 					{{ currentFunctionSignature.description }}
 				</div>
 			</template>
@@ -281,7 +281,7 @@ function setSignatureElementPosition() {
 		<transition name="fade" mode="out-in">
 			<div class="flex items-center gap-4 max-h-[10%] px-3 py-2 border-t border-b">
 				<template v-if="validationState === 'validating'">
-					<LoadingIndicator class="h-4 w-4 text-gray-500" />
+					<LoadingIndicator class="h-4 w-4 text-ink-gray-4" />
 				</template>
 
 				<template v-else-if="validationState === 'valid'">
@@ -308,7 +308,7 @@ function setSignatureElementPosition() {
 				</template>
 
 				<template v-else>
-					<div class="text-sm text-gray-500">No output</div>
+					<div class="text-sm text-ink-gray-4">No output</div>
 				</template>
 			</div>
 		</transition>

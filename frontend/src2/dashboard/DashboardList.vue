@@ -51,14 +51,14 @@ watchEffect(() => {
 		<div class="flex gap-2 overflow-visible py-1">
 			<FormControl :placeholder="__('Search')" v-model="searchQuery" :debounce="300">
 				<template #prefix>
-					<SearchIcon class="h-4 w-4 text-gray-500" />
+					<SearchIcon class="h-4 w-4 text-ink-gray-4" />
 				</template>
 			</FormControl>
 		</div>
 		<!-- favourite dashboards -->
 		<div class="h-full w-full">
 			<div v-if="favorites.length > 0" class="mb-8">
-				<h2 class="mb-4 text-lg font-semibold text-gray-700">{{ __('Favorites') }}</h2>
+				<h2 class="mb-4 text-lg font-semibold text-ink-gray-6">{{ __('Favorites') }}</h2>
 				<div class="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					<DashboardCard
 						v-for="dashboard in favorites"
@@ -73,7 +73,7 @@ watchEffect(() => {
 			</div>
 			<!-- all dashboards -->
 			<div v-if="store.dashboards.length">
-				<h2 v-if="favorites.length > 0" class="mb-4 text-lg font-semibold text-gray-700">
+				<h2 v-if="favorites.length > 0" class="mb-4 text-lg font-semibold text-ink-gray-6">
 					All Dashboards
 				</h2>
 				<div class="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -92,7 +92,7 @@ watchEffect(() => {
 			<!-- Empty State -->
 			<div v-else class="flex h-full w-full flex-col items-center justify-center text-base">
 				<div class="text-xl font-medium">{{ __('No Dashboards') }}</div>
-				<div class="mt-1 text-base text-gray-600">
+				<div class="mt-1 text-base text-ink-gray-5">
 					{{ __('Create a dashboard in your workbook to view it here.') }}
 				</div>
 			</div>

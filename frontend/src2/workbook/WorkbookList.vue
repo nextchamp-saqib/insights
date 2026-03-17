@@ -79,8 +79,8 @@ const listOptions = ref({
 				const workbook = props.row as WorkbookListItem
 				return (
 					<div class="flex gap-1">
-						<Eye class="h-3.5 w-3.5 text-gray-600" stroke-width="1.5" />
-						<span class="font-mono text-sm text-gray-700">{workbook.views}</span>
+						<Eye class="h-3.5 w-3.5 text-ink-gray-5" stroke-width="1.5" />
+						<span class="font-mono text-sm text-ink-gray-6">{workbook.views}</span>
 					</div>
 				)
 			},
@@ -169,7 +169,7 @@ watchEffect(() => {
 				autocomplete="off"
 			>
 				<template #prefix>
-					<SearchIcon class="h-4 w-4 text-gray-500" />
+					<SearchIcon class="h-4 w-4 text-ink-gray-4" />
 				</template>
 			</FormControl>
 		</div>

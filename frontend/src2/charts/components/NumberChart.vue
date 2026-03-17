@@ -107,7 +107,7 @@ function onDoubleClick(measure_name: string) {
 					color,
 				} in cards"
 				:key="measure_name"
-				class="flex max-h-[140px] items-center gap-2 overflow-hidden rounded bg-white px-6 pt-5 shadow cursor-pointer"
+				class="flex max-h-[140px] items-center gap-2 overflow-hidden rounded bg-surface-white px-6 pt-5 shadow cursor-pointer"
 				:class="config.comparison ? 'pb-6' : 'pb-3'"
 				@dblclick="onDoubleClick(measure_name)"
 			>
@@ -127,11 +127,11 @@ function onDoubleClick(measure_name: string) {
 						:class="[
 							config.negative_is_better
 								? delta >= 0
-									? 'text-red-500'
+									? 'text-ink-red-3'
 									: 'text-green-500'
 								: delta >= 0
 								  ? 'text-green-500'
-								  : 'text-red-500',
+								  : 'text-ink-red-3',
 						]"
 					>
 						<span class="">

@@ -87,12 +87,12 @@ function confirmSelection() {
 					<template #target="{ togglePopover }">
 						<Button class="w-full !justify-start" @click="togglePopover">
 							<template #prefix>
-								<SearchIcon class="h-4 w-4 text-gray-500" stroke-width="1.5" />
+								<SearchIcon class="h-4 w-4 text-ink-gray-4" stroke-width="1.5" />
 							</template>
-							<span class="flex-1 text-gray-500">{{ __('Add column') }}</span>
+							<span class="flex-1 text-ink-gray-4">{{ __('Add column') }}</span>
 							<template #suffix>
 								<ChevronDown
-									class="ml-auto h-4 w-4 text-gray-500"
+									class="ml-auto h-4 w-4 text-ink-gray-4"
 									stroke-width="1.5"
 								/>
 							</template>
@@ -116,7 +116,7 @@ function confirmSelection() {
 					</DraggableList>
 				</div>
 
-				<p class="flex-shrink-0 bg-white pt-1.5 text-sm text-gray-500">
+				<p class="flex-shrink-0 bg-surface-white pt-1.5 text-sm text-ink-gray-4">
 					{{ __('{0} columns selected', String(selectedColumns.length)) }}
 				</p>
 			</div>

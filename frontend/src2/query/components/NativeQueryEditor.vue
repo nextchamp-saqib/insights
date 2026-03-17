@@ -113,7 +113,7 @@ const completions = computed(() => {
 				<div class="flex flex-shrink-0 items-center gap-1 border-b p-1">
 					<DataSourceSelector v-model="data_source" placeholder="Select a data source" />
 					<ContentEditable
-						class="flex h-7 cursor-text items-center justify-center rounded bg-white px-2 text-base text-gray-800 focus-visible:ring-1 focus-visible:ring-gray-600"
+						class="flex h-7 cursor-text items-center justify-center rounded bg-surface-white px-2 text-base text-ink-gray-8 focus-visible:ring-1 focus-visible:ring-gray-600"
 						v-model="query.doc.title"
 						placeholder="Untitled Dashboard"
 					></ContentEditable>
@@ -131,7 +131,7 @@ const completions = computed(() => {
 				<div class="flex flex-shrink-0 gap-1 border-t p-1">
 					<Button @click="execute(true)" :label="__('Execute')">
 						<template #prefix>
-							<Play class="h-3.5 w-3.5 text-gray-700" stroke-width="1.5" />
+							<Play class="h-3.5 w-3.5 text-ink-gray-6" stroke-width="1.5" />
 						</template>
 					</Button>
 					<Dropdown
@@ -148,7 +148,7 @@ const completions = computed(() => {
 			</div>
 			<div
 				v-show="query.result.executedSQL"
-				class="tnum flex flex-shrink-0 items-center gap-2 text-sm text-gray-600"
+				class="tnum flex flex-shrink-0 items-center gap-2 text-sm text-ink-gray-5"
 			>
 				<div class="h-2 w-2 rounded-full bg-green-500"></div>
 				<div class="flex items-center gap-1">

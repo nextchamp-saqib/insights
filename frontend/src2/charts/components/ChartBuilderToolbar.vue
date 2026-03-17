@@ -25,35 +25,35 @@ const props = defineProps<{
 const moreActions = [
 	{
 		label: __('Export as PNG'),
-		icon: h(ImageDown, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(ImageDown, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.onDownload(),
 		condition: () => !!props.chartEl,
 	},
 	{
 		label: __('Share Chart'),
-		icon: h(Share2, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(Share2, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.onShare(),
 		condition: () => !props.chart.doc.read_only,
 	},
 	{
 		label: __('Duplicate Chart'),
-		icon: h(CopyPlus, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(CopyPlus, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.chart.duplicate(),
 	},
 	{
 		label: __('Reset Options'),
-		icon: h(XIcon, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(XIcon, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.chart.resetConfig(),
 		condition: () => !props.chart.doc.read_only,
 	},
 	{
 		label: __('Copy JSON'),
-		icon: h(Copy, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(Copy, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.chart.copy(),
 	},
 	{
 		label: __('Open in Desk'),
-		icon: h(ExternalLink, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(ExternalLink, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.chart.openInDesk(),
 		condition: () => session.user.has_desk_access,
 	},
@@ -61,11 +61,11 @@ const moreActions = [
 </script>
 
 <template>
-	<div class="flex w-full flex-shrink-0 items-center justify-between bg-white">
+	<div class="flex w-full flex-shrink-0 items-center justify-between bg-surface-white">
 		<div>
 			<div
 				v-show="chart.dataQuery.result.executedSQL"
-				class="tnum flex items-center gap-2 text-sm text-gray-600"
+				class="tnum flex items-center gap-2 text-sm text-ink-gray-5"
 			>
 				<div class="h-2 w-2 rounded-full bg-green-500"></div>
 				<div>
@@ -80,16 +80,16 @@ const moreActions = [
 				variant="ghost"
 				label="Refresh"
 				@click="() => chart.refresh(true)"
-				class="!h-6 !gap-1.5 bg-white !px-2 text-xs shadow"
+				class="!h-6 !gap-1.5 bg-surface-white !px-2 text-xs shadow"
 			>
 				<template #prefix>
-					<RefreshCcw class="h-3 w-3 text-gray-700" stroke-width="1.5" />
+					<RefreshCcw class="h-3 w-3 text-ink-gray-6" stroke-width="1.5" />
 				</template>
 			</Button>
 			<Dropdown placement="right" :options="moreActions">
-				<Button variant="ghost" class="!h-6 !gap-1.5 bg-white !px-2 text-xs shadow">
+				<Button variant="ghost" class="!h-6 !gap-1.5 bg-surface-white !px-2 text-xs shadow">
 					<template #icon>
-						<MoreHorizontal class="h-3 w-3 text-gray-700" stroke-width="1.5" />
+						<MoreHorizontal class="h-3 w-3 text-ink-gray-6" stroke-width="1.5" />
 					</template>
 				</Button>
 			</Dropdown>

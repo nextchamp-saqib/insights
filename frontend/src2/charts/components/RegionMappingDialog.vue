@@ -198,8 +198,8 @@ function getOptions(region: Region) {
 			<!-- Loading State -->
 			<div v-if="loading" class="flex h-[28rem] items-center justify-center">
 				<div class="flex flex-col items-center gap-3">
-					<LoadingIndicator class="h-5 w-5 text-gray-400" />
-					<span class="text-sm text-gray-500">Loading</span>
+					<LoadingIndicator class="h-5 w-5 text-ink-gray-3" />
+					<span class="text-sm text-ink-gray-4">Loading</span>
 				</div>
 			</div>
 
@@ -209,15 +209,15 @@ function getOptions(region: Region) {
 					<!-- Unresolved Regions -->
 					<div class="flex flex-col">
 						<div class="mb-2 flex items-center gap-2">
-							<h3 class="text-sm font-medium text-gray-700">
+							<h3 class="text-sm font-medium text-ink-gray-6">
 								{{ unresolvedRegions.length }}
 							</h3>
-							<h3 class="text-sm font-bold text-gray-900">Unresolved Locations</h3>
+							<h3 class="text-sm font-bold text-ink-gray-9">Unresolved Locations</h3>
 						</div>
 						<div
-							class="h-[15rem] flex flex-col overflow-hidden rounded-md border bg-white"
+							class="h-[15rem] flex flex-col overflow-hidden rounded-md border bg-surface-white"
 						>
-							<div class="z-10 bg-white">
+							<div class="z-10 bg-surface-white">
 								<TextInput
 									v-model="searchQuery"
 									placeholder="Search locations"
@@ -231,7 +231,7 @@ function getOptions(region: Region) {
 									:key="region.user_region"
 									class="group flex items-center gap-3 px-3 py-2 hover:bg-gray-50/60"
 								>
-									<p class="min-w-0 flex-1 truncate text-sm text-gray-900">
+									<p class="min-w-0 flex-1 truncate text-sm text-ink-gray-9">
 										{{ region.user_region }}
 									</p>
 
@@ -253,17 +253,17 @@ function getOptions(region: Region) {
 					<!-- Resolved Regions -->
 					<div class="flex flex-col">
 						<div class="mb-2 flex items-center gap-2">
-							<h3 class="text-sm font-medium text-gray-700">
+							<h3 class="text-sm font-medium text-ink-gray-6">
 								{{ manualMappings.length }}
 							</h3>
-							<h3 class="text-sm font-medium text-gray-900">Resolved</h3>
+							<h3 class="text-sm font-medium text-ink-gray-9">Resolved</h3>
 						</div>
 
-						<div class="h-[10rem] overflow-y-auto rounded-md border bg-white">
+						<div class="h-[10rem] overflow-y-auto rounded-md border bg-surface-white">
 							<div class="flex flex-col divide-y h-full">
 								<div
 									v-if="manualMappings.length === 0"
-									class="flex items-center justify-center flex-1 text-sm text-gray-500"
+									class="flex items-center justify-center flex-1 text-sm text-ink-gray-4"
 								>
 									No Locations Resolved
 								</div>
@@ -272,7 +272,7 @@ function getOptions(region: Region) {
 									:key="mapping.user_region"
 									class="group flex items-center gap-3 px-3 py-2 hover:bg-gray-50/60"
 								>
-									<p class="min-w-0 flex-1 truncate text-sm text-gray-600">
+									<p class="min-w-0 flex-1 truncate text-sm text-ink-gray-5">
 										{{ mapping.user_region }}
 									</p>
 
@@ -295,7 +295,7 @@ function getOptions(region: Region) {
 									<Button
 										variant="icon"
 										@click="removeMapping(mapping.user_region)"
-										class="text-red-600"
+										class="text-ink-red-4"
 										:icon="Trash2Icon"
 									>
 									</Button>

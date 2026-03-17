@@ -21,7 +21,8 @@ body {
 	/* Works on Firefox */
 	* {
 		scrollbar-width: thin;
-		scrollbar-color: #c0c6cc #ebeef0;
+		/* scrollbar-color: #c0c6cc #ebeef0; */
+		scrollbar-color: var(--color-ink-gray-8) var(--color-surface-gray-1);
 	}
 
 	html {
@@ -30,13 +31,13 @@ body {
 
 	/* Works on Chrome, Edge, and Safari */
 	*::-webkit-scrollbar-thumb {
-		background: #e2e8f0;
+		background: var(--color-surface-gray-2);
 		border-radius: 6px;
 	}
 
 	*::-webkit-scrollbar-track,
 	*::-webkit-scrollbar-corner {
-		background: #f8fafc;
+		background: var(--color-surface-gray-1);
 	}
 
 	*::-webkit-scrollbar {
@@ -62,4 +63,12 @@ body {
 
 .lucide {
 	stroke-width: 1.5;
+}
+
+.shadow {
+	@apply dark:border;
+}
+
+.dialog-content {
+	@apply dark:text-ink-gray-8;
 }

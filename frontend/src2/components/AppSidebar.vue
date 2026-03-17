@@ -20,7 +20,7 @@
 			</div>
 		</div>
 		<div>
-				<DemoDataBanner v-if="!isSidebarCollapsed" class="m-2 p-2" />
+			<DemoDataBanner v-if="!isSidebarCollapsed" class="m-2 p-2" />
 			<TrialBanner v-if="is_fc_site" :is-sidebar-collapsed="isSidebarCollapsed" />
 			<SidebarLink
 				:label="isSidebarCollapsed ? __('Expand') : __('Collapse')"
@@ -31,7 +31,7 @@
 				<template #icon>
 					<span class="grid h-5 w-6 flex-shrink-0 place-items-center">
 						<PanelRightOpen
-							class="h-4.5 w-4.5 text-gray-700 duration-300 ease-in-out"
+							class="h-4.5 w-4.5 text-ink-gray-6 duration-300 ease-in-out"
 							:class="{ '[transform:rotateY(180deg)]': isSidebarCollapsed }"
 							stroke-width="1.5"
 						/>

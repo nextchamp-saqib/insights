@@ -10,7 +10,7 @@ const workbook = inject(workbookKey)!
 </script>
 
 <template>
-	<div class="flex h-11 w-full flex-shrink-0 items-center gap-3 bg-white px-3 shadow-sm">
+	<div class="flex h-11 w-full flex-shrink-0 items-center gap-3 bg-surface-white px-3 shadow-sm">
 		<div class="relative flex flex-1 items-center">
 			<div class="absolute left-0">
 				<slot name="left">
@@ -31,7 +31,7 @@ const workbook = inject(workbookKey)!
 						/>
 					</Tooltip>
 					<ContentEditable
-						class="rounded-sm font-medium !text-gray-800 focus:ring-2 focus:ring-gray-700 focus:ring-offset-4"
+						class="rounded-sm font-medium !text-ink-gray-8 focus:ring-2 focus:ring-gray-700 focus:ring-offset-4"
 						:modelValue="workbook.doc.title"
 						placeholder="Untitled Workbook"
 						@returned="workbook.doc.title = $event"

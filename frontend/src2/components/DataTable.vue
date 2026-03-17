@@ -245,12 +245,12 @@ page.startIndex = computed(() => (page.current - 1) * page.size)
 page.endIndex = computed(() => Math.min(page.current * page.size, visibleRows.value?.length || 0))
 
 const colorByPercentage = {
-	0: 'bg-white text-gray-900',
-	10: 'bg-blue-100 text-blue-900',
+	0: 'bg-surface-white text-ink-gray-9',
+	10: 'bg-surface-blue-1 text-blue-900',
 	30: 'bg-blue-200 text-blue-900',
 	60: 'bg-blue-300 text-blue-900',
 	90: 'bg-blue-400 text-blue-900',
-	100: 'bg-blue-500 text-white',
+	100: 'bg-blue-500 text-ink-white',
 }
 
 const colorByValues = computed(() => {
@@ -331,9 +331,9 @@ function getColorClass(colorName: string): string {
 
 	switch (colorName.toLowerCase()) {
 		case 'red':
-			return 'bg-[#d87373] text-white'
+			return 'bg-[#d87373] text-ink-white'
 		case 'green':
-			return 'bg-[#6DB678] text-white'
+			return 'bg-[#6DB678] text-ink-white'
 		case 'amber':
 			return 'bg-[#F8D16E] text-black'
 		default:
@@ -506,7 +506,7 @@ function getColorScaleClassFromFormat(colName: string, val: any, format: Formatt
 		}
 	}
 	const thresholdKey = String(selectedThreshold)
-	const bgClass = colorScale[thresholdKey]?.trim() || 'bg-gray-300'
+	const bgClass = colorScale[thresholdKey]?.trim() || 'bg-surface-gray-4'
 	return `${bgClass}`
 }
 
@@ -566,10 +566,10 @@ function toggleNewColumn() {
 	>
 		<div class="w-full flex-1 overflow-y-auto">
 			<table class="relative h-full w-full border-separate border-spacing-0">
-				<thead ref="$header" class="sticky top-0 z-10 bg-gray-50">
+				<thead ref="$header" class="sticky top-0 z-10 bg-surface-gray-1">
 					<tr v-for="headerRow in headers">
 						<td
-							class="sticky left-0 h-8 whitespace-nowrap border-b border-r bg-gray-50 px-3"
+							class="sticky left-0 h-8 whitespace-nowrap border-b border-r bg-surface-gray-1 px-3"
 							data-column-name="__index"
 							width="1px"
 						></td>
@@ -581,7 +581,9 @@ function toggleNewColumn() {
 								header.isLast && isNumberColumn(header.column.name)
 									? 'text-right'
 									: 'text-left',
-								isStickyColumn(header.column.name) ? 'sticky bg-gray-50' : '',
+								isStickyColumn(header.column.name)
+									? 'sticky bg-surface-gray-1'
+									: '',
 							]"
 							:style="{
 								...getStickyColumnStyle(header.column.name),
@@ -628,7 +630,7 @@ function toggleNewColumn() {
 								@click="toggleNewColumn"
 							>
 								<template #icon>
-									<Plus class="size-4 text-gray-700" :stroke-width="1.5" />
+									<Plus class="size-4 text-ink-gray-6" :stroke-width="1.5" />
 								</template>
 							</Button>
 							<slot
@@ -649,14 +651,14 @@ function toggleNewColumn() {
 
 					<tr v-if="props.showFilterRow">
 						<td
-							class="sticky left-0 h-8 whitespace-nowrap border-b border-r bg-gray-50 px-3"
+							class="sticky left-0 h-8 whitespace-nowrap border-b border-r bg-surface-gray-1 px-3"
 							width="1px"
 						></td>
 						<td
 							v-for="(column, idx) in props.columns"
 							:key="idx"
 							class="h-8 border-b border-r p-1"
-							:class="isStickyColumn(column.name) ? 'sticky bg-gray-50' : ''"
+							:class="isStickyColumn(column.name) ? 'sticky bg-surface-gray-1' : ''"
 							:style="{
 								...getStickyColumnStyle(column.name),
 								...getColumnWidthStyle(column.name),
@@ -669,7 +671,7 @@ function toggleNewColumn() {
 								class="[&_input]:h-6 [&_input]:bg-gray-200/80"
 							>
 								<template #prefix>
-									<Search class="h-4 w-4 text-gray-500" stroke-width="1.5" />
+									<Search class="h-4 w-4 text-ink-gray-4" stroke-width="1.5" />
 								</template>
 							</FormControl>
 						</td>
@@ -688,7 +690,7 @@ function toggleNewColumn() {
 						:key="idx"
 					>
 						<td
-							class="tnum sticky left-0 h-8 whitespace-nowrap border-b border-r bg-white px-3 text-right text-xs"
+							class="tnum sticky left-0 h-8 whitespace-nowrap border-b border-r bg-surface-white px-3 text-right text-xs"
 							width="1px"
 							height="30px"
 						>
@@ -697,7 +699,7 @@ function toggleNewColumn() {
 
 						<td
 							v-for="col in props.columns"
-							class="h-8 border-b border-r px-3 text-gray-800 leading-5 py-1.5"
+							class="h-8 border-b border-r px-3 text-ink-gray-8 leading-5 py-1.5"
 							:class="[
 								getTextWrapClass(col.name),
 								isNumberColumn(col.name) ? 'tnum text-right' : 'text-left',
@@ -708,7 +710,7 @@ function toggleNewColumn() {
 									? 'cursor-pointer'
 									: '',
 								getCellStyleClass(col.name, row[col.name]),
-								isStickyColumn(col.name) ? 'sticky bg-white' : '',
+								isStickyColumn(col.name) ? 'sticky bg-surface-white' : '',
 							]"
 							:style="{
 								...getStickyColumnStyle(col.name),
@@ -743,15 +745,15 @@ function toggleNewColumn() {
 
 					<tr
 						v-if="props.showColumnTotals && totalPerColumn"
-						class="sticky bottom-0 border-b bg-white"
+						class="sticky bottom-0 border-b bg-surface-white"
 					>
 						<td class="h-8 whitespace-nowrap border-r border-t px-3"></td>
 						<td
 							v-for="col in props.columns"
-							class="h-8 truncate border-r border-t px-3 font-bold text-gray-800"
+							class="h-8 truncate border-r border-t px-3 font-bold text-ink-gray-8"
 							:class="[
 								isNumberColumn(col.name) ? 'tnum text-right' : 'text-left',
-								isStickyColumn(col.name) ? 'sticky bg-white' : '',
+								isStickyColumn(col.name) ? 'sticky bg-surface-white' : '',
 							]"
 							:style="{
 								...getStickyColumnStyle(col.name),
@@ -788,7 +790,7 @@ function toggleNewColumn() {
 							v-if="props.enablePagination && visibleRows?.length && page.total > 1"
 							class="flex flex-shrink-0 items-center justify-end gap-2"
 						>
-							<p class="tnum text-sm text-gray-600">
+							<p class="tnum text-sm text-ink-gray-5">
 								{{ page.startIndex + 1 }} - {{ page.endIndex }} of
 								{{ visibleRows.length }}
 							</p>
@@ -799,7 +801,10 @@ function toggleNewColumn() {
 									@click="page.prev"
 									:disabled="page.current === 1"
 								>
-									<ChevronLeft class="h-4 w-4 text-gray-700" stroke-width="1.5" />
+									<ChevronLeft
+										class="h-4 w-4 text-ink-gray-6"
+										stroke-width="1.5"
+									/>
 								</Button>
 								<Button
 									variant="ghost"
@@ -807,7 +812,7 @@ function toggleNewColumn() {
 									:disabled="page.current === page.total"
 								>
 									<ChevronRight
-										class="h-4 w-4 text-gray-700"
+										class="h-4 w-4 text-ink-gray-6"
 										stroke-width="1.5"
 									/>
 								</Button>
@@ -822,8 +827,8 @@ function toggleNewColumn() {
 
 	<div v-else class="flex h-full w-full items-center justify-center">
 		<div class="flex flex-col items-center gap-2">
-			<Table2Icon class="h-16 w-16 text-gray-300" stroke-width="1.5" />
-			<p class="text-center text-gray-500">No data to display.</p>
+			<Table2Icon class="h-16 w-16 text-ink-gray-2" stroke-width="1.5" />
+			<p class="text-center text-ink-gray-4">No data to display.</p>
 		</div>
 	</div>
 
@@ -831,6 +836,6 @@ function toggleNewColumn() {
 		v-if="props.loading"
 		class="absolute top-10 flex h-[calc(100%-2rem)] w-full items-center justify-center rounded bg-white/30 backdrop-blur-sm"
 	>
-		<LoadingIndicator class="h-8 w-8 text-gray-700" />
+		<LoadingIndicator class="h-8 w-8 text-ink-gray-6" />
 	</div>
 </template>

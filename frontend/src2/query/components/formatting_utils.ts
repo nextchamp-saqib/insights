@@ -97,7 +97,7 @@ export type FormattingMode = color_scale | cell_rules | text_rules | date_rules 
 
 // color scale options Red-Amber-Green and Green-Amber-Red
 export const ragByPercentage = {
-    10: "bg-[#d87373] text-white",
+    10: "bg-[#d87373] text-ink-white",
     20: "bg-[#e29696] text-black",
     30: "bg-[#ebb9b9] text-black",
     40: "bg-[#EFC5C5] text-black",
@@ -106,11 +106,11 @@ export const ragByPercentage = {
     70: "bg-[#CEE7D3] text-black",
     80: "bg-[#c5e2c9] text-black",
     90: "bg-[#a7d3ae] text-black",
-    100: "bg-[#8ac593] text-white",
+    100: "bg-[#8ac593] text-ink-white",
 };
 
 export const garByPercentage = {
-    10: "bg-[#8AC593] text-white",
+    10: "bg-[#8AC593] text-ink-white",
     20: "bg-[#A7D3AE] text-black",
     30: "bg-[#C5E2C9] text-black",
     40: "bg-[#CEE7D3] text-black",
@@ -119,7 +119,7 @@ export const garByPercentage = {
     70: "bg-[#EFC5C5] text-black",
     80: "bg-[#EBB9B9] text-black",
     90: "bg-[#E29696] text-black",
-    100: "bg-[#D87373] text-white",
+    100: "bg-[#D87373] text-ink-white",
 };
 
 // helper functions for date comparison

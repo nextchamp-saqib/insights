@@ -17,7 +17,7 @@ const moreActions = computed(() => {
 	if (!query.doc.use_live_connection && session.user.is_admin) {
 		actions.push({
 			label: __('Refresh Stored Tables'),
-			icon: h(RefreshCw, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+			icon: h(RefreshCw, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 			onClick: query.refreshStoredTables,
 		})
 	}
@@ -25,17 +25,17 @@ const moreActions = computed(() => {
 	actions.push(
 		{
 			label: __('View SQL'),
-			icon: h(Scroll, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+			icon: h(Scroll, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 			onClick: () => (showViewSQLDialog.value = true),
 		},
 		{
 			label: __('Duplicate Query'),
-			icon: h(CopyPlus, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+			icon: h(CopyPlus, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 			onClick: () => query.duplicate(),
 		},
 		{
 			label: __('Copy Query'),
-			icon: h(Copy, { class: 'h-3 w-3 text-gray-700', strokeWidth: 1.5 }),
+			icon: h(Copy, { class: 'h-3 w-3 text-ink-gray-6', strokeWidth: 1.5 }),
 			onClick: () => query.copy(),
 		},
 	)
@@ -45,11 +45,11 @@ const moreActions = computed(() => {
 </script>
 
 <template>
-	<div class="flex w-full flex-shrink-0 items-center justify-between bg-white">
+	<div class="flex w-full flex-shrink-0 items-center justify-between bg-surface-white">
 		<div>
 			<div
 				v-show="query.result.executedSQL"
-				class="tnum flex items-center gap-2 text-sm text-gray-600"
+				class="tnum flex items-center gap-2 text-sm text-ink-gray-5"
 			>
 				<div class="h-2 w-2 rounded-full bg-green-500"></div>
 				<div class="flex items-center gap-1">
@@ -68,16 +68,16 @@ const moreActions = computed(() => {
 				variant="ghost"
 				:label="__('Execute')"
 				@click="() => query.execute(true)"
-				class="!h-6 !gap-1.5 bg-white !px-2 text-xs shadow"
+				class="!h-6 !gap-1.5 bg-surface-white !px-2 text-xs shadow"
 			>
 				<template #prefix>
-					<PlayIcon class="h-3 w-3 text-gray-700" stroke-width="1.5" />
+					<PlayIcon class="h-3 w-3 text-ink-gray-6" stroke-width="1.5" />
 				</template>
 			</Button>
 			<Dropdown placement="right" :options="moreActions">
-				<Button variant="ghost" class="!h-6 !gap-1.5 bg-white !px-2 text-xs shadow">
+				<Button variant="ghost" class="!h-6 !gap-1.5 bg-surface-white !px-2 text-xs shadow">
 					<template #icon>
-						<MoreHorizontal class="h-3 w-3 text-gray-700" stroke-width="1.5" />
+						<MoreHorizontal class="h-3 w-3 text-ink-gray-6" stroke-width="1.5" />
 					</template>
 				</Button>
 			</Dropdown>

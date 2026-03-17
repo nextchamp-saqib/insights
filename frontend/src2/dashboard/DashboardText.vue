@@ -12,7 +12,7 @@ const editedText = ref(unref(props.item.text))
 </script>
 
 <template>
-	<div class="prose w-full text-gray-700 h-full flex items-center">
+	<div class="prose w-full text-ink-gray-6 h-full flex items-center">
 		<div v-html="props.item.text"></div>
 	</div>
 
@@ -42,16 +42,16 @@ const editedText = ref(unref(props.item.text))
 	>
 		<template #body-content>
 			<div class="space-y-2">
-				<span class="block text-sm leading-4 text-gray-700">{{ __('Content') }}</span>
+				<span class="block text-sm leading-4 text-ink-gray-6">{{ __('Content') }}</span>
 				<TextEditor
 					ref="textEditor"
 					:editable="true"
 					:content="editedText"
-					editor-class="min-h-[8rem] h-auto prose-sm cursor-text bg-gray-100 rounded p-2"
+					editor-class="min-h-[8rem] h-auto prose-sm cursor-text bg-surface-gray-2 rounded p-2"
 					@change="editedText = $event"
 					:placeholder="__('Enter your text content here...')"
 				/>
-				<p class="text-xs text-gray-500">{{ __('Markdown supported') }}</p>
+				<p class="text-xs text-ink-gray-4">{{ __('Markdown supported') }}</p>
 			</div>
 		</template>
 	</Dialog>

@@ -5,11 +5,7 @@ import { computed, ref, watch } from 'vue'
 import DrillDown from '../../charts/components/DrillDown.vue'
 import DataTable from '../../components/DataTable.vue'
 import ExportDialog from '../../components/ExportDialog.vue'
-import {
-	QueryResultColumn,
-	QueryResultRow,
-	SortDirection,
-} from '../../types/query.types'
+import { QueryResultColumn, QueryResultRow, SortDirection } from '../../types/query.types'
 
 import { column } from '../helpers'
 import { Query } from '../query'
@@ -88,14 +84,14 @@ const currentAlertName = ref('')
 // Export dialog state
 const showExportDialog = ref(false)
 const exportDefaultName = computed(() => {
-    const now = new Date()
-    const ts = `${now.getDate()}_${now.getMonth()}_${now.getFullYear()}`
-    return `export_${ts}`
+	const now = new Date()
+	const ts = `${now.getDate()}_${now.getMonth()}_${now.getFullYear()}`
+	return `export_${ts}`
 })
 
 function openExport() {
-    if (!props.query?.exportResults) return
-    showExportDialog.value = true
+	if (!props.query?.exportResults) return
+	showExportDialog.value = true
 }
 
 // Auto-close dialog after export completes
@@ -105,11 +101,11 @@ watch(
 		if (prev && !downloading) {
 			showExportDialog.value = false
 		}
-	}
+	},
 )
 
 function onExport(format: 'csv' | 'excel', filename: string) {
-    props.query.exportResults(format, filename)
+	props.query.exportResults(format, filename)
 }
 </script>
 
@@ -119,8 +115,8 @@ function onExport(format: 'csv' | 'excel', filename: string) {
 		:columns="columns"
 		:rows="rows"
 		:enable-pagination="true"
-        :on-export="props.query.exportResults"
-        :downloading="props.query.downloading"
+		:on-export="props.query.exportResults"
+		:downloading="props.query.downloading"
 		:sort-order="sortOrder"
 		:on-sort-change="props.enableSort ? onSortChange : undefined"
 		:on-column-rename="props.enableColumnRename ? onRename : undefined"
@@ -135,17 +131,17 @@ function onExport(format: 'csv' | 'excel', filename: string) {
 			<slot name="header-suffix" :column="column" />
 		</template>
 		<template #footer-left>
-			<div class="tnum flex items-center gap-1 text-sm text-gray-600">
+			<div class="tnum flex items-center gap-1 text-sm text-ink-gray-5">
 				<span> Showing {{ previewRowCount.toLocaleString() }} of </span>
 				<span v-if="!totalRowCount" class="inline-block">
 					<Tooltip text="Load Count">
 						<RefreshCw
 							v-if="!props.query.fetchingCount"
-							class="h-3.5 w-3.5 cursor-pointer transition-all hover:text-gray-800"
+							class="h-3.5 w-3.5 cursor-pointer transition-all hover:text-ink-gray-8"
 							stroke-width="1.5"
 							@click="props.query.fetchResultCount"
 						/>
-						<LoadingIndicator v-else class="h-3.5 w-3.5 text-gray-600" />
+						<LoadingIndicator v-else class="h-3.5 w-3.5 text-ink-gray-5" />
 					</Tooltip>
 				</span>
 				<span v-else> {{ totalRowCount.toLocaleString() }} </span>
@@ -153,33 +149,29 @@ function onExport(format: 'csv' | 'excel', filename: string) {
 			</div>
 		</template>
 		<template #footer-right-actions>
-			<Button
-				v-if="enableAlerts"
-				variant="ghost"
-				@click="showAlertsDialog = true"
-			>
+			<Button v-if="enableAlerts" variant="ghost" @click="showAlertsDialog = true">
 				<template #icon>
-					<Bell class="h-4 w-4 text-gray-700" stroke-width="1.5" />
+					<Bell class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 				</template>
 			</Button>
-            <Button variant="ghost" @click="openExport">
-                <template #icon>
-                    <Download class="h-4 w-4 text-gray-700" stroke-width="1.5" />
-                </template>
-            </Button>
+			<Button variant="ghost" @click="openExport">
+				<template #icon>
+					<Download class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
+				</template>
+			</Button>
 		</template>
 
 		<template v-if="props.enableNewColumn" #new-column-editor="slotArgs">
 			<slot name="new-column-editor" v-bind="slotArgs" />
 		</template>
 	</DataTable>
-    <ExportDialog
-        v-model="showExportDialog"
-        :downloading="props.query.downloading"
-        :default-filename="exportDefaultName"
-        @export="onExport"
-        @cancel="props.query.cancelDownload"
-    />
+	<ExportDialog
+		v-model="showExportDialog"
+		:downloading="props.query.downloading"
+		:default-filename="exportDefaultName"
+		@export="onExport"
+		@cancel="props.query.cancelDownload"
+	/>
 
 	<DrillDown
 		v-if="drillDownQuery"

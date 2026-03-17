@@ -26,28 +26,32 @@ watchDebounced(
 			.then((values: string[]) => (distinctColumnValues.value = values))
 			.finally(() => (fetchingValues.value = false))
 	},
-	{ debounce: 300, immediate: true }
+	{ debounce: 300, immediate: true },
 )
 
 const sortedValues = computed(() => {
-  const values = [...distinctColumnValues.value];
-  const order = sortOrder.value === 'asc' ? 1 : -1;
-  
-  return values.sort((a, b) => {
-    const stringA = String(a);
-    const stringB = String(b);
-    
-    // try numeric comparison first
-    const numA = Number(stringA);
-    const numB = Number(stringB);
-    
-    if (!isNaN(numA) && !isNaN(numB) && stringA.trim() && stringB.trim()) {
-      return (numA - numB) * order;
-    }
-    
-    return stringA.toLowerCase().localeCompare(stringB.toLowerCase(), undefined, { numeric: true }) * order;
-  });
-});
+	const values = [...distinctColumnValues.value]
+	const order = sortOrder.value === 'asc' ? 1 : -1
+
+	return values.sort((a, b) => {
+		const stringA = String(a)
+		const stringB = String(b)
+
+		// try numeric comparison first
+		const numA = Number(stringA)
+		const numB = Number(stringB)
+
+		if (!isNaN(numA) && !isNaN(numB) && stringA.trim() && stringB.trim()) {
+			return (numA - numB) * order
+		}
+
+		return (
+			stringA
+				.toLowerCase()
+				.localeCompare(stringB.toLowerCase(), undefined, { numeric: true }) * order
+		)
+	})
+})
 
 function toggleValue(value: string) {
 	if (selectedValues.value.includes(value)) {
@@ -72,15 +76,15 @@ function toggleSort() {
 				class="flex-1"
 			>
 				<template #prefix>
-					<SearchIcon class="h-4 w-4 text-gray-400" />
+					<SearchIcon class="h-4 w-4 text-ink-gray-3" />
 				</template>
 				<template #suffix>
-					<LoadingIndicator v-if="fetchingValues" class="h-4 w-4 text-gray-600" />
+					<LoadingIndicator v-if="fetchingValues" class="h-4 w-4 text-ink-gray-5" />
 				</template>
 			</FormControl>
 			<button
 				@click.stop="toggleSort"
-				class="flex h-7 w-7 items-center justify-center rounded border border-gray-300 bg-white hover:bg-gray-50"
+				class="flex h-7 w-7 items-center justify-center rounded border border-outline-gray-2 bg-surface-white hover:bg-surface-gray-1"
 				:title="sortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'"
 			>
 				<component :is="sortOrder === 'asc' ? ArrowDownAZ : ArrowUpAZ" class="h-4 w-4" />
@@ -90,12 +94,12 @@ function toggleSort() {
 			<div
 				v-for="(value, idx) in sortedValues.slice(0, 50)"
 				:key="value || idx"
-				class="flex cursor-pointer items-center justify-between gap-2 rounded px-1 py-1.5 text-base hover:bg-gray-100"
+				class="flex cursor-pointer items-center justify-between gap-2 rounded px-1 py-1.5 text-base hover:bg-surface-gray-2"
 				@click.prevent.stop="toggleValue(value)"
 			>
 				<component
 					:is="selectedValues.includes(value) ? CheckSquare : Square"
-					class="h-4 w-4 text-gray-600"
+					class="h-4 w-4 text-ink-gray-5"
 				/>
 				<span class="flex-1 truncate"> {{ value }} </span>
 			</div>

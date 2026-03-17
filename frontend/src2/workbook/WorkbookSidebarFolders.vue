@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, Plus, X , Folder, PenLine } from 'lucide-vue-next'
+import { ChevronDown, ChevronRight, Plus, X, Folder, PenLine } from 'lucide-vue-next'
 import { computed, inject, ref } from 'vue'
 import type { WorkbookChart, WorkbookFolder, WorkbookQuery } from '../types/workbook.types'
 import { workbookKey } from './workbook'
@@ -75,7 +75,9 @@ function startRenameFolder(folder: WorkbookFolder, event: Event) {
 	editingFolderTitle.value = folder.title
 	// Focus input on next tick
 	setTimeout(() => {
-		const input = document.querySelector(`input[data-folder="${folder.name}"]`) as HTMLInputElement
+		const input = document.querySelector(
+			`input[data-folder="${folder.name}"]`,
+		) as HTMLInputElement
 		if (input) {
 			input.focus()
 			input.select()
@@ -149,19 +151,17 @@ function onDropOnItem(event: DragEvent, targetItem: any, targetFolder?: string) 
 		return
 	}
 
-	const targetContext = targetFolder
-		? folderItems.value[targetFolder] || []
-		: rootItems.value
+	const targetContext = targetFolder ? folderItems.value[targetFolder] || [] : rootItems.value
 
 	const draggedItemName = draggedItem.value.item.name
 	const targetIdx = targetContext.findIndex((i) => i.name === targetItem.name)
 
 	// remove dragged item from context(if it exists)
-	const contextWithoutDragged = targetContext.filter(i => i.name !== draggedItemName)
+	const contextWithoutDragged = targetContext.filter((i) => i.name !== draggedItemName)
 	let insertIdx = targetIdx
 
 	// adjust insert index if the dragged item was before the target
-	const draggedIdx = targetContext.findIndex(i => i.name === draggedItemName)
+	const draggedIdx = targetContext.findIndex((i) => i.name === draggedItemName)
 	if (draggedIdx !== -1 && draggedIdx < targetIdx) {
 		insertIdx--
 	}
@@ -176,7 +176,7 @@ function onDropOnItem(event: DragEvent, targetItem: any, targetFolder?: string) 
 		type: section.type,
 		name: item.name,
 		sort_order: index,
-		folder: targetFolder || null
+		folder: targetFolder || null,
 	}))
 
 	workbook.updateSortOrder(updates).then(() => {
@@ -223,19 +223,21 @@ function onDropFolder(event: DragEvent, targetFolder: WorkbookFolder) {
 	let newSortOrder = 0
 	if (itemsInFolder.length > 0) {
 		const lastItem = itemsInFolder[itemsInFolder.length - 1]
-			newSortOrder = lastItem.sort_order + 1
+		newSortOrder = lastItem.sort_order + 1
 	}
 
-	const updates = [{
-		type: section.type,
-		name: draggedItem.value.item.name,
-		sort_order: newSortOrder,
-		folder: targetFolderId
-	}]
+	const updates = [
+		{
+			type: section.type,
+			name: draggedItem.value.item.name,
+			sort_order: newSortOrder,
+			folder: targetFolderId,
+		},
+	]
 
 	workbook.updateSortOrder(updates).then(() => {
 		workbook.load()
-		})
+	})
 }
 
 function allowDrop(event: DragEvent) {
@@ -255,40 +257,33 @@ function allowDrop(event: DragEvent) {
 					variant="ghost"
 					@click="workbook.addFolder(`Untitled`, section.type)"
 				>
-				<Folder class="h-4 w-4 text-gray-600" stroke-width="1.5" />
+					<Folder class="h-4 w-4 text-ink-gray-5" stroke-width="1.5" />
 				</Button>
-				<Button 
-					class="!h-fit !p-1" 
-					variant="ghost" 
-					@click="section.add()">
-				<Plus class="h-4 w-4 text-gray-600" stroke-width="1.5" />
+				<Button class="!h-fit !p-1" variant="ghost" @click="section.add()">
+					<Plus class="h-4 w-4 text-ink-gray-5" stroke-width="1.5" />
 				</Button>
 			</div>
 		</div>
 
 		<div
 			v-if="!section.items.length && !folders.length"
-			class="flex h-12 flex-col items-center justify-center rounded border border-dashed border-gray-300 py-2"
+			class="flex h-12 flex-col items-center justify-center rounded border border-dashed border-outline-gray-2 py-2"
 		>
-			<div class="text-xs text-gray-500">{{ section.emptyMessage }}</div>
+			<div class="text-xs text-ink-gray-4">{{ section.emptyMessage }}</div>
 		</div>
 
 		<div v-else class="flex flex-col border-b pb-3">
-			<div
-				v-for="row in rootItems"
-				:key="row.name"
-				class="relative"
-			>
+			<div v-for="row in rootItems" :key="row.name" class="relative">
 				<div
 					v-if="dragOverItem === row.name && dragPosition === 'before'"
 					class="absolute -top-0.5 left-0 right-0 h-0.5 bg-blue-500 transition-all"
 				/>
 
 				<div
-					class="group w-full cursor-pointer rounded transition-all hover:bg-gray-100 drag-item"
+					class="group w-full cursor-pointer rounded transition-all hover:bg-surface-gray-2 drag-item"
 					:class="[
-						section.isActive(row) ? ' bg-gray-100' : '',
-						dragOverItem === row.name ? 'bg-blue-50' : ''
+						section.isActive(row) ? ' bg-surface-gray-2' : '',
+						dragOverItem === row.name ? 'bg-surface-blue-1' : '',
 					]"
 					draggable="true"
 					@dragstart="setDraggedItem($event, row)"
@@ -308,10 +303,10 @@ function allowDrop(event: DragEvent) {
 							<p class="truncate">{{ row.title }}</p>
 						</div>
 						<button
-							class="invisible cursor-pointer rounded px-1.5 py-1 transition-all hover:bg-gray-100 group-hover:visible"
+							class="invisible cursor-pointer rounded px-1.5 py-1 transition-all hover:bg-surface-gray-2 group-hover:visible"
 							@click.prevent.stop="section.remove(row)"
 						>
-							<X class="h-4 w-4 text-gray-700" stroke-width="1.5" />
+							<X class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 						</button>
 					</router-link>
 				</div>
@@ -327,12 +322,14 @@ function allowDrop(event: DragEvent) {
 				:key="folder.name"
 				class="mt-1 rounded transition-all"
 				:class="{
-					'bg-blue-50 ring-1 ring-blue-400': dragOverFolder === folder.name
+					'bg-surface-blue-1 ring-1 ring-blue-400': dragOverFolder === folder.name,
 				}"
 			>
 				<div
-					:class="['group flex h-7.5 cursor-pointer items-center justify-between rounded px-1.5 mb-0.5 transition-all hover:bg-gray-100', 
-					editingFolderName === folder.name ? 'ring-1 ring-gray-400' : '']"
+					:class="[
+						'group flex h-7.5 cursor-pointer items-center justify-between rounded px-1.5 mb-0.5 transition-all hover:bg-surface-gray-2',
+						editingFolderName === folder.name ? 'ring-1 ring-gray-400' : '',
+					]"
 					@click="editingFolderName !== folder.name && toggleFolder(folder)"
 					@dragenter="onDragEnterFolder($event, folder)"
 					@dragleave="onDragLeaveFolder"
@@ -341,20 +338,24 @@ function allowDrop(event: DragEvent) {
 				>
 					<div class="flex items-center gap-1.5 overflow-hidden">
 						<ChevronRight
-							v-if="!isFolderExpanded(folder.name) && editingFolderName !== folder.name"
-							class="h-4 w-4 flex-shrink-0 text-gray-600"
+							v-if="
+								!isFolderExpanded(folder.name) && editingFolderName !== folder.name
+							"
+							class="h-4 w-4 flex-shrink-0 text-ink-gray-5"
 							stroke-width="1.5"
 						/>
 						<ChevronDown
-							v-else-if="isFolderExpanded(folder.name) && editingFolderName !== folder.name"
-							class="h-4 w-4 flex-shrink-0 text-gray-600"
+							v-else-if="
+								isFolderExpanded(folder.name) && editingFolderName !== folder.name
+							"
+							class="h-4 w-4 flex-shrink-0 text-ink-gray-5"
 							stroke-width="1.5"
 						/>
 						<input
 							v-if="editingFolderName === folder.name"
 							v-model="editingFolderTitle"
 							:data-folder="folder.name"
-							class="flex-1 truncate text-sm outline-none border-none bg-transparent w-full "
+							class="flex-1 truncate text-sm outline-none border-none bg-transparent w-full"
 							@click.stop
 							@blur="finishRenameFolder(folder)"
 							@keydown.enter="finishRenameFolder(folder)"
@@ -362,18 +363,21 @@ function allowDrop(event: DragEvent) {
 						/>
 						<p v-else class="flex-1 truncate text-sm">{{ folder.title }}</p>
 					</div>
-					<div v-if="editingFolderName !== folder.name" class="invisible flex gap-0.5 group-hover:visible">
+					<div
+						v-if="editingFolderName !== folder.name"
+						class="invisible flex gap-0.5 group-hover:visible"
+					>
 						<button
-							class="cursor-pointer rounded p-1 transition-all hover:bg-gray-200"
+							class="cursor-pointer rounded p-1 transition-all hover:bg-surface-gray-3"
 							@click.stop="startRenameFolder(folder, $event)"
 						>
-							<PenLine class="h-3.5 w-3.5 text-gray-700" stroke-width="1.5" />
+							<PenLine class="h-3.5 w-3.5 text-ink-gray-6" stroke-width="1.5" />
 						</button>
 						<button
-							class="cursor-pointer rounded p-1 transition-all hover:bg-gray-200"
+							class="cursor-pointer rounded p-1 transition-all hover:bg-surface-gray-3"
 							@click.stop="removeFolder(folder, $event)"
 						>
-							<X class="h-3.5 w-3.5 text-gray-700" stroke-width="1.5" />
+							<X class="h-3.5 w-3.5 text-ink-gray-6" stroke-width="1.5" />
 						</button>
 					</div>
 				</div>
@@ -386,21 +390,17 @@ function allowDrop(event: DragEvent) {
 					@drop="onDropFolder($event, folder)"
 					@dragover="allowDrop"
 				>
-					<div
-						v-for="row in folderItems[folder.name]"
-						:key="row.name"
-						class="relative"
-					>
+					<div v-for="row in folderItems[folder.name]" :key="row.name" class="relative">
 						<div
 							v-if="dragOverItem === row.name && dragPosition === 'before'"
 							class="absolute -top-0.5 left-0 right-0 h-0.5 bg-blue-500 transition-all"
 						/>
 
 						<div
-							class="group w-full cursor-pointer rounded transition-all hover:bg-gray-100 drag-item"
+							class="group w-full cursor-pointer rounded transition-all hover:bg-surface-gray-2 drag-item"
 							:class="[
-								section.isActive(row) ? ' bg-gray-100' : '',
-								dragOverItem === row.name ? 'bg-blue-50' : ''
+								section.isActive(row) ? ' bg-surface-gray-2' : '',
+								dragOverItem === row.name ? 'bg-surface-blue-1' : '',
 							]"
 							draggable="true"
 							@dragstart="setDraggedItem($event, row, folder.name)"
@@ -420,10 +420,10 @@ function allowDrop(event: DragEvent) {
 									<p class="truncate">{{ row.title }}</p>
 								</div>
 								<button
-									class="invisible cursor-pointer rounded px-1.5 py-1 transition-all hover:bg-gray-100 group-hover:visible"
+									class="invisible cursor-pointer rounded px-1.5 py-1 transition-all hover:bg-surface-gray-2 group-hover:visible"
 									@click.prevent.stop="section.remove(row)"
 								>
-									<X class="h-4 w-4 text-gray-700" stroke-width="1.5" />
+									<X class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 								</button>
 							</router-link>
 						</div>

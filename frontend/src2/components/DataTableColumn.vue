@@ -18,17 +18,17 @@ watchEffect(() => (_label.value = props.label))
 const sortOptions = [
 	{
 		label: __('Sort Ascending'),
-		icon: h(ArrowUpNarrowWide, { class: 'h-4 w-4 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(ArrowUpNarrowWide, { class: 'h-4 w-4 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.onSortChange?.('asc'),
 	},
 	{
 		label: __('Sort Descending'),
-		icon: h(ArrowDownWideNarrow, { class: 'h-4 w-4 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(ArrowDownWideNarrow, { class: 'h-4 w-4 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.onSortChange?.('desc'),
 	},
 	{
 		label: __('Remove Sort'),
-		icon: h(XIcon, { class: 'h-4 w-4 text-gray-700', strokeWidth: 1.5 }),
+		icon: h(XIcon, { class: 'h-4 w-4 text-ink-gray-6', strokeWidth: 1.5 }),
 		onClick: () => props.onSortChange?.(''),
 	},
 ]
@@ -56,7 +56,7 @@ const sortOptions = [
 								  ? ArrowUpNarrowWide
 								  : ArrowDownWideNarrow
 						"
-						class="h-3.5 w-3.5 text-gray-700"
+						class="h-3.5 w-3.5 text-ink-gray-6"
 						stroke-width="1.5"
 					/>
 				</template>
