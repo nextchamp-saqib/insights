@@ -143,10 +143,50 @@ class IbisQueryBuilder:
         return _table
 
     def get_column(self, column_name, throw=True):
+        # 1. Exact match
         if column_name in self.query.columns:
             return self.query[column_name]
+
+        # 2. Sanitized name match (handles capitalisation / special-char differences)
         if sanitize_name(column_name) in self.query.columns:
             return self.query[sanitize_name(column_name)]
+
+        # 3. Suffix match: handles the case where a stored column name was produced
+        #    in live-connection mode (e.g. "tabhd_ticket_priority_name") but the
+        #    query now runs against the warehouse, where rename_duplicate_columns
+        #    prepends the data-source schema prefix and produces a longer name
+        #    (e.g. "support_frappe_io_tabhd_ticket_priority_name").
+        #    We only match when exactly one column ends with "_{column_name}" so
+        #    that ambiguous / short suffixes are never silently resolved to the
+        #    wrong column.
+        suffix = f"_{column_name}"
+        suffix_matches = [col for col in self.query.columns if col.endswith(suffix)]
+        if len(suffix_matches) == 1:
+            return self.query[suffix_matches[0]]
+
+        # 4. Schema-prefix-strip match: handles the case where a stored column name
+        #    was produced in old warehouse mode (e.g. "frappe_cloud_tabinvoice_item_parent")
+        #    but the query now runs without the data-source schema prefix, producing
+        #    the shorter name "tabinvoice_item_parent" (new warehouse behaviour after
+        #    PR #953 + revert of get_ibis_table_name).
+        #    We scan all DatabaseTable nodes in the current ibis expression tree to
+        #    collect the schema names that are actually present in this query, then
+        #    try stripping each as a leading prefix before checking for a column match.
+        all_dt = self.query.op().find_topmost(DatabaseTable)
+        schemas = {
+            dt.namespace.database
+            for dt in all_dt
+            if dt.namespace and dt.namespace.database and dt.namespace.database != "main"
+        }
+        for schema in schemas:
+            prefix = f"{schema}_"
+            if column_name.startswith(prefix):
+                remainder = column_name[len(prefix) :]
+                if remainder in self.query.columns:
+                    return self.query[remainder]
+                if sanitize_name(remainder) in self.query.columns:
+                    return self.query[sanitize_name(remainder)]
+
         if throw:
             frappe.throw(f"Column {column_name} does not exist in the table")
 
@@ -215,8 +255,8 @@ class IbisQueryBuilder:
         def left_eq_right_condition(left_column, right_column):
             if left_column and right_column and left_column.column_name and right_column.column_name:
                 rt = right_table
-                lc = getattr(self.query, left_column.column_name)
-                rc = getattr(rt, right_column.column_name)
+                lc = self.get_column(left_column.column_name)
+                rc = rt[right_column.column_name]
                 return lc.cast(rc.type()) == rc
 
             frappe.throw("Join condition is not valid")
@@ -372,7 +412,8 @@ class IbisQueryBuilder:
 
     def apply_select(self, select_args):
         select_args = _dict(select_args)
-        return self.query.select(select_args.column_names)
+        resolved_names = [self.get_column(col).get_name() for col in select_args.column_names]
+        return self.query.select(resolved_names)
 
     def apply_rename(self, rename_args):
         old_name = self.get_column(rename_args.column.column_name).get_name()
@@ -434,10 +475,7 @@ class IbisQueryBuilder:
         return self.query.order_by(order_fn(order_by_column))
 
     def apply_limit(self, limit_args):
-        return self.query.limit(
-            int(limit_args.limit),
-            offset=int(limit_args.offset or 0),
-        )
+        return self.query
 
     def apply_pivot(self, pivot_args, pivot_type):
         rows = [self.translate_dimension(dimension) for dimension in pivot_args["rows"]]
@@ -637,7 +675,7 @@ class IbisQueryBuilder:
         return column.name(measure.measure_name)
 
     def translate_dimension(self, dimension):
-        col = getattr(self.query, dimension.column_name)
+        col = self.get_column(dimension.column_name)
         if self.is_date_type(dimension.data_type) and dimension.granularity:
             col = self.apply_granularity(col, dimension.granularity)
             col = col.cast(self.get_ibis_dtype(dimension.data_type))
@@ -705,13 +743,20 @@ class IbisQueryBuilder:
 
 def execute_ibis_query(
     query: IbisQuery,
-    limit=100,
+    page=1,
+    page_size=100,
     force=False,
     cache=True,
     cache_expiry=3600,
     reference_doctype=None,
     reference_name=None,
 ):
+    if hasattr(query, "limit") and page_size:
+        page_size = int(page_size or 100)
+        page_size = min(max(page_size, 1), 10_00_000)
+        offset = (page - 1) * page_size if page > 1 else 0
+        query = query.limit(page_size, offset=offset)
+
     try:
         sql = ibis.to_sql(query)
     except ibis.common.exceptions.OperationNotDefinedError:
@@ -725,11 +770,6 @@ def execute_ibis_query(
 
         if has_cached_results(cache_key) and not force:
             return get_cached_results(cache_key), -1
-
-    if hasattr(query, "limit") and limit:
-        limit = int(limit or 100)
-        limit = min(max(limit, 1), 10_00_000)
-        query = query.limit(limit)
 
     start = time.monotonic()
 
