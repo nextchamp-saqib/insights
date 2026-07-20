@@ -12,7 +12,7 @@ const editedText = ref(unref(props.item.text))
 </script>
 
 <template>
-	<div class="prose w-full text-gray-700 h-full flex items-center">
+	<div class="prose h-full w-full max-w-none overflow-auto text-gray-700">
 		<div v-html="props.item.text"></div>
 	</div>
 
