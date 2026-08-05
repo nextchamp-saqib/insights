@@ -41,9 +41,10 @@ class InsightsChartv3(Document):
         return d
 
     def validate(self):
-        from insights.permissions import check_chart_query_access
+        from insights.permissions import check_audience_widening, check_chart_query_access
 
         check_chart_query_access(self)
+        check_audience_widening(self)
 
     @frappe.whitelist()
     def update_access(self, is_public: bool):

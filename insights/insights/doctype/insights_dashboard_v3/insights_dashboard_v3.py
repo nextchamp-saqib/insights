@@ -72,9 +72,10 @@ class InsightsDashboardv3(Document):
             self.items = items
 
     def validate(self):
-        from insights.permissions import check_dashboard_chart_access
+        from insights.permissions import check_audience_widening, check_dashboard_chart_access
 
         check_dashboard_chart_access(self)
+        check_audience_widening(self)
 
     @frappe.whitelist()
     def track_view(self):
