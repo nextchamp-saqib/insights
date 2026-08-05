@@ -7,10 +7,12 @@ from contextlib import contextmanager
 import frappe
 import requests
 from frappe.model.document import Document
+from frappe.model.naming import append_number_if_name_exists
 from frappe.query_builder import Interval
 from frappe.query_builder.functions import Now
 from frappe.utils.html_utils import sanitize_html
 from frappe.utils.telemetry import capture
+from frappe.website.utils import cleanup_page_name
 
 from insights.utils import DocShare, File, get_app_url
 
@@ -29,12 +31,15 @@ class InsightsDashboardv3(Document):
         )
 
         is_public: DF.Check
+        is_standard: DF.Check
         items: DF.JSON | None
         linked_charts: DF.TableMultiSelect[InsightsDashboardChartv3]
+        logical_id: DF.Data | None
         old_name: DF.Data | None
         permission_user: DF.Link | None
         preview_image: DF.Data | None
         share_link: DF.Data | None
+        slug: DF.Data | None
         title: DF.Data | None
         vertical_compact_layout: DF.Check
         workbook: DF.Link
@@ -117,7 +122,27 @@ class InsightsDashboardv3(Document):
         )
 
     def before_save(self):
+        self.set_slug()
         self.enqueue_update_dashboard_preview()
+
+    def set_slug(self):
+        """Give every dashboard a readable key for external links.
+
+        The slug is derived from the title only when it is empty, so renaming a
+        dashboard leaves an already-published link working. Clearing the slug
+        asks for a fresh one. It stays unique with a numbered suffix — nothing
+        internal points at a slug, so a suffix costs a bookmark at worst.
+        """
+        slug = cleanup_page_name(self.slug or self.title)
+        if not slug:
+            return
+
+        self.slug = append_number_if_name_exists(
+            self.doctype,
+            slug,
+            fieldname="slug",
+            filters={"name": ("!=", self.name or "")},
+        )
 
     def set_linked_charts(self):
         self.set(
