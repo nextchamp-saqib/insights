@@ -18,3 +18,4 @@ insights.patches.strip_default_schema_from_table_names
 insights.patches.hash_invitation_keys
 insights.patches.backfill_permission_user
 insights.patches.set_visibility_from_is_public
+insights.patches.retire_workbook_template_updates
