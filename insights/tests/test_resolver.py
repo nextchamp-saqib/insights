@@ -130,8 +130,12 @@ class TestInsightsResolver(InsightsIntegrationTestCase):
         # the copy keeps its own identity
         self.assertEqual(resolve(DASHBOARD, copy.name), copy.name)
 
-        # with the standard document gone, the id resolves to nothing at all
-        frappe.delete_doc(DT.DASHBOARD, shipped.name, force=True, ignore_permissions=True)
+        # with the standard document gone, the id resolves to nothing at all.
+        # Shipped content is read-only on a site, so it leaves the way the app
+        # removes it — `force` and `ignore_permissions` do not reach `on_trash`
+        gone = frappe.get_doc(DT.DASHBOARD, shipped.name)
+        gone.flags.in_bundle_sync = True
+        gone.delete(ignore_permissions=True, force=True)
         self.assertIsNone(resolve(DASHBOARD, SHIPPED_ID))
 
     def test_slug_is_generated_from_the_title(self):
