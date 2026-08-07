@@ -137,6 +137,7 @@ class TestLinkRequiresReadAccess(InsightsIntegrationTestCase):
         self.assertEqual(frappe.db.get_value(DT.CHART, self.owner_chart, "visibility"), "Public")
 
     def test_publishing_your_own_dashboard_still_works(self):
+        """The chart is readable, so the check the rules above make does not fire."""
         with self.as_user(OWNER):
             dashboard = frappe.get_doc(
                 {
@@ -147,7 +148,8 @@ class TestLinkRequiresReadAccess(InsightsIntegrationTestCase):
                 }
             ).insert()
             self.assertEqual([row.chart for row in dashboard.linked_charts], [self.owner_chart])
-            dashboard.update_access(
-                {"is_public": 1, "is_shared_with_organization": 0, "people_with_access": []}
-            )
-            self.assertTrue(frappe.db.get_value(DT.DASHBOARD, dashboard.name, "is_public"))
+
+            dashboard.visibility = "Public"
+            dashboard.save()
+
+        self.assertEqual(frappe.db.get_value(DT.DASHBOARD, dashboard.name, "visibility"), "Public")

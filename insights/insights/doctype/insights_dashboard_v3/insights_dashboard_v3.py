@@ -1,7 +1,6 @@
 # Copyright (c) 2025, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import re
 from contextlib import contextmanager
 
 import frappe
@@ -14,6 +13,7 @@ from frappe.utils.html_utils import sanitize_html
 from frappe.utils.telemetry import capture
 from frappe.website.utils import cleanup_page_name
 
+from insights.bundles import LINK_COLUMN
 from insights.utils import DocShare, File, get_app_url
 
 
@@ -151,41 +151,66 @@ class InsightsDashboardv3(Document):
             [{"chart": item["chart"]} for item in frappe.parse_json(self.items) if item["type"] == "chart"],
         )
 
+    def filter_source(self, filter_name: str) -> tuple[str, str, str] | None:
+        """The chart, query and column a named filter on this dashboard reads.
+
+        The saved items, deliberately. This is what decides which column a
+        caller may ask for at all, so it answers from the document rather than
+        from the request it is guarding — and a caller that names the filter
+        never has to be handed the link that says where it lands.
+        """
+        items = frappe.parse_json(self.items) or []
+        charts = {item.get("chart") for item in items if item.get("type") == "chart"}
+
+        for item in items:
+            if item.get("type") != "filter" or item.get("filter_name") != filter_name:
+                continue
+            for chart, link in (item.get("links") or {}).items():
+                match = LINK_COLUMN.match(link or "")
+                if match and chart in charts:
+                    return chart, *match.groups()
+
+        return None
+
     @frappe.whitelist()
     def get_distinct_column_values(
-        self, query: str, column_name: str, search_term: str | None = None, adhoc_filters: dict | None = None
+        self,
+        filter_name: str,
+        search_term: str | None = None,
+        filter_context: dict | None = None,
     ):
-        from insights.permissions import check_referenced_query_access
+        """The values one of this dashboard's filters offers.
 
-        is_guest = frappe.session.user == "Guest"
-        if is_guest and not self.is_public:
-            raise frappe.PermissionError
+        Who may read this dashboard was settled before this ran — the builder
+        reaches it through `run_doc_method`, a viewer through
+        `insights.api.viewer.get_filter_values`, and both check the read first.
 
-        if not self.is_filter_column(query, column_name):
+        `filter_context` is what the rest of the grid currently holds, unrouted:
+        the `items`, the `chart` they link by, and the `filters` state. Routing
+        happens here for the same reason it does everywhere else. This filter is
+        left out of its own list, or picking a second value would be impossible.
+        """
+        source = self.filter_source(filter_name)
+        if not source:
             frappe.throw(
-                frappe._("This column is not available as a filter on this dashboard"),
+                frappe._("This filter is not available on this dashboard"),
                 frappe.PermissionError,
             )
+        _chart, query, column_name = source
 
-        check_referenced_query_access(query)
+        adhoc_filters = None
+        if filter_context:
+            adhoc_filters = route_filters(
+                filter_context.get("items"),
+                filter_context.get("chart"),
+                filter_context.get("filters"),
+                filter_name,
+            )
 
         doc = frappe.get_cached_doc("Insights Query v3", query)
         return doc.get_distinct_column_values(
             column_name, search_term=search_term, adhoc_filters=adhoc_filters
         )
-
-    def is_filter_column(self, query, column_name):
-        # a filter links a column as "links": { '<chart>': "`<query>`.`<column>`" }
-        pattern = "^`([^`]+)`\\.`([^`]+)`$"
-        items = frappe.parse_json(self.items)
-        for item in items:
-            if item["type"] != "filter":
-                continue
-            for linked_column in item.get("links", {}).values():
-                match = re.match(pattern, linked_column)
-                if match and match.groups() == (query, column_name):
-                    return True
-        return False
 
     def enqueue_update_dashboard_preview(self):
         if self.is_new() or not self.get_doc_before_save() or frappe.flags.in_patch:
@@ -273,16 +298,15 @@ class InsightsDashboardv3(Document):
             frappe.throw("You do not have permission to share this dashboard")
 
         data = frappe.parse_json(data)
-        is_public = data.get("is_public")
         is_shared_with_organization = data.get("is_shared_with_organization")
         people_with_access = data.get("people_with_access") or []
 
-        # this writes is_public with db_set, so validate() never runs. Check
-        # before any share is applied, so a refusal leaves nothing half-done.
-        if is_public:
-            from insights.permissions import check_dashboard_chart_access
+        # this applies shares with db_set and ignore_permissions, so validate()
+        # never runs. Check before any share is applied, so a refusal leaves
+        # nothing half-done.
+        from insights.permissions import check_dashboard_chart_access
 
-            check_dashboard_chart_access(self)
+        check_dashboard_chart_access(self)
 
         existing_shares = frappe.get_all(
             "DocShare",
@@ -326,19 +350,63 @@ class InsightsDashboardv3(Document):
             for share in org_shares:
                 frappe.delete_doc("DocShare", share.name, ignore_permissions=True)
 
-        # a public execution has no caller of its own, so the rows it returns are
-        # filtered by whoever published the dashboard
-        self.db_set(
+        if people_with_access:
+            capture("dashboard_shared_with_user", "insights")
+        if self.visibility == "Public":
+            capture("dashboard_set_public", "insights")
+
+
+def route_filters(
+    items, chart: str, filter_states: dict | None, exclude_filter: str | None = None
+) -> dict | None:
+    """Dashboard filter state, routed to the queries the filters are linked to.
+
+    One router for both doors. A viewer names a saved dashboard and the read
+    path hands over its stored items. The builder is editing items it has not
+    saved yet, so it sends those instead. Routing is the same either way, and it
+    belongs on this side: a link names a query and a column, and that is exactly
+    what a viewer is never given.
+
+    `exclude_filter` leaves one filter out. A filter offering its own values
+    must not narrow them by what it currently holds, or picking a second value
+    would be impossible.
+    """
+    if not filter_states:
+        return None
+
+    filters_by_query = {}
+
+    for item in frappe.parse_json(items) or []:
+        if item.get("type") != "filter":
+            continue
+
+        filter_name = item.get("filter_name")
+        if exclude_filter and filter_name == exclude_filter:
+            continue
+
+        state = filter_states.get(filter_name) or {}
+        if not state.get("operator"):
+            continue
+
+        link = (item.get("links") or {}).get(chart)
+        match = LINK_COLUMN.match(link) if link else None
+        if not match:
+            continue
+
+        query, column = match.groups()
+        group = filters_by_query.setdefault(
+            query, {"type": "filter_group", "logical_operator": "And", "filters": []}
+        )
+        group["filters"].append(
             {
-                "is_public": is_public,
-                "permission_user": frappe.session.user if is_public else None,
+                "type": "filter",
+                "column": {"type": "column", "column_name": column},
+                "operator": state["operator"],
+                "value": state.get("value"),
             }
         )
 
-        if people_with_access:
-            capture("dashboard_shared_with_user", "insights")
-        if is_public:
-            capture("dashboard_set_public", "insights")
+    return filters_by_query or None
 
 
 def get_page_preview(url: str, headers: dict | None = None) -> bytes:
