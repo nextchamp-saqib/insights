@@ -11,7 +11,7 @@ from unittest.mock import patch
 import frappe
 from werkzeug.test import EnvironBuilder
 
-from insights.api.shared import is_public
+from insights.permissions import has_doc_permission
 from insights.tests.base import InsightsIntegrationTestCase
 from insights.tests.factories import (
     DT,
@@ -59,10 +59,11 @@ class TestDashboardPreview(InsightsIntegrationTestCase):
         frappe.local.request = EnvironBuilder(headers={"Host": ATTACKER_HOST}).get_request()
 
     def reads_with_key(self, key, doctype, name):
+        """What a guest carrying this key may read, through the controller itself."""
         request_was = frappe.local.request
         frappe.local.request = EnvironBuilder(headers={"X-Insights-Preview-Key": key}).get_request()
         try:
-            return bool(is_public(doctype, name))
+            return bool(has_doc_permission(frappe.get_doc(doctype, name), "read", "Guest"))
         finally:
             frappe.local.request = request_was
 
@@ -119,4 +120,5 @@ class TestDashboardPreview(InsightsIntegrationTestCase):
     def test_a_spent_key_opens_nothing(self):
         opened = self.render(self.dashboard)
         frappe.local.request = EnvironBuilder(headers={"X-Insights-Preview-Key": opened["key"]}).get_request()
-        self.assertFalse(is_public(DT.DASHBOARD, self.dashboard))
+        dashboard = frappe.get_doc(DT.DASHBOARD, self.dashboard)
+        self.assertFalse(has_doc_permission(dashboard, "read", "Guest"))

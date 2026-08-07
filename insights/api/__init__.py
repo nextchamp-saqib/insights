@@ -8,7 +8,6 @@ from frappe.handler import is_valid_http_method, is_whitelisted
 from frappe.monitor import add_data_to_monitor
 from frappe.utils import cint
 
-from insights.api.shared import get_public_permission_user, is_public
 from insights.decorators import insights_whitelist
 from insights.insights.doctype.insights_data_source_v3.ibis_utils import (
     get_columns_from_schema,
@@ -19,7 +18,6 @@ from insights.insights.doctype.insights_table_v3.insights_table_v3 import (
 from insights.insights.doctype.insights_team.insights_team import (
     check_data_source_permission,
 )
-from insights.permission_user import permission_user
 from insights.utils import get_owned_file
 
 
@@ -220,40 +218,17 @@ def _read_uploaded_table(db, file_path: str, ext: str):
         frappe.throw("Failed to read CSV data from uploaded file. Please try again.")
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep - falls back to is_public() only after the
-# framework has already refused the caller
+# The two generic doc endpoints the authoring surfaces are built on. Reading is
+# not their job: a viewer names content to `insights.api.viewer`, which decides
+# access through the visibility ladder. So these grant nothing a caller's own
+# permissions do not already carry, and no guest reaches them.
+
+
+@frappe.whitelist()
 def get_doc(doctype: str, name: str | int):
-    try:
-        from frappe.client import get as _get_doc
+    from frappe.client import get as _get_doc
 
-        return _get_doc(doctype, name)
-    except frappe.PermissionError:
-        if not is_public(doctype, name):
-            raise
-        doc = frappe.get_doc(doctype, name)
-        # the framework's own read path drops permlevel fields, and this branch
-        # goes around it. `permission_user` names a real person, so a public
-        # document must not carry it out to the internet.
-        doc.apply_fieldlevel_read_permissions()
-        return doc.as_dict()
-
-
-def _execute_doc_method(doc, method: str, args: dict | None = None, ignore_permissions=False):
-    args = frappe.parse_json(args)
-    method_obj = getattr(doc, method)
-    fn = getattr(method_obj, "__func__", method_obj)
-
-    if not ignore_permissions:
-        doc.check_permission("read")
-        is_whitelisted(fn)
-        is_valid_http_method(fn)
-
-    new_kwargs = frappe.get_newargs(fn, args or {})
-    response = doc.run_method(method, **new_kwargs)
-    frappe.response.docs.append(doc)
-    frappe.response["message"] = response
-    add_data_to_monitor(methodname=method)
-    return response
+    return _get_doc(doctype, name)
 
 
 def check_stored_document(doctype: str, name: str):
@@ -270,66 +245,31 @@ def check_stored_document(doctype: str, name: str):
         raise frappe.PermissionError("You don't have permission to access this document")
 
 
-@frappe.whitelist(allow_guest=True)  # nosemgrep - guests reach only public documents, and only
-# the methods and arguments PUBLIC_METHOD_ARGS names
+@frappe.whitelist()
 def run_doc_method(method: str, docs: dict | str, args: dict | None = None):
-    doc = frappe.parse_json(docs)
-    doctype = doc.get("doctype")
-    name = doc.get("name")
+    docs = frappe.parse_json(docs)
+    doctype, name = docs.get("doctype"), docs.get("name")
 
     # a name is one document's identity. A dict is a filter set to `frappe.db`,
     # so it is not a name.
     if not doctype or not name or not isinstance(name, str):
         raise frappe.ValidationError("Invalid document")
 
-    try:
-        check_stored_document(doctype, name)
-        docs = frappe.parse_json(docs)
-        doc = frappe.get_doc(docs)
-        return _execute_doc_method(doc, method, args)
+    check_stored_document(doctype, name)
 
-    except frappe.PermissionError:
-        if not is_public(doctype, name):
-            raise frappe.PermissionError("You don't have permission to access this document")
-        if not is_public_method(doctype, method):
-            raise frappe.PermissionError("You don't have permission to access this method")
+    doc = frappe.get_doc(docs)
+    args = frappe.parse_json(args)
 
-        # the caller is a Guest with no permissions of its own, so the rows come
-        # back filtered by the user the publisher recorded - not unfiltered.
-        doc = frappe.get_doc(doctype, name)
-        with permission_user(get_public_permission_user(doctype, name)):
-            return _execute_doc_method(
-                doc, method, public_method_args(doctype, method, args), ignore_permissions=True
-            )
+    method_obj = getattr(doc, method)
+    fn = getattr(method_obj, "__func__", method_obj)
 
+    doc.check_permission("read")
+    is_whitelisted(fn)
+    is_valid_http_method(fn)
 
-# A public execution runs what the publisher published, so the public surface is
-# a set of parameter names, not a set of method names. The query builder passes
-# its own parameters to these methods - `active_operation_idx` drives the step
-# preview, and reshapes the query - and those are for the builder, not for the
-# published document.
-PUBLIC_METHOD_ARGS = {
-    ("Insights Query v3", "execute"): {"adhoc_filters", "page", "page_size"},
-    ("Insights Query v3", "download_results"): {"format", "adhoc_filters"},
-    ("Insights Dashboard v3", "get_distinct_column_values"): {
-        "query",
-        "column_name",
-        "search_term",
-        "adhoc_filters",
-    },
-    ("Insights Dashboard v3", "track_view"): set(),
-}
-
-
-def is_public_method(doctype: str, method: str):
-    return (doctype, method) in PUBLIC_METHOD_ARGS
-
-
-def public_method_args(doctype: str, method: str, args: dict | str | None):
-    """The caller's args, less anything the public contract does not name.
-
-    Dropped rather than refused, so the published document still renders.
-    """
-    allowed = PUBLIC_METHOD_ARGS[(doctype, method)]
-    args = frappe.parse_json(args) or {}
-    return {name: value for name, value in args.items() if name in allowed}
+    new_kwargs = frappe.get_newargs(fn, args or {})
+    response = doc.run_method(method, **new_kwargs)
+    frappe.response.docs.append(doc)
+    frappe.response["message"] = response
+    add_data_to_monitor(methodname=method)
+    return response

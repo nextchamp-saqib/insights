@@ -1,13 +1,8 @@
-"""A link names what its author can read, and a public document runs as published.
+"""A link names what its author can read.
 
-Two rules over the same boundary. A chart's `query` and a dashboard's
-`linked_charts` are grants: the permission queries in `insights.permissions` read
-a link as access, and `insights.api.shared` reads a link from a public document
-the same way. So a link is checked where it is written.
-
-Once a document is public, the arguments its methods accept come from the
-request. `insights.api.PUBLIC_METHOD_ARGS` names them, so the query builder's own
-parameters stay with the builder.
+A chart's `query` and a dashboard's `linked_charts` are grants: the permission
+queries in `insights.permissions` read a link as access. So a link is checked
+where it is written, not where it is followed.
 """
 
 import frappe
@@ -69,7 +64,7 @@ class TestLinkRequiresReadAccess(InsightsIntegrationTestCase):
             ).insert()
 
     def test_a_public_chart_cannot_link_an_unreadable_query(self):
-        """Public in a single insert, so the check runs before the flag lands."""
+        """Public in a single insert, so the check runs before the rung lands."""
         with self.as_user(OTHER), self.assertRaises(frappe.PermissionError):
             frappe.get_doc(
                 {
@@ -78,7 +73,7 @@ class TestLinkRequiresReadAccess(InsightsIntegrationTestCase):
                     "workbook": self.other_workbook,
                     "query": self.owner_query,
                     "chart_type": "Bar",
-                    "is_public": 1,
+                    "visibility": "Public",
                     "config": {},
                 }
             ).insert()
@@ -133,10 +128,13 @@ class TestLinkRequiresReadAccess(InsightsIntegrationTestCase):
                 dashboard.save()
 
     def test_publishing_your_own_chart_still_works(self):
+        """The query is readable, so the check the rules above make does not fire."""
         with self.as_user(OWNER):
             chart = frappe.get_doc(DT.CHART, self.owner_chart)
-            chart.update_access(is_public=True)
-            self.assertTrue(frappe.db.get_value(DT.CHART, chart.name, "is_public"))
+            chart.visibility = "Public"
+            chart.save()
+
+        self.assertEqual(frappe.db.get_value(DT.CHART, self.owner_chart, "visibility"), "Public")
 
     def test_publishing_your_own_dashboard_still_works(self):
         with self.as_user(OWNER):
@@ -153,53 +151,3 @@ class TestLinkRequiresReadAccess(InsightsIntegrationTestCase):
                 {"is_public": 1, "is_shared_with_organization": 0, "people_with_access": []}
             )
             self.assertTrue(frappe.db.get_value(DT.DASHBOARD, dashboard.name, "is_public"))
-
-
-class TestPublicMethodArguments(InsightsIntegrationTestCase):
-    """The builder's own parameters are not part of the public contract."""
-
-    def filter_args(self, doctype, method, args):
-        from insights.api import public_method_args
-
-        return public_method_args(doctype, method, args)
-
-    def test_a_builder_parameter_is_dropped(self):
-        """The builder's step preview reshapes the query, so it stays with the builder."""
-        args = self.filter_args(DT.QUERY, "execute", {"active_operation_idx": 0, "page_size": 100})
-        self.assertNotIn("active_operation_idx", args)
-        self.assertEqual(args, {"page_size": 100})
-
-    def test_a_json_string_body_is_filtered_too(self):
-        """`args` arrives as a JSON body, so filtering must survive the parse."""
-        args = self.filter_args(DT.QUERY, "execute", '{"active_operation_idx": 0, "page": 2}')
-        self.assertEqual(args, {"page": 2})
-
-    def test_download_results_is_filtered_too(self):
-        args = self.filter_args(DT.QUERY, "download_results", {"active_operation_idx": 0, "format": "csv"})
-        self.assertEqual(args, {"format": "csv"})
-
-    def test_no_public_method_accepts_a_builder_parameter(self):
-        """The rule, not one parameter name."""
-        from insights.api import PUBLIC_METHOD_ARGS
-
-        builder_only = {"active_operation_idx", "force", "use_live_connection", "limit"}
-        for (doctype, method), allowed in PUBLIC_METHOD_ARGS.items():
-            self.assertFalse(
-                allowed & builder_only,
-                f"{doctype}.{method} exposes {allowed & builder_only} to Guests",
-            )
-
-    def test_every_public_method_declares_its_arguments(self):
-        """is_public_method and the argument surface are one map, so they cannot drift."""
-        from insights.api import PUBLIC_METHOD_ARGS, is_public_method
-
-        for doctype, method in PUBLIC_METHOD_ARGS:
-            self.assertTrue(is_public_method(doctype, method))
-
-    def test_the_dashboard_filter_path_keeps_what_it_needs(self):
-        args = self.filter_args(
-            DT.DASHBOARD,
-            "get_distinct_column_values",
-            {"query": "q1", "column_name": "status", "search_term": "op"},
-        )
-        self.assertEqual(args, {"query": "q1", "column_name": "status", "search_term": "op"})

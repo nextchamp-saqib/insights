@@ -1,21 +1,20 @@
-"""A public link, a preview and an alert each run as somebody.
+"""A preview and an alert each run as somebody.
 
-None of the three has a caller whose permissions can decide the rows, so each
-names a user at the moment it was published or enabled. The engine filters by
-that user. The session user is left alone, so nothing here may call
-`frappe.set_user`.
+Neither has a caller whose permissions can decide the rows, so each names a user
+at the moment the privileged act happened — minting a preview key, enabling an
+alert. The engine filters by that user, and the session user is left alone, so
+nothing here may call `frappe.set_user`.
+
+A public link names its user another way. Content declares its own
+`data_authority`, and `test_data_authority` is where that is held.
 
 The fixtures below sit on `tabToDo`, whose permission query restricts a
 non-System-Manager to their own assignments. That is the row-level difference
 every test turns on.
 """
 
-from contextlib import contextmanager
-from unittest.mock import patch
-
 import frappe
 
-from insights.api import run_doc_method
 from insights.insights.doctype.insights_data_source_v3.insights_data_source_v3 import (
     db_connections,
 )
@@ -24,7 +23,6 @@ from insights.tests.base import InsightsIntegrationTestCase
 from insights.tests.factories import (
     DT,
     as_user,
-    create_test_chart,
     create_test_query,
     create_test_workbook,
     create_user,
@@ -33,23 +31,9 @@ from insights.tests.factories import (
 )
 
 PUBLISHER = "permission_user_publisher@test.com"
-BYSTANDER = "permission_user_bystander@test.com"
 
 WORKBOOK_TITLE = "Permission User Test Workbook"
 TODO_PREFIX = "Permission User Test"
-
-PUBLISHER_TODOS = [f"{TODO_PREFIX} publisher 1", f"{TODO_PREFIX} publisher 2"]
-BYSTANDER_TODOS = [f"{TODO_PREFIX} bystander 1"]
-
-
-@contextmanager
-def as_http_request():
-    """`insights.api.run_doc_method` validates the HTTP method, so fake a request."""
-    frappe.local.request = frappe._dict(method="POST", headers={})
-    try:
-        yield
-    finally:
-        del frappe.local.request
 
 
 def todo_operations():
@@ -67,218 +51,17 @@ def todo_operations():
     ]
 
 
-class TestPermissionUser(InsightsIntegrationTestCase):
+class TestPreviewKeyNamesItsUser(InsightsIntegrationTestCase):
+    """A preview has no caller, so the key carries the user it was cut for."""
+
     @classmethod
     def before_class(cls):
-        cls.cleanup()
+        delete_users(PUBLISHER)
         create_user(PUBLISHER, first_name="Perm", last_name="Publisher", roles="Insights User")
-        create_user(BYSTANDER, first_name="Perm", last_name="Bystander", roles="Insights User")
-
-        for user, descriptions in ((PUBLISHER, PUBLISHER_TODOS), (BYSTANDER, BYSTANDER_TODOS)):
-            for description in descriptions:
-                frappe.get_doc(
-                    {
-                        "doctype": "ToDo",
-                        "description": description,
-                        "allocated_to": user,
-                        "assigned_by": "Administrator",
-                    }
-                ).insert(ignore_permissions=True)
-
-        cls.workbook = create_test_workbook(PUBLISHER, title=WORKBOOK_TITLE).name
-        cls.query = create_test_query(
-            PUBLISHER, cls.workbook, title="Permission User Query", operations=todo_operations()
-        ).name
-        cls.chart = create_test_chart(
-            PUBLISHER, cls.workbook, query=cls.query, title="Permission User Chart"
-        ).name
 
     @classmethod
     def after_class(cls):
-        cls.cleanup()
-
-    @classmethod
-    def cleanup(cls):
-        delete_workbooks(title_prefix=WORKBOOK_TITLE)
-        for todo in frappe.get_all(
-            "ToDo", filters={"description": ["like", f"%{TODO_PREFIX}%"]}, pluck="name"
-        ):
-            frappe.delete_doc("ToDo", todo, force=True, ignore_permissions=True)
-        delete_users(PUBLISHER, BYSTANDER)
-
-    def publish_dashboard(self, title):
-        with as_user(PUBLISHER):
-            dashboard = frappe.get_doc(
-                {
-                    "doctype": DT.DASHBOARD,
-                    "title": title,
-                    "workbook": self.workbook,
-                    "items": [{"id": "chart-1", "type": "chart", "chart": self.chart}],
-                }
-            ).insert()
-            dashboard.update_access(
-                {"is_public": 1, "is_shared_with_organization": 0, "people_with_access": []}
-            )
-        # a public dashboard on the shared chart is a root every other test here
-        # would then resolve to, so it does not outlive the test that made it
-        self.addCleanup(frappe.delete_doc, DT.DASHBOARD, dashboard.name, force=True)
-        return dashboard.name
-
-    def publish(self, user=PUBLISHER):
-        with as_user(user):
-            frappe.get_doc(DT.CHART, self.chart).update_access(is_public=True)
-        self.addCleanup(
-            frappe.db.set_value,
-            DT.CHART,
-            self.chart,
-            {"is_public": 0, "permission_user": None},
-        )
-
-    def descriptions(self, result):
-        return sorted(row["description"] for row in result["rows"])
-
-    def run_as_guest(self, **kwargs):
-        docs = frappe.as_json({"doctype": DT.QUERY, "name": self.query})
-        kwargs.setdefault("docs", docs)
-        with as_user("Guest"), db_connections(), as_http_request():
-            return run_doc_method(method="execute", **kwargs)
-
-    # publishing
-
-    def test_publishing_records_the_publisher(self):
-        self.publish()
-        self.assertEqual(frappe.db.get_value(DT.CHART, self.chart, "permission_user"), PUBLISHER)
-
-    def test_withdrawing_clears_the_publisher(self):
-        self.publish()
-        with as_user(PUBLISHER):
-            frappe.get_doc(DT.CHART, self.chart).update_access(is_public=False)
-        self.assertFalse(frappe.db.get_value(DT.CHART, self.chart, "permission_user"))
-
-    def test_a_plain_write_cannot_publish(self):
-        """`is_public` is permlevel 1, so the generic write surface cannot reach it."""
-        with as_user(PUBLISHER):
-            chart = frappe.get_doc(DT.CHART, self.chart)
-            chart.is_public = 1
-            chart.save()
-
-        self.assertFalse(frappe.db.get_value(DT.CHART, self.chart, "is_public"))
-
-    def test_a_plain_write_cannot_name_a_permission_user(self):
-        with as_user(PUBLISHER):
-            chart = frappe.get_doc(DT.CHART, self.chart)
-            chart.permission_user = "Administrator"
-            chart.save()
-
-        self.assertFalse(frappe.db.get_value(DT.CHART, self.chart, "permission_user"))
-
-    def test_publishing_needs_share_access(self):
-        with as_user(BYSTANDER), self.assertRaises(frappe.PermissionError):
-            frappe.get_doc(DT.CHART, self.chart).update_access(is_public=True)
-
-    # execution
-
-    def test_a_public_link_returns_only_the_publisher_rows(self):
-        self.publish()
-        result = self.run_as_guest()
-        self.assertEqual(self.descriptions(result), sorted(PUBLISHER_TODOS))
-
-    def test_a_public_link_does_not_switch_the_session_user(self):
-        self.publish()
-        docs = frappe.as_json({"doctype": DT.QUERY, "name": self.query})
-
-        with as_user("Guest"), db_connections(), as_http_request():
-            with patch.object(frappe, "set_user", side_effect=AssertionError("set_user in a request")):
-                result = run_doc_method(method="execute", docs=docs)
-            self.assertEqual(frappe.session.user, "Guest")
-
-        self.assertEqual(self.descriptions(result), sorted(PUBLISHER_TODOS))
-
-    def test_the_permission_user_does_not_outlive_the_execution(self):
-        self.publish()
-        self.run_as_guest()
-        self.assertEqual(get_permission_user(), frappe.session.user)
-
-    def test_a_request_payload_cannot_name_its_own_permission_user(self):
-        """`run_doc_method` builds the document from the body, so the user is
-        read off the stored root instead."""
-        self.publish()
-
-        forged = frappe.get_doc(DT.QUERY, self.query).as_dict()
-        forged.update({"permission_user": "Administrator", "owner": "Administrator"})
-
-        result = self.run_as_guest(docs=frappe.as_json(forged))
-        self.assertEqual(self.descriptions(result), sorted(PUBLISHER_TODOS))
-
-    def test_a_request_argument_cannot_name_a_permission_user(self):
-        self.publish()
-        result = self.run_as_guest(args={"permission_user": "Administrator"})
-        self.assertEqual(self.descriptions(result), sorted(PUBLISHER_TODOS))
-
-    def test_a_link_that_names_nobody_is_refused(self):
-        """Content published before the field existed, and never re-published."""
-        self.publish()
-        frappe.db.set_value(DT.CHART, self.chart, "permission_user", None)
-
-        with self.assertRaises(frappe.PermissionError):
-            self.run_as_guest()
-
-    def test_a_chart_on_a_public_dashboard_runs_as_the_dashboard_publisher(self):
-        from insights.api.shared import get_public_root
-
-        with as_user(PUBLISHER):
-            dashboard = frappe.get_doc(
-                {
-                    "doctype": DT.DASHBOARD,
-                    "title": f"{WORKBOOK_TITLE} Dashboard",
-                    "workbook": self.workbook,
-                    "items": [{"id": "chart-1", "type": "chart", "chart": self.chart}],
-                }
-            ).insert()
-            dashboard.update_access(
-                {"is_public": 1, "is_shared_with_organization": 0, "people_with_access": []}
-            )
-
-        # the chart itself was never published, so the dashboard is what names
-        # the user its rows are filtered by
-        self.assertFalse(frappe.db.get_value(DT.CHART, self.chart, "is_public"))
-        self.assertEqual(get_public_root(DT.CHART, self.chart), (DT.DASHBOARD, dashboard.name))
-        self.assertEqual(frappe.db.get_value(DT.DASHBOARD, dashboard.name, "permission_user"), PUBLISHER)
-
-        result = self.run_as_guest()
-        self.assertEqual(self.descriptions(result), sorted(PUBLISHER_TODOS))
-
-    def test_a_chart_on_two_public_dashboards_picks_the_older_one(self):
-        """The identity decides the rows, so an unordered `LIMIT 1` would make
-        the same link answer differently on different days."""
-        from insights.api.shared import get_public_root
-
-        mine = [self.publish_dashboard(f"{WORKBOOK_TITLE} Holder {i}") for i in (1, 2)]
-
-        holders = frappe.get_all("Insights Dashboard Chart v3", filters={"chart": self.chart}, pluck="parent")
-        candidates = frappe.get_all(
-            DT.DASHBOARD,
-            filters={"name": ["in", holders], "is_public": 1},
-            fields=["name", "creation"],
-        )
-        self.assertLessEqual(set(mine), {d.name for d in candidates})
-
-        oldest = min(candidates, key=lambda d: d.creation).name
-        for _ in range(3):
-            self.assertEqual(get_public_root(DT.CHART, self.chart), (DT.DASHBOARD, oldest))
-
-    def test_the_identity_decides_the_rows(self):
-        """Two publishers, one chart, two different answers."""
-        self.publish()
-        as_publisher = self.descriptions(self.run_as_guest())
-
-        frappe.db.set_value(DT.CHART, self.chart, "permission_user", BYSTANDER)
-        as_bystander = self.descriptions(self.run_as_guest())
-
-        self.assertEqual(as_publisher, sorted(PUBLISHER_TODOS))
-        self.assertEqual(as_bystander, sorted(BYSTANDER_TODOS))
-
-    # preview
+        delete_users(PUBLISHER)
 
     def test_a_preview_key_names_the_user_it_was_cut_for(self):
         from insights.insights.doctype.insights_dashboard_v3.insights_dashboard_v3 import (
