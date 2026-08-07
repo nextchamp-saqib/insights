@@ -134,7 +134,7 @@ class TestInsightsResolver(InsightsIntegrationTestCase):
         # Shipped content is read-only on a site, so it leaves the way the app
         # removes it — `force` and `ignore_permissions` do not reach `on_trash`
         gone = frappe.get_doc(DT.DASHBOARD, shipped.name)
-        gone.flags.in_bundle_sync = True
+        gone.flags.in_standard_content_sync = True
         gone.delete(ignore_permissions=True, force=True)
         self.assertIsNone(resolve(DASHBOARD, SHIPPED_ID))
 
