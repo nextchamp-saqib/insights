@@ -5,6 +5,11 @@ import frappeui from 'frappe-ui/vite'
 import path from 'path'
 import { defineConfig, searchForWorkspaceRoot } from 'vite'
 
+// The real directory `frappe-ui` resolves to. The dev server serves only what
+// its allow-list covers, and the files it is asked for from there are the Inter
+// woff2s. A no-op while the package sits inside the workspace.
+const frappeUIRoot = fs.realpathSync(path.resolve(__dirname, 'node_modules/frappe-ui'))
+
 // Pre-bundled below to avoid a dev-only duplicate prosemirror-state instance
 // (TipTap "keyed plugin" error). Keep in sync with frappe-ui's @tiptap/* deps.
 const tiptapDeps = [
@@ -63,16 +68,11 @@ export default defineConfig({
 	],
 	server: {
 		allowedHosts: true,
-		// A linked frappe-ui sits outside the workspace, and the dev server refuses
-		// to serve a file it does not cover — the Inter faces `frappe-ui/style.css`
-		// asks for come back 403, so every page renders in the system font while
-		// its CSS looks fine. Covering the real directory the package resolves to
-		// keeps this true of whatever is linked, and no-ops when nothing is.
 		fs: {
-			allow: [
-				searchForWorkspaceRoot(process.cwd()),
-				fs.realpathSync(path.resolve(__dirname, 'node_modules/frappe-ui')),
-			],
+			// Without this the font 403s, Inter never loads, and every screen
+			// silently falls back to system sans — in dev only, because the
+			// build copies the woff2 into its own assets.
+			allow: [searchForWorkspaceRoot(process.cwd()), frappeUIRoot],
 		},
 	},
 	esbuild: { loader: 'ts' },
