@@ -615,6 +615,15 @@ function toggleNewColumn() {
 							</div>
 						</td>
 
+						<!-- the header cell the row action column stands under. It has
+						     nothing to say, but without it every row is one cell wider
+						     than the head above it. -->
+						<td
+							v-if="$slots['row-action']"
+							class="h-8 border-b border-r"
+							width="1px"
+						></td>
+
 						<td v-if="props.enableNewColumn" class="h-8 border-b border-r">
 							<Button
 								v-if="!showNewColumn"
@@ -675,6 +684,11 @@ function toggleNewColumn() {
 								</template>
 							</LazyTextInput>
 						</td>
+						<td
+							v-if="$slots['row-action']"
+							class="h-8 border-b border-r"
+							width="1px"
+						></td>
 						<td
 							v-if="props.showRowTotals"
 							class="border-b border-r px-3 text-right"
@@ -740,6 +754,14 @@ function toggleNewColumn() {
 							</template>
 						</td>
 
+						<td
+							v-if="$slots['row-action']"
+							class="h-8 border-b border-r px-1 text-right"
+							width="1px"
+						>
+							<slot name="row-action" :row="row" />
+						</td>
+
 						<td v-if="props.enableNewColumn" class="h-8 border-b border-r px-3"></td>
 
 						<td
@@ -773,6 +795,12 @@ function toggleNewColumn() {
 									: ''
 							}}
 						</td>
+
+						<td
+							v-if="$slots['row-action']"
+							class="h-8 border-r border-t"
+							width="1px"
+						></td>
 
 						<td
 							v-if="props.showRowTotals && totalColumnTotal"
