@@ -29,26 +29,33 @@ function onDrilldown(column: QueryResultColumn, row: QueryResultRow) {
 		     card clips the overhang. `-mx-4` is `ChartCard`'s horizontal padding,
 		     which is the only measurement this bleed depends on.
 		     The last column drops its own right border once it is flush: the
-		     card's border is already that line, and both drawn is a double rule. -->
-		<DataTable
-			class="-mx-4 !w-[calc(100%_+_2rem)] [&_tr>*:last-child]:border-r-0"
-			:columns="props.columns"
-			:rows="props.rows"
-			:loading="props.loading"
-			:sort-order="props.sortOrder"
-			:on-sort-change="props.onSortChange"
-			:on-drilldown="props.drillable ? onDrilldown : undefined"
-			:show-filter-row="props.showFilterRow"
-			:show-column-totals="props.showColumnTotals"
-			:show-row-totals="props.showRowTotals"
-			:compact-numbers="props.compactNumbers"
-			:enable-color-scale="props.enableColorScale"
-			:format-group="props.formatGroup"
-			:sticky-columns="props.stickyColumns"
-			:column-widths="props.columnWidths"
-			:text-wrap="props.textWrap"
-			:column-formats="props.columnFormats"
-			:replace-nulls-with-zeros="true"
-		/>
+		     card's border is already that line, and both drawn is a double rule.
+		     A box of its own, not classes on the table: DataTable renders a
+		     fragment — the grid, the empty state and the loading veil are
+		     siblings — so an inherited class would reach none of them. `relative`
+		     is for the veil, which is absolute and should cover the bled width. -->
+		<div
+			class="relative -mx-4 mt-1 h-full w-[calc(100%_+_2rem)] [&_tr>*:last-child]:border-r-0"
+		>
+			<DataTable
+				:columns="props.columns"
+				:rows="props.rows"
+				:loading="props.loading"
+				:sort-order="props.sortOrder"
+				:on-sort-change="props.onSortChange"
+				:on-drilldown="props.drillable ? onDrilldown : undefined"
+				:show-filter-row="props.showFilterRow"
+				:show-column-totals="props.showColumnTotals"
+				:show-row-totals="props.showRowTotals"
+				:compact-numbers="props.compactNumbers"
+				:enable-color-scale="props.enableColorScale"
+				:format-group="props.formatGroup"
+				:sticky-columns="props.stickyColumns"
+				:column-widths="props.columnWidths"
+				:text-wrap="props.textWrap"
+				:column-formats="props.columnFormats"
+				:replace-nulls-with-zeros="true"
+			/>
+		</div>
 	</ChartContainer>
 </template>
