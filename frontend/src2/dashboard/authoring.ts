@@ -10,7 +10,8 @@
 // It lives apart from `viewer.ts` for the same reason `chart_preview` lives
 // apart from `chart_read`: the editing layer drags in the workbook's stores and
 // its forms, which an island carries neither the weight nor the rights for. A
-// read surface imports `viewer` and gets none of it.
+// read surface imports `viewer` and gets none of it — and `DashboardViewer`,
+// which both feeds fill, imports neither.
 
 import { useStorage, useWindowSize } from '@vueuse/core'
 import { computed, markRaw, provide, reactive, watchEffect } from 'vue'
@@ -18,15 +19,17 @@ import { safeJSONParse } from '../helpers'
 import { __ } from '../translation'
 import type { Layout, WorkbookChart } from '../types/workbook.types'
 import useDashboard from './dashboard'
-import DashboardEditActions from './DashboardEditActions.vue'
 import DashboardItem from './DashboardItem.vue'
 import EditableGridLayout from './EditableGridLayout.vue'
-import { defaultFilters, type DashboardSource, type ViewerDashboardItem } from './viewer'
+import { defaultFilters, type AuthoredDashboardSource, type ViewerDashboardItem } from './viewer'
 
 /** The charts this dashboard may draw from — the workbook's, not the site's. */
 export const chartOptionsKey = 'dashboardChartOptions'
 
-export function useDashboardAuthoring(name: string, charts: WorkbookChart[]): DashboardSource {
+export function useDashboardAuthoring(
+	name: string,
+	charts: WorkbookChart[],
+): AuthoredDashboardSource {
 	const dashboard = useDashboard(name)
 	// the edit chrome and the cards reach the store the way they always have
 	provide('dashboard', dashboard)
@@ -70,7 +73,6 @@ export function useDashboardAuthoring(name: string, charts: WorkbookChart[]): Da
 		authoring: reactive({
 			// the page only reads it — turning it on and off is the chrome's own
 			editing: computed(() => dashboard.editing),
-			actions: markRaw(DashboardEditActions),
 			menuOptions: computed(() =>
 				dashboard.editing
 					? [
@@ -101,5 +103,5 @@ export function useDashboardAuthoring(name: string, charts: WorkbookChart[]): Da
 			},
 			drop: dropChart,
 		}),
-	}) as DashboardSource
+	}) as AuthoredDashboardSource
 }

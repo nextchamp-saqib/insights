@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DashboardView from './DashboardView.vue'
+import DashboardPage from './DashboardPage.vue'
 import { useSavedDashboard } from './viewer'
 
 // A dashboard reached by its public link. The viewer endpoints are the same ones
@@ -21,5 +21,5 @@ function setTitle(title: string) {
 </script>
 
 <template>
-	<DashboardView :source="source" @title="setTitle" />
+	<DashboardPage :source="source" @title="setTitle" />
 </template>

@@ -47,7 +47,7 @@ The builder is a viewer that can also write.
 2. As an app developer, I want a chart's shipped folder to carry one file per chart, so that the format has no cache file I must remember to materialize.
 3. As a site user, I want a chart's rows to always match its config, so that a stale cache can never show me wrong numbers.
 4. As a desk user with no Insights role, I want dashboard cards to load through the same path as everyone else's, so that what I may see is decided by the ladder, not by which surface I opened.
-5. As a viewer of a public dashboard, I want the public page to be the same surface as the desk page, so that filters, states, and freshness behave identically everywhere.
+5. As a viewer of a public dashboard, I want the public page to be the same surface as the desk page, so that filters and states behave identically everywhere.
 6. As a viewer on any surface, I want refresh, export-as-image, and duplicate offered when I hold the capability, so that what I can do depends on my rights, not on which page I found.
 7. As a viewer without edit rights, I want no editing affordance rendered at all, so that the surface never dangles an action I cannot take.
 8. As an editor, I want "Edit in Insights" on any surface where I hold edit rights, so that reaching the builder never requires knowing the workbook URL.

@@ -23,7 +23,7 @@ import type { DashboardCellProps, ViewerFilterState } from './viewer'
 // page — `filter` is declared to say it is answered here.
 const props = defineProps<DashboardCellProps>()
 
-defineEmits<{ loaded: [executedAt: Date]; resetFilters: []; filter: [state?: ViewerFilterState] }>()
+defineEmits<{ resetFilters: []; filter: [state?: ViewerFilterState] }>()
 
 // the live document item, which is what the editors below write to. The page
 // hands it over as a viewer would read it, because that is the one shape both
@@ -47,7 +47,6 @@ const dashboard = inject('dashboard') as Dashboard
 				v-if="item.type == 'chart'"
 				:item="item as WorkbookDashboardChart"
 				:refresh-token="props.refreshToken"
-				@loaded="$emit('loaded', $event)"
 			/>
 
 			<DashboardText v-else-if="item.type === 'text'" :item="item as WorkbookDashboardText" />

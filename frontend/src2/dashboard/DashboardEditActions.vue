@@ -21,7 +21,7 @@ const showShareDialog = ref(false)
 <template>
 	<Button
 		v-if="!dashboard.editing && !dashboard.doc.read_only"
-		variant="subtle"
+		variant="outline"
 		:label="__('Share')"
 		@click="showShareDialog = true"
 	>
@@ -31,7 +31,7 @@ const showShareDialog = ref(false)
 	</Button>
 	<Button
 		v-if="!dashboard.editing"
-		variant="subtle"
+		variant="outline"
 		:label="__('Edit')"
 		@click="dashboard.editing = true"
 	>

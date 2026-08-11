@@ -1,60 +1,50 @@
 <script setup lang="ts">
-import { Breadcrumbs } from 'frappe-ui'
-import { MoreHorizontal, RefreshCcw } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
-import ContentEditable from '../components/ContentEditable.vue'
 import { downloadImage } from '../helpers'
-import dayjs from '../helpers/dayjs'
 import { __ } from '../translation'
 import type {
+	DashboardMenuOption,
 	DashboardSource,
 	ViewerDashboardItem,
 	ViewerFilters,
 	ViewerFilterState,
 } from './viewer'
 
-// A saved dashboard. This is the whole of what a dashboard page shows — the
-// trail, the title, the freshness, the actions and the grid — on every surface
-// that shows one: the desk island, the public link, the SPA's own page and the
-// builder. Each of those is a mount shim around this component, carrying nothing
-// but the feed it reads from and the navigation context of where it sits.
+// A dashboard's content: the filters a reader moves, the grid of cards, and
+// every state the page can be in before there is a grid to draw. This is the
+// whole of what a dashboard *is*, on every surface that shows one — the desk
+// island, the public link, the SPA's own page and the builder.
 //
-// Everything that changes between them arrives on the feed, as a capability that
-// is either there or not. Nothing here asks which surface it is, and an
-// ungranted capability draws nothing at all — no disabled button, no action that
-// answers with a refusal.
+// It draws no header of its own. What sits above the grid is the one thing that
+// genuinely differs between surfaces: a desk page needs the band desk hides, and
+// the builder already has the workbook's navbar over it. So the band is a slot,
+// and the two things a header needs — a refresh and the page's menu — are handed
+// to it. `DashboardPage` fills it with a page header; the builder fills it with
+// a title row that blends into the dashboard.
+//
+// Everything else that changes between surfaces arrives on the feed, as a
+// capability that is either there or not. Nothing here asks which surface it is,
+// and an ungranted capability draws nothing at all — no disabled button, no
+// action that answers with a refusal.
 //
 // The layout arrives in one request and is drawn straight away; every card then
 // fetches on its own, so one slow or failing card never holds up the rest.
 //
-// A surface hands this a bounded box and it fills it: a header band that stays,
-// one scrolling body under it. That is what lets the grid scroll without the
-// page around it scrolling too.
-type PageCrumb = {
-	label: string
-	/** an SPA route. A surface without a router passes `onClick` instead. */
-	route?: string
-	onClick?: () => void
-}
-
+// A surface hands this a bounded box and it fills it: the header band stays, one
+// scrolling body under it. That is what lets the grid scroll without the page
+// around it scrolling too.
 const props = defineProps<{
 	// where the page's content comes from: `useSavedDashboard` on a read surface,
 	// `useDashboardAuthoring` in the builder
 	source: DashboardSource
 	// where the reader starts. What they last chose on this dashboard wins over it
 	filters?: ViewerFilters
-	// ancestors of this page, never the page itself — the last crumb is ours
-	breadcrumbs?: PageCrumb[]
 }>()
-
-// what this page is called, for whoever names the browser tab
-const emit = defineEmits<{ title: [title: string] }>()
 
 const GRID_COLS = 20
 
 const filters = ref<ViewerFilters>({})
 const refreshToken = ref(0)
-const executedAt = ref<Record<string, Date>>({})
 
 // what the surface mounted us with is the starting point; where the feed says
 // the filters start wins over it — a reader's last choice on a read surface, the
@@ -62,7 +52,6 @@ const executedAt = ref<Record<string, Date>>({})
 watch(
 	() => props.source.name,
 	(name) => {
-		executedAt.value = {}
 		if (!name) return
 		filters.value = { ...(props.filters || {}), ...props.source.filters }
 	},
@@ -108,25 +97,9 @@ function layoutRank(item: ViewerDashboardItem) {
 	return item.layout.y * GRID_COLS + item.layout.x
 }
 
-// when what is on screen was produced. Cards fetch on their own, so the honest
-// stamp for the page is the oldest of them.
-const freshness = computed(() => {
-	const times = Object.values(executedAt.value).map((date) => date.getTime())
-	return times.length ? dayjs(Math.min(...times)).format('h:mm a') : ''
-})
-
-// A dashboard that is loading and one the reader may not see answer the same
-// name, so the header never says whether the content exists.
-const pageTitle = computed(() => props.source.title || __('Dashboard'))
-
-// The trail that led here, drawn in this header because a page box is all a
-// surface gives us: the shim hands down the ancestors it can vouch for.
-const crumbs = computed(() => [...(props.breadcrumbs || []), { label: pageTitle.value }])
-
-watch(pageTitle, (title) => emit('title', title), { immediate: true })
-
 // Every action is offered on the strength of what the feed carries, never of
-// which surface this is.
+// which surface this is. The header draws them; which of them exist is settled
+// here, because the export is this component's own.
 const menuOptions = computed(() => {
 	const duplicate = props.source.duplicate
 	return [
@@ -151,7 +124,7 @@ const menuOptions = computed(() => {
 			  }
 			: null,
 		...(props.source.authoring?.menuOptions || []),
-	].filter(Boolean)
+	].filter(Boolean) as DashboardMenuOption[]
 })
 
 const grid = ref<HTMLElement>()
@@ -166,72 +139,11 @@ function exportImage() {
 
 <template>
 	<div class="flex h-full w-full flex-col overflow-hidden">
-		<!-- The page's one header, so it is drawn in every state — a reader who
-		     may not see this dashboard still gets a way back. It sits outside the
-		     scrolling body rather than sticking to the top of it, so the grid
-		     scrolls under it and the page around it does not move. -->
-		<!-- 48px is desk's `--page-head-height`: this header stands in for the page
-		     head desk hides, so it has to be the same band an ordinary desk page
-		     draws, not merely a similar one. -->
-		<div
-			class="flex h-12 flex-shrink-0 items-center justify-between gap-2 border-b border-outline-gray-1 px-4"
-		>
-			<div class="flex min-w-0 items-baseline gap-2">
-				<!-- renaming is a capability like any other: where it is granted
-				     the title is the control, and where it is not there is a
-				     trail with the title at the end of it -->
-				<ContentEditable
-					v-if="source.authoring?.rename"
-					class="cursor-text rounded-1 text-lg-semibold !text-ink-gray-7 focus:ring-2 focus:ring-outline-gray-6 focus:ring-offset-4"
-					:modelValue="source.title"
-					@returned="source.authoring.rename($event)"
-					@blur="source.authoring.rename($event)"
-					:placeholder="__('Untitled Dashboard')"
-				/>
-				<Breadcrumbs v-else :items="crumbs" />
-
-				<span
-					v-if="source.duplicate?.running"
-					class="flex-shrink-0 text-p-sm text-ink-gray-5"
-				>
-					{{ __('Duplicating...') }}
-				</span>
-				<span
-					v-else-if="source.duplicate?.failed"
-					class="flex-shrink-0 text-p-sm text-ink-red-5"
-				>
-					{{ __('Could not duplicate this dashboard') }}
-				</span>
-				<span v-else-if="freshness" class="flex-shrink-0 text-p-sm text-ink-gray-5">
-					{{ __('as of') }} {{ freshness }}
-				</span>
-			</div>
-			<!-- Nothing to refresh and nothing to act on until the dashboard
-			     is there, and a denied page offers neither. -->
-			<div
-				v-if="!source.loading && !source.unavailable"
-				class="flex flex-shrink-0 items-center gap-1"
-			>
-				<component v-if="source.authoring" :is="source.authoring.actions" />
-				<Button
-					v-if="!source.authoring?.editing"
-					variant="subtle"
-					:label="__('Refresh')"
-					@click="refreshToken++"
-				>
-					<template #prefix>
-						<RefreshCcw class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
-					</template>
-				</Button>
-				<Dropdown v-if="menuOptions.length" align="end" :options="menuOptions">
-					<Button variant="subtle">
-						<template #icon>
-							<MoreHorizontal class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
-						</template>
-					</Button>
-				</Dropdown>
-			</div>
-		</div>
+		<!-- The header sits outside the scrolling body rather than sticking to the
+		     top of it, so the grid scrolls under it and the page around it does not
+		     move. It is drawn in every state, including the ones below — a reader
+		     who may not see this dashboard still gets a way back. -->
+		<slot name="header" :refresh="() => refreshToken++" :menuOptions="menuOptions" />
 
 		<div
 			v-if="source.unavailable"
@@ -284,7 +196,6 @@ function exportImage() {
 						:filters="cellFilters(source.items[index])"
 						:priority="layoutRank(source.items[index])"
 						:refresh-token="refreshToken"
-						@loaded="executedAt[source.items[index].layout.i] = $event"
 						@filter="setFilter(source.items[index], $event)"
 						@reset-filters="filters = {}"
 					/>

@@ -113,16 +113,13 @@ export type DashboardMenuOption = {
  * Writing, for whoever holds it. Absent on every read surface, and nothing it
  * carries is drawn without it.
  *
- * It carries components because the builder's editing layer cannot be reached
- * from a read surface at all: it pulls in the workbook's stores and its forms,
- * which an island refuses by weight and by rule. So the feed that has them hands
- * them over, the same way the chart store's authoring feed carries drill-down.
+ * The edit chrome itself is not here: the builder draws its own header, so it
+ * reaches `DashboardEditActions` by import. What stays on the feed is state —
+ * what is being edited, and what that adds to the page's menu.
  */
 export type DashboardAuthoring = {
 	// true while the reader is moving things about
 	editing: boolean
-	// the edit chrome, drawn in the page's header band
-	actions: Component
 	// what this capability adds to the page's one menu
 	menuOptions: DashboardMenuOption[]
 	rename: (title: string) => void
@@ -168,6 +165,9 @@ export type DashboardSource = {
 	}
 	authoring?: DashboardAuthoring
 }
+
+/** The same feed, from the one surface that always holds the writing half. */
+export type AuthoredDashboardSource = DashboardSource & { authoring: DashboardAuthoring }
 
 /** The read feed: a saved dashboard, named to the server. */
 export function useSavedDashboard(dashboard: string): DashboardSource {

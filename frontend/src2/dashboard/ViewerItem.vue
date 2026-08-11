@@ -16,7 +16,6 @@ import { fetchFilterValues, type DashboardCellProps, type ViewerFilterState } fr
 const props = defineProps<DashboardCellProps>()
 
 const emit = defineEmits<{
-	loaded: [executedAt: Date]
 	resetFilters: []
 	filter: [state?: ViewerFilterState]
 }>()
@@ -54,7 +53,6 @@ watch(draft, () => {
 			:filters="props.filters"
 			:priority="props.priority"
 			:refresh-token="props.refreshToken"
-			@loaded="$emit('loaded', $event)"
 			@reset-filters="$emit('resetFilters')"
 		/>
 		<div

@@ -12,7 +12,6 @@ import { workbookKey } from '../workbook/workbook_key'
 import { Dashboard } from './dashboard'
 
 const props = defineProps<{ item: WorkbookDashboardChart; refreshToken?: number }>()
-const emit = defineEmits<{ loaded: [executedAt: Date] }>()
 const dashboard = inject<Dashboard>('dashboard')!
 
 const chart = computed(() => {
@@ -46,13 +45,6 @@ if (props.item.chart) {
 watch(
 	() => props.refreshToken,
 	() => props.item.chart && dashboard.refreshChart(props.item.chart, true),
-)
-
-// when these rows were produced. The page's freshness stamp is the oldest of
-// its cards, so every card says.
-watch(
-	() => preview.value?.executedAt,
-	(executedAt) => executedAt && emit('loaded', executedAt),
 )
 
 const workbook = inject(workbookKey, null)

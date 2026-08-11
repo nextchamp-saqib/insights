@@ -63,7 +63,7 @@ version. Site customization of shipped content is Duplicate, nothing more.
 10. As a desk user, I want each card to load independently with a skeleton, so that one slow query never blanks the page.
 11. As a desk user, I want a failing card to degrade in place with a retry, so that one bad query never takes the page down.
 12. As a desk user, I want filter chips with per-user persistence, so that my dashboard opens the way I left it.
-13. As a desk user, I want a freshness stamp and a refresh action, so that I can trust the numbers I act on.
+13. As a desk user, I want a refresh action, so that I can trust the numbers I act on. (A freshness stamp shipped with it and was removed: the oldest card's time told a reader nothing they acted on.)
 14. As a desk user, I want empty-data cards to offer a one-click filter reset when filters caused the empty result, so that I recover without hunting.
 15. As a desk user, I want denied and missing dashboards to look identical, so that access control leaks no existence information.
 16. As a desk user with edit rights, I want "Edit in Insights" to open the builder in a new tab, so that desk never hosts a builder.
@@ -125,7 +125,7 @@ version. Site customization of shipped content is Duplicate, nothing more.
 - The `insights.dashboard` island renders, in content priority order: the
   chart grid (above the fold, per-card async, skeleton per card), a sticky
   filter bar with applied values as chips and per-user per-dashboard
-  persistence, a quiet title row (title, freshness stamp, refresh), and a
+  persistence, a quiet title row (title, refresh), and a
   rights-gated overflow menu.
 - The overflow menu: "Edit in Insights" opens the builder in a new tab and
   renders only for users who hold edit rights and pass the app permission

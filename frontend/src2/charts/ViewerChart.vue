@@ -27,7 +27,7 @@ const props = defineProps<{
 	refreshToken?: number
 }>()
 
-const emit = defineEmits<{ loaded: [executedAt: Date]; resetFilters: [] }>()
+const emit = defineEmits<{ resetFilters: [] }>()
 
 const viewer = computed(() =>
 	useSavedChart(props.chart, {
@@ -51,11 +51,6 @@ watch(
 watch(
 	() => props.refreshToken,
 	() => viewer.value.load(true),
-)
-
-watch(
-	() => viewer.value.executedAt,
-	(executedAt) => executedAt && emit('loaded', executedAt),
 )
 
 // Drilling is row exploration, and an anonymous reader is not offered it — a

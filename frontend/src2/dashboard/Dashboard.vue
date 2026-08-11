@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DashboardView from './DashboardView.vue'
+import DashboardPage from './DashboardPage.vue'
 import { useSavedDashboard } from './viewer'
 import { __ } from '../translation'
 
@@ -18,5 +18,5 @@ function setTitle(title: string) {
 </script>
 
 <template>
-	<DashboardView :source="source" :breadcrumbs="crumbs" @title="setTitle" />
+	<DashboardPage :source="source" :breadcrumbs="crumbs" @title="setTitle" />
 </template>
