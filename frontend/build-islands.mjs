@@ -11,20 +11,8 @@ await buildIslands({
 		insights_chart: 'src2/islands/chart.ts',
 		insights_dashboard: 'src2/islands/dashboard.ts',
 	},
-	// Only the modules an island renders: the builder's forms and dialogs would
-	// otherwise ship their utilities in every island sheet.
-	content: [
-		'src2/islands/**/*.{vue,ts}',
-		'src2/components/**/*.vue',
-		'src2/charts/ViewerChart.vue',
-		'src2/charts/adapter/*.vue',
-		'src2/charts/components/{ChartBody,ChartSectionEmptySvg,MapChart,TableChart}.vue',
-		// the drill a reader is offered. AuthoringDrillDown and DrillQuery are the
-		// builder's half and stay out.
-		'src2/charts/drill/{ChartDrillDown,DrillBreakdown,DrillDialog,DrillMenu,DrillRecords}.vue',
-		'src2/query/components/{ColumnFilterValueSelector,DataTypeIcon,NumberFilterPicker,QueryDataTable,RelativeDatePicker}.vue',
-		'src2/dashboard/{DashboardView,Filter,FilterControl,StaticGridLayout,ViewerItem}.vue',
-	],
+	// No content list: the preset scans the modules each island is built from, so
+	// a helper holding class literals cannot be left out of the scan by accident.
 	// The SPA's plugin. Without it the Number grid's `@xl:` columns compile to nothing.
 	tailwindPlugins: ['@tailwindcss/container-queries'],
 	// 18 kB of typography the runtime sheet already carries — the shadow root
@@ -34,7 +22,14 @@ await buildIslands({
 	// entry picks up a graph it has no business in. Raised from 152 kB when the
 	// island took on the whole page's chrome: export-as-image is offered on every
 	// surface now, and its renderer is 15 kB the island did not carry before.
-	budget: 168 * 1024,
+	//
+	// Raised again from 168 kB when the sheet started being scanned from the
+	// modules each island is built from. `filter_icons.ts` is one of them, and it
+	// spells out 112 lucide names so a filter can wear any of them — 188 kB of
+	// masked SVG, against 19 kB for the rest of the dashboard island's CSS. The
+	// icons were simply not drawing before, which is what the budget was
+	// measured against. The palette is the number to argue with, not this.
+	budget: 360 * 1024,
 	// The budget catches a recoupled entry late and by weight; these name the
 	// recouplings. Each drags something a viewer cannot do: routed pages, the
 	// builder aggregate, or a role-gated resource load. Checked after vite erases
