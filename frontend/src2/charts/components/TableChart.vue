@@ -23,7 +23,15 @@ function onDrilldown(column: QueryResultColumn, row: QueryResultRow) {
 
 <template>
 	<ChartContainer :title="props.title">
+		<!-- The grid runs to the card's own edges, so its first and last columns
+		     end on the card border instead of floating 16px inside it. Nothing
+		     else in the card moves: the title keeps the card's padding, and the
+		     card clips the overhang. `-mx-4` is `ChartCard`'s horizontal padding,
+		     which is the only measurement this bleed depends on.
+		     The last column drops its own right border once it is flush: the
+		     card's border is already that line, and both drawn is a double rule. -->
 		<DataTable
+			class="-mx-4 !w-[calc(100%_+_2rem)] [&_tr>*:last-child]:border-r-0"
 			:columns="props.columns"
 			:rows="props.rows"
 			:loading="props.loading"
