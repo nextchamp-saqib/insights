@@ -170,9 +170,6 @@ class TestViewerAPI(InsightsIntegrationTestCase):
         with as_user(user), db_connections():
             return get_chart_data(chart=chart, dashboard=dashboard, **kwargs)
 
-    def descriptions(self, result):
-        return sorted(row["description"] for row in result["rows"])
-
     # the desk viewer
 
     def test_audience_member_without_an_insights_role_reads_the_dashboard(self):

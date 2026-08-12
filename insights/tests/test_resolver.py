@@ -150,7 +150,7 @@ class TestInsightsResolver(InsightsIntegrationTestCase):
         self.assertEqual(second.slug, "resolver-test-same-title-1")
         self.assertEqual(resolve(DASHBOARD, second.slug), second.name)
 
-    def test_manual_slug_survives_a_rename(self):
+    def test_manual_slug_survives_a_new_title(self):
         dashboard = self.make_dashboard(title="Resolver Test Renamed Dashboard")
         dashboard.slug = "Sales Overview"
         dashboard.save(ignore_permissions=True)

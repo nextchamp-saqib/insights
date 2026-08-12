@@ -123,7 +123,12 @@ def write_workbook(folder: str, files: dict, title=WORKBOOK_TITLE, required_apps
             json.dump(data, f)
 
 
-def remove_fixtures():
+def remove_sync_test_folders():
+    """Delete this suite's shipped folders from the live app source tree.
+
+    `test_export_to_app` writes into the same tree under folders of its own,
+    which `remove_export_test_folders` deletes.
+    """
     for folder in (FOLDER, OTHER_FOLDER):
         shutil.rmtree(os.path.join(shipped_root(), folder), ignore_errors=True)
 
@@ -164,11 +169,11 @@ class TestStandardContent(InsightsIntegrationTestCase):
     @classmethod
     def before_class(cls):
         # a crashed run can leave the fixture behind; it is a fixed name
-        remove_fixtures()
+        remove_sync_test_folders()
 
     @classmethod
     def after_class(cls):
-        remove_fixtures()
+        remove_sync_test_folders()
 
     def before_test(self):
         # a plain site, not a developer bench, is the condition to hold sync to:
@@ -181,7 +186,7 @@ class TestStandardContent(InsightsIntegrationTestCase):
         write_workbook(FOLDER, self.files)
 
     def after_test(self):
-        remove_fixtures()
+        remove_sync_test_folders()
 
     # ------------------------------------------------------------- helpers
 

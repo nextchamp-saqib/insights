@@ -25,9 +25,9 @@ def execute():
     list that opens with "Count of", over a column that is already a `COUNT(*)`.
     Counting a group of one row returns 1, and every ribbon draws the same width.
 
-    Only the two functions that collapse are repaired. The other four already
-    return the value itself over a one-row group, so they draw what the author
-    sees today and are the author's own choice for a source that groups.
+    This repairs only the two functions that collapse. Over a one-row group the
+    other four return the value itself. A chart that holds one of them draws
+    what the author sees today, so the patch leaves it alone.
 
     `measure_name` moves with the aggregation, because it is the name of the
     column the summarize writes and the name the renderer looks the value up by.

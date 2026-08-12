@@ -44,6 +44,7 @@ create.
 import frappe
 from frappe import _
 
+from insights.permissions import PRIVATE
 from insights.resolver import ContentNotAvailableError, resolve_for_read
 from insights.standard_content import (
     CARRIED_FIELDS,
@@ -56,7 +57,6 @@ from insights.standard_content import (
 )
 
 WORKBOOK = "Insights Workbook"
-PRIVATE = "Private"
 
 
 def duplicate_dashboard(reference: str) -> dict:

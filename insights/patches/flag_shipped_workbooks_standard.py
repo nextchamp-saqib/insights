@@ -13,10 +13,10 @@ def execute():
     ones it owns: without the flag, a workbook shipped by an earlier release is
     invisible to the reconcile, which would create a second one beside it.
 
-    Identity is the whole test. A `standard_id` on a workbook is only ever
-    written by sync, so a workbook that has one is shipped, and a workbook that
-    does not is a site's own. Duplicates of shipped content are user workbooks
-    and never carry it.
+    The `standard_id` is the whole test. Only sync writes a `standard_id` on a
+    workbook. A workbook that has one is shipped, and a workbook without one
+    belongs to the site. A duplicate of shipped content is a user workbook, and
+    it never carries one.
 
     Runs before the first sync on migrate, so the reconcile finds what is
     already there. A second run finds nothing left to flag.

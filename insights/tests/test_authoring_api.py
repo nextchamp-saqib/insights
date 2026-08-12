@@ -169,9 +169,6 @@ class TestAuthoringAPI(InsightsIntegrationTestCase):
         with as_user(user), db_connections():
             return [d["name"] for d in get_drill_dimensions(**kwargs)["dimensions"]]
 
-    def descriptions(self, result):
-        return sorted(row["description"] for row in result["rows"])
-
     # the preview
 
     def test_a_config_that_was_never_saved_draws_rows(self):

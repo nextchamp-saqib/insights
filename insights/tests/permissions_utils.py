@@ -59,7 +59,7 @@ def create_test_users():
     )
 
 
-def delete_test_users():
+def delete_permission_test_users():
     delete_users(
         WEB_USER_EMAIL,
         NON_INSIGHTS_USER,
@@ -154,14 +154,14 @@ def unshare_chart(chart_name, user):
         frappe.delete_doc("DocShare", share_name, ignore_permissions=True)
 
 
-def delete_test_workbooks():
+def delete_permission_test_workbooks():
     delete_workbooks(owners=[USER_1, USER_2, ADMIN])
 
 
 def cleanup_test_fixtures():
-    delete_test_workbooks()
+    delete_permission_test_workbooks()
     delete_test_teams()
     delete_test_tables()
     delete_test_data_sources()
-    delete_test_users()
+    delete_permission_test_users()
     clear_team_cache()

@@ -82,7 +82,7 @@ def delete_users(*emails):
         frappe.delete_doc(DT.USER, email, force=True)
 
 
-def delete_test_users():
+def delete_workbook_flow_users():
     delete_users(USER_1)
 
 
@@ -709,6 +709,12 @@ def execute_test_query(query_name):
 
 
 def is_visible(doctype, name):
+    """Whether `get_list` returns this document for the current user.
+
+    `get_list` applies the doctype role check as well as the permission query
+    conditions. `is_listed` in `test_visibility_ladder` runs the conditions on
+    their own, which is what a desk user with no Insights role needs.
+    """
     return bool(frappe.get_list(doctype, filters={"name": name}, pluck="name", limit=1))
 
 
@@ -727,10 +733,12 @@ def delete_workbooks(title_prefix=None, owners=None):
         frappe.delete_doc(DT.WORKBOOK, workbook, force=True)
 
 
-def delete_test_workbooks():
+def delete_workbook_flow_workbooks():
+    # selects by title prefix. `delete_permission_test_workbooks` in
+    # `permissions_utils` selects by owner instead.
     delete_workbooks(title_prefix=TEST_WORKBOOK_TITLE)
 
 
 def cleanup_workbook_flow_fixtures():
-    delete_test_workbooks()
-    delete_test_users()
+    delete_workbook_flow_workbooks()
+    delete_workbook_flow_users()

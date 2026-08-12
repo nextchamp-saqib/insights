@@ -58,20 +58,25 @@ class TestChartQueryCacheRetirement(InsightsIntegrationTestCase):
 
         self.assertFalse(frappe.db.exists(QUERY, cache))
 
+    def queries_in_workbook(self):
+        return frappe.get_all(QUERY, filters={"workbook": self.workbook}, pluck="name", order_by="name")
+
     def test_a_second_run_deletes_nothing(self):
         chart, cache = self.cached_query()
         mine = create_test_query(OWNER, self.workbook, title="Chart Query Cache Test Survivor")
+
+        retire()
+        once = self.queries_in_workbook()
         retire()
 
+        self.assertEqual(self.queries_in_workbook(), once)
+        self.assertNotIn(cache, once)
+        self.assertIn(mine.name, once)
         # the chart still names the cache in the column nothing reads any more,
-        # so a second run walks the same list and finds it gone
+        # so the second run walks the same list and finds the document gone
         self.assertEqual(
             frappe.db.sql_list(f"select `{FIELD}` from `tab{CHART}` where name = %s", chart), [cache]
         )
-        retire()
-
-        self.assertFalse(frappe.db.exists(QUERY, cache))
-        self.assertTrue(frappe.db.exists(QUERY, mine.name))
 
     def test_a_query_no_chart_cached_is_left_alone(self):
         mine = create_test_query(OWNER, self.workbook, title="Chart Query Cache Test Own Query")

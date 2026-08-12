@@ -61,4 +61,4 @@ def execute():
 
     print(f"Insights: deleted {len(cached)} cached chart query document(s)")
     for alert in alerts:
-        print(f"  alert {alert.name} ({alert.title}) watched one of them and went with it")
+        print(f"  deleted alert {alert.name} ({alert.title}) with its query")

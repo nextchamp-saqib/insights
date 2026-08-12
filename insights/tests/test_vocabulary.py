@@ -5,10 +5,9 @@ invented to hold shipped content, and that container is the workbook itself
 now. `logical_id` said what the field is not, where `standard_id` states the
 rule: only standard content has one.
 
-A rename is easy to land and easy to leak back — one merge, one new call site,
-and the tree speaks both vocabularies again. This test is what makes the rename
-hold. It reads source files, needs no database, and fails naming the file and
-line so the fix is obvious.
+A merge or a new call site can bring a retired word back. This test reads the
+source files and needs no database. It reports the file and the line of every
+offence.
 """
 
 import os
@@ -18,11 +17,11 @@ import unittest
 import frappe
 
 # The word is retired for the shipping unit, not for every meaning. A JavaScript
-# asset bundle is Frappe's word and stays. So the gate cannot be a pattern: it is
-# a literal list of the lines that survive, each with the reason it does.
+# asset bundle is Frappe's word and stays. Each exemption lists the literal text
+# that excuses a line.
 #
-# Keep it literal. A pattern permissive enough to admit `*.bundle.js` would also
-# admit a sync module that happens to ship one, which is the thing being guarded.
+# Keep it literal. A pattern permissive enough to admit `*.bundle.js` also admits
+# a sync module that ships one, and that module is what the gate guards.
 EXEMPTIONS = {
     # a JavaScript asset bundle — Frappe's word, not ours
     "insights/hooks.py": ["insights_nudge.bundle.js"],
@@ -36,21 +35,6 @@ EXEMPTIONS = {
         "`REQUESTS_CA_BUNDLE`",
         "operator's CA bundle from the environment",
     ],
-    # A registered patch filename is frozen: renaming one re-runs it on every
-    # site that already ran it. These two carry the old words in their names,
-    # and the rename patch has to name the field it renames from.
-    "insights/patches.txt": [
-        "move_bundle_containers_to_logical_id",
-        "rename_logical_id_to_standard_id",
-    ],
-    "insights/patches/rename_logical_id_to_standard_id.py": ["logical_id"],
-    "insights/patches/move_bundle_containers_to_logical_id.py": [
-        # the site global's key is data sitting in real databases, not an
-        # identifier — changing it makes the patch a no-op on the sites that
-        # need it
-        "insights_bundle_workbook:",
-        "The file name still says",
-    ],
 }
 
 # Directories under the scanned roots that are not source.
@@ -61,7 +45,20 @@ SKIPPED = (
     "node_modules",
 )
 
-SCANNED_SUFFIXES = (".py", ".ts", ".vue", ".json", ".txt", ".js")
+SCANNED_SUFFIXES = (".py", ".ts", ".vue", ".json", ".txt", ".js", ".md")
+
+# The two code trees, plus the docs that outlive a branch. Two exclusions, both
+# deliberate. `docs/projects/` holds branch-scoped build logs, deleted when the
+# branch merges, and a dated record may say what a word used to be. `CONTEXT.md`
+# is the glossary this gate enforces — it retires a word by naming it under
+# `_Avoid_`, the same reason this file excludes itself.
+SCANNED_ROOTS = (
+    "insights",
+    "frontend/src2",
+    "docs/adr",
+    "docs/agents",
+    "AGENTS.md",
+)
 
 # the gate has to name what it forbids
 GATE = "insights/tests/test_vocabulary.py"
@@ -74,8 +71,12 @@ def app_root() -> str:
 
 
 def source_files():
-    for root in ("insights", "frontend/src2"):
-        for dirpath, dirnames, filenames in os.walk(os.path.join(app_root(), root)):
+    for root in SCANNED_ROOTS:
+        target = os.path.join(app_root(), root)
+        if os.path.isfile(target):
+            yield root, target
+            continue
+        for dirpath, dirnames, filenames in os.walk(target):
             relative_dir = os.path.relpath(dirpath, app_root())
             if any(part in relative_dir for part in SKIPPED):
                 dirnames[:] = []
@@ -113,17 +114,15 @@ class TestRetiredVocabulary(unittest.TestCase):
             found,
             [],
             "These lines use a retired word. The shipping unit is a workbook and "
-            "the identity field is `standard_id`. If a line is a JavaScript asset "
-            "bundle or a frozen patch filename, add it to EXEMPTIONS with its "
-            "reason:\n  " + "\n  ".join(found),
+            "the identity field is `standard_id`. If a line means a JavaScript "
+            "asset bundle, add it to EXEMPTIONS with its reason:\n  " + "\n  ".join(found),
         )
 
     def test_every_exemption_is_still_earning_its_place(self):
-        """An exemption outlives the line it excused, and then it is a hole.
+        """An exemption that outlives the line it excused becomes a hole.
 
-        The list is small and hand-written, so it is worth asserting that each
-        entry still matches something — an exemption nobody can see is one
-        nobody will remove.
+        The list is small and hand-written. This test asserts that each entry
+        still matches a line, so a dead entry gets removed.
         """
         stale = []
         for relative_path, reasons in EXEMPTIONS.items():

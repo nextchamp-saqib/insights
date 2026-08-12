@@ -148,9 +148,6 @@ class TestDataAuthority(InsightsIntegrationTestCase):
         frappe.db.set_value(DT.CHART, self.chart.name, "data_authority", authority)
         self.addCleanup(frappe.db.set_value, DT.CHART, self.chart.name, "data_authority", "Viewer")
 
-    def descriptions(self, result):
-        return sorted(row["description"] for row in result["rows"])
-
     def fetch_chart_data(self, user):
         with as_user(user), db_connections():
             return frappe.get_doc(DT.CHART, self.chart.name).get_data(force=True)

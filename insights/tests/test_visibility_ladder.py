@@ -111,6 +111,12 @@ class TestVisibilityLadder(InsightsIntegrationTestCase):
         )
 
     def is_listed(self, user, doctype, name):
+        """Whether the list conditions alone admit this document for this user.
+
+        `is_visible` in `factories` goes through `get_list`, which also applies
+        the doctype role check. A desk user here holds no Insights role, so the
+        conditions have to be read on their own.
+        """
         condition = get_permission_query_conditions(user, doctype)
         self.assertTrue(condition, f"{doctype} list access should stay narrowed for {user}")
         return bool(
@@ -244,7 +250,7 @@ class TestVisibilityLadder(InsightsIntegrationTestCase):
         self.assert_can_read(DESK_USER, chart)
         self.assert_cannot_read(DESK_USER, dashboard)
 
-    def test_guest_reads_public_content_and_nothing_below_it(self):
+    def test_a_public_dashboard_carries_its_charts_to_a_guest(self):
         chart, dashboard = self.make_content(link_chart_to_dashboard=True)
         self.declare(chart, "Private")
         dashboard = self.declare(dashboard, "Public")

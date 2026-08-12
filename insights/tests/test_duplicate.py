@@ -28,7 +28,7 @@ from insights.tests.test_standard_content import (
     SOURCE_QUERY,
     WORKBOOK_TITLE,
     developer_mode,
-    remove_fixtures,
+    remove_sync_test_folders,
     workbook_files,
     write_workbook,
 )
@@ -50,14 +50,14 @@ class TestDuplicateToEdit(InsightsIntegrationTestCase):
 
     @classmethod
     def before_class(cls):
-        remove_fixtures()
+        remove_sync_test_folders()
         cls.cleanup()
         create_user(AUTHOR, first_name="Duplicate", last_name="Author", roles="Insights User")
         create_user(VIEWER, first_name="Duplicate", last_name="Viewer")
 
     @classmethod
     def after_class(cls):
-        remove_fixtures()
+        remove_sync_test_folders()
         cls.cleanup()
 
     @classmethod
@@ -77,7 +77,7 @@ class TestDuplicateToEdit(InsightsIntegrationTestCase):
         write_workbook(FOLDER, self.files)
 
     def after_test(self):
-        remove_fixtures()
+        remove_sync_test_folders()
 
     # ------------------------------------------------------------- helpers
 

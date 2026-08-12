@@ -246,9 +246,6 @@ class TestDrillAPI(InsightsIntegrationTestCase):
         with as_user(user), db_connections():
             return get_drill_data(chart=chart, dashboard=dashboard, **kwargs)
 
-    def descriptions(self, result):
-        return sorted(row["description"] for row in result["rows"])
-
     def column_names(self, result):
         return [column["name"] for column in result["columns"]]
 

@@ -52,7 +52,12 @@ FILES = {
 }
 
 
-def remove_fixtures():
+def remove_export_test_folders():
+    """Delete this suite's shipped folders from the live app source tree.
+
+    `test_standard_content` writes into the same tree under folders of its own,
+    which `remove_sync_test_folders` deletes.
+    """
     for folder in (FOLDER, OTHER_FOLDER):
         shutil.rmtree(os.path.join(shipped_root(), folder), ignore_errors=True)
 
@@ -90,11 +95,11 @@ class TestExportToApp(InsightsIntegrationTestCase):
     @classmethod
     def before_class(cls):
         # a crashed run can leave the fixture behind; it is a fixed name
-        remove_fixtures()
+        remove_export_test_folders()
 
     @classmethod
     def after_class(cls):
-        remove_fixtures()
+        remove_export_test_folders()
 
     def before_test(self):
         # export is an authoring surface, and authoring shipped content happens
@@ -188,7 +193,7 @@ class TestExportToApp(InsightsIntegrationTestCase):
         ).insert()
 
     def after_test(self):
-        remove_fixtures()
+        remove_export_test_folders()
 
     # ------------------------------------------------------------- helpers
 

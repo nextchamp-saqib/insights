@@ -31,13 +31,12 @@ its sources add up to:
     Team resource grant            source, table — and dashboard,      all
                                    chart (legacy)
     Team membership                team                                all
-    Audience ladder                dashboard, chart                    read only
+    Visibility ladder              dashboard, chart                    read only
     Seat (`check_app_permission`)  the authoring SPA, not documents    —
 
-The table is exhaustive: a grant that is not in it does not exist. That closed
-only recently. `3c0d5edb` retired the `is_public` walk and `api/shared.py`, the
-second read path, so every read of Insights content is now decided here. The
-`is_public` column stays on the content doctypes, with nothing reading it.
+The table is exhaustive. A grant that is not in it does not exist. This file
+decides every read of Insights content. The `is_public` column stays on the
+content doctypes, and nothing reads it.
 
 The rule the table is written for: a new grant source must earn a row here
 before it earns a join in this file.
@@ -112,12 +111,17 @@ VISIBILITY_LADDER_DOCTYPES = [
     "Insights Dashboard v3",
 ]
 
-# The rungs of the ladder, from the narrowest reach to the widest. The
-# `visibility` field on chart and dashboard declares the same four options.
-RUNGS = ["Private", "Specific Roles", "Everyone", "Public"]
+# The rungs of the visibility ladder, from the narrowest reach to the widest.
+# The `visibility` field on chart and dashboard declares the same four options,
+# and `test_visibility_ladder` asserts that this list and the schema agree.
+PRIVATE = "Private"
+SPECIFIC_ROLES = "Specific Roles"
+EVERYONE = "Everyone"
+PUBLIC = "Public"
+RUNGS = [PRIVATE, SPECIFIC_ROLES, EVERYONE, PUBLIC]
 
 # rungs that admit a viewer without naming them
-OPEN_AUDIENCES = ["Everyone", "Public"]
+OPEN_RUNGS = [EVERYONE, PUBLIC]
 
 # what the browser that takes a dashboard's preview image carries
 PREVIEW_KEY_HEADER = "X-Insights-Preview-Key"
@@ -250,8 +254,8 @@ class InsightsPermissions:
             query = self._build_alert_permission_query(ptype)
         return query
 
-    def _build_audience_query(self, doctype, ptype):
-        """Returns a query to get docs whose declared audience admits this user.
+    def _build_visibility_query(self, doctype, ptype):
+        """Returns a query to get docs whose declared visibility admits this user.
 
         The visibility ladder is one grant source beside owner, DocShare and
         the workbook/dashboard links. It is view-only: no rung ever grants
@@ -264,10 +268,10 @@ class InsightsPermissions:
 
         if self.user == "Guest":
             # the ladder is strict, so a guest only ever reaches the top rung
-            return frappe.qb.from_(Content).select(Content.name).where(Content.visibility == "Public")
+            return frappe.qb.from_(Content).select(Content.name).where(Content.visibility == PUBLIC)
 
         query = frappe.qb.from_(Content).select(Content.name)
-        admits_user = Content.visibility.isin(OPEN_AUDIENCES)
+        admits_user = Content.visibility.isin(OPEN_RUNGS)
 
         roles = [role for role in self.user_roles if role != "Guest"]
         if roles:
@@ -282,22 +286,20 @@ class InsightsPermissions:
                 )
             )
             query = query.left_join(NamedRoles).on(Content.name == NamedRoles.name)
-            admits_user = admits_user | (
-                (Content.visibility == "Specific Roles") & NamedRoles.name.isnotnull()
-            )
+            admits_user = admits_user | ((Content.visibility == SPECIFIC_ROLES) & NamedRoles.name.isnotnull())
 
         return query.where(admits_user)
 
-    def _with_audience_grant(self, query, Content, doctype, ptype, granted):
+    def _with_visibility_grant(self, query, Content, doctype, ptype, granted):
         """Adds the visibility ladder to a doctype's grant sources"""
-        audience = self._build_audience_query(doctype, ptype)
-        if audience is None:
+        visible = self._build_visibility_query(doctype, ptype)
+        if visible is None:
             return query.where(granted)
 
         return (
-            query.left_join(audience)
-            .on(Content.name == audience.name)
-            .where(granted | audience.name.isnotnull())
+            query.left_join(visible)
+            .on(Content.name == visible.name)
+            .where(granted | visible.name.isnotnull())
         )
 
     def _build_source_permission_query(self, ptype):
@@ -425,7 +427,7 @@ class InsightsPermissions:
             | AllowedDashboards.name.isnotnull()
         )
 
-        return self._with_audience_grant(query, Dashboard, "Insights Dashboard v3", ptype, granted)
+        return self._with_visibility_grant(query, Dashboard, "Insights Dashboard v3", ptype, granted)
 
     def _build_chart_permission_query(self, ptype):
         DocShare = frappe.qb.DocType("DocShare")
@@ -486,13 +488,13 @@ class InsightsPermissions:
             OwnedCharts.name.isnotnull()
             | SharedCharts.share_name.isnotnull()
             | LinkedWithAllowedWorkbooks.name.isnotnull()
-            # a chart on a dashboard inherits the dashboard's audience,
+            # a chart on a dashboard inherits the dashboard's visibility,
             # downward only — see _build_dashboard_permission_query
             | LinkedWithAllowedDashboards.name.isnotnull()
             | AllowedCharts.name.isnotnull()
         )
 
-        return self._with_audience_grant(query, Chart, "Insights Chart v3", ptype, granted)
+        return self._with_visibility_grant(query, Chart, "Insights Chart v3", ptype, granted)
 
     def _build_query_permission_query(self, ptype):
         Query = frappe.qb.DocType("Insights Query v3")
@@ -694,7 +696,7 @@ def check_app_permission():
     """The authoring gate: may this person enter the builder?
 
     It answers for the app, not for a document, and it is never consulted for
-    viewing. A dashboard's audience is the visibility ladder's business, and the
+    viewing. The visibility ladder decides who reads a dashboard, and the
     reading surfaces mount for people who hold no Insights role at all. Editing
     is both questions at once — write rights on the document AND a seat — and
     `can_edit` in `api/viewer.py` is the one place that conjunction is made.
