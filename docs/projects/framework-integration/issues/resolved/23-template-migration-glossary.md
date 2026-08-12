@@ -60,9 +60,10 @@ never interfere with the fixture bundle the tests write.
 **Logical names come from titles, with one pin.** Four source queries share a
 title with the chart drawn from them. The chart takes the bare name — it is the
 id something outside Insights mounts — and the query was pinned to
-`{chart}_source` before export, the way a chart's own `data_query` becomes
-`{chart}_data`. Left alone the machinery would have shipped
-`quotation-funnel-2.json`, which reads like an accident in a repo.
+`{chart}-source` before export. Left alone the machinery would have shipped
+`quotation-funnel-2.json`, which reads like an accident in a repo. A query that
+no chart draws from needs no pin. It takes a plain name for the rows it returns,
+and the title carries the `(helper)` marker.
 
 **Deleted:** `insights/api/templates.py`, `insights/workbook_templates/` (four
 folders, manifests, workbooks and previews), the `insights_workbooks` hook, the

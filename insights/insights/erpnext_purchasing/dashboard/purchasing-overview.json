@@ -34,7 +34,7 @@
     "y": 0
    },
    "links": {
-    "overdue-purchase-orders": "`overdue-purchase-orders_source`.`company`",
+    "overdue-purchase-orders": "`overdue-purchase-orders-source`.`company`",
     "purchase-order-kpis": "`purchase-orders`.`company`",
     "purchase-orders-by-status": "`purchase-orders`.`company`",
     "spend-by-item-group": "`purchase-invoice-items`.`company`",

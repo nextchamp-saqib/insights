@@ -17,7 +17,7 @@
     "ar-over-90-days": "`ar-open-invoices`.`company`",
     "ar-overdue": "`ar-open-invoices`.`company`",
     "cash-in-vs-out": "`payments-cash-flow`.`company`",
-    "invoiced-vs-collected": "`invoiced-vs-collected_source`.`company`",
+    "invoiced-vs-collected": "`invoiced-vs-collected-source`.`company`",
     "net-cash-flow": "`payments-cash-flow`.`company`",
     "payments-due-next-30-days": "`ap-open-invoices`.`company`",
     "top-overdue-customers": "`ar-open-invoices`.`company`",
@@ -41,7 +41,7 @@
    },
    "links": {
     "cash-in-vs-out": "`payments-cash-flow`.`posting_date`",
-    "invoiced-vs-collected": "`invoiced-vs-collected_source`.`posting_date`",
+    "invoiced-vs-collected": "`invoiced-vs-collected-source`.`posting_date`",
     "net-cash-flow": "`payments-cash-flow`.`posting_date`"
    },
    "type": "filter"

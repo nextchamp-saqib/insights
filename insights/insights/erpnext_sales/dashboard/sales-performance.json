@@ -34,7 +34,7 @@
     "y": 0
    },
    "links": {
-    "overdue-deliveries": "`overdue-deliveries_source`.`company`",
+    "overdue-deliveries": "`overdue-deliveries-source`.`company`",
     "quotations-lost": "`quotations`.`company`",
     "revenue-by-item-group": "`sales-invoice-items`.`company`",
     "revenue-trend": "`sales-invoices`.`company`",

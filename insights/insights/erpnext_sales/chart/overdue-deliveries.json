@@ -49,7 +49,7 @@
   ]
  },
  "data_authority": "Viewer",
- "query": "overdue-deliveries_source",
+ "query": "overdue-deliveries-source",
  "sort_order": 7,
  "title": "Overdue Deliveries",
  "visibility": "Private",

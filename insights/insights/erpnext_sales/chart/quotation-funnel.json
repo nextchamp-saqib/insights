@@ -22,7 +22,7 @@
   }
  },
  "data_authority": "Viewer",
- "query": "quotation-funnel_source",
+ "query": "quotation-funnel-source",
  "sort_order": 5,
  "title": "Quotation Funnel",
  "visibility": "Private",
