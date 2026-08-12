@@ -2,34 +2,33 @@
 import { computed } from 'vue'
 import DashboardPage from '../dashboard/DashboardPage.vue'
 import { useSavedDashboard, type ViewerFilters } from '../dashboard/viewer'
-import { useHost } from './host'
+import { useDesk } from './desk'
 
-// Where a dashboard sits on a desk page. Everything the page shows is
-// `DashboardPage`'s; this carries what only the host knows — where the reader
-// came from, how to name the tab they are on, and that desk draws its page
-// controls subtle.
+// Where a dashboard sits on a desk page. `DashboardPage` shows everything. This
+// carries what only desk knows: where the reader came from, how to name the tab
+// they are on, and that desk draws its page controls subtle.
 const props = defineProps<{ dashboard: string; filters?: ViewerFilters }>()
 
 const source = useSavedDashboard(props.dashboard)
 
-const host = useHost()
+const desk = useDesk()
 
-// `onClick` alone renders the crumb as a button, which is what routes desk in
-// place. Given an `href` as well, frappe-ui's Breadcrumbs would follow the link
-// too and reload the whole page.
+// `onClick` alone renders the crumb as a button, which routes desk in place.
+// Given an `href` as well, frappe-ui's Breadcrumbs would follow the link too and
+// reload the whole page.
 const crumbs = computed(() =>
-	(host.breadcrumbs || []).map((crumb) => ({
+	(desk.breadcrumbs || []).map((crumb) => ({
 		label: crumb.label,
-		onClick: () => host.navigate?.(crumb.route),
+		onClick: () => desk.navigate?.(crumb.route),
 	})),
 )
 
-// Nothing else names this route in the browser: desk's own page head is hidden,
-// and `page.set_title` was what used to do it. Through the host where there is
-// one — it keeps an unread-count prefix over the title it remembers, and a
-// direct write would be undone the next time that count moved.
+// Nothing else names this route in the browser. Desk hides its own page head,
+// and `page.set_title` used to do it. Go through desk where it offers the call:
+// desk keeps an unread-count prefix over the title it remembers, and a direct
+// write would be undone the next time that count moved.
 function setTitle(title: string) {
-	host.set_title ? host.set_title(title) : (document.title = title)
+	desk.set_title ? desk.set_title(title) : (document.title = title)
 }
 </script>
 
