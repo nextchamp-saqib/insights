@@ -1,6 +1,9 @@
 # Spec: charts v2 — Insights configures charts, frappe-ui draws them
 
-Status: ready-for-agent
+Status: shipped — all five steps under Order of work. The adapter and its
+per-type vitest files sit in `frontend/src2/charts/adapter/`, `BaseChart.vue`
+and the `get*ChartOptions` builders are gone, and Insights installs frappe-ui
+from npm. ADR-0001's config split is the follow-on and is still pending.
 Target: `feat/charts-v2`, branched from `develop`. Two work streams — a
 frappe-ui stream that lands first into branch `charts-v2`, then the Insights
 render swap.
@@ -250,27 +253,6 @@ v2 exposes `currentColorScheme`, `useChartTheme` and theme-reactive palettes
 that read `--chart-*` from CSS. Insights charts follow the color scheme with no
 Insights theming code. This finishes the charts half of dark mode, which was
 parked precisely because hand-theming an ECharts option was unclaimed work.
-
-### The dependency
-
-For the duration of this work, Insights consumes frappe-ui through the local
-link, so that charts-v2 can keep being polished alongside the swap. The branch's
-`frontend/package.json` declares the link rather than sitting on a published
-version while building against source.
-
-Flipping the link to the published version was a **merge condition**, not a task
-inside the swap. That condition was **lifted on 2026-08-09**: charts v2 still
-needs changes Insights is asking for, so there is nothing published to flip to.
-The link stays until frappe-ui publishes.
-
-It carries one cost worth knowing. Re-locking under the `link:` protocol prunes
-frappe-ui's transitive dependencies, which is why `vitest` sits in
-`package.json` and not in `yarn.lock`, and why `yarn test` fails on a fresh
-checkout. `socket.io-client` is undeclared for the same reason and works only
-because a stale `node_modules` carries it. Declaring it and re-locking is the
-fix, and it does not wait on frappe-ui.
-
-Individual commits on this branch need not be in a working state.
 
 ### Order of work
 

@@ -1,6 +1,9 @@
 # Spec: drill-down — one inspection layer for every surface
 
-Status: ready-for-agent
+Status: shipped. The server layer is
+`insights/insights/doctype/insights_chart_v3/chart_drill.py`, behind
+`viewer.get_drill_data` and `authoring.get_drill_data`. The client layer is
+`frontend/src2/charts/drill/`, and the old `DrillDown.vue` is gone.
 
 Sources: the resolved ticket
 [11](issues/resolved/11-drill-down-interaction.md) (drill-down interaction),

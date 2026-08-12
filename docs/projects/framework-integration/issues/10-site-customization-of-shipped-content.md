@@ -6,7 +6,7 @@ Status: open
 ## Question
 
 The customization model for shipped (standard) Insights content — split out of
-[Content lifecycle](03-content-lifecycle.md) because the decision has
+[Content lifecycle](resolved/03-content-lifecycle.md) because the decision has
 new-convention ambitions beyond Insights and confidence had not converged.
 
 What this ticket decides:
@@ -14,7 +14,7 @@ What this ticket decides:
 - What a site-local customization of a shipped dashboard/chart *is* — a
   whole-document fork, an item-keyed overlay, or something else.
 - The fork-resolution policy delegated by
-  [Mount and renderer API](04-v1-contract-surface.md): which copy
+  [Mount and renderer API](resolved/04-v1-contract-surface.md): which copy
   `{app}/{name}` resolves to at mount when a customization exists.
 - The reset / staleness UX, and whether the mechanism is generic enough to
   propose as a framework convention (the standard-Workspace clobber pain is

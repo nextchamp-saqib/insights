@@ -46,6 +46,13 @@ framework's actually-installed runtime, so a second version never exists
 and runtime skew is unreachable. No handshake, no degrade path, no
 refuse-to-mount logic.
 
+> **Amended by [ticket 28](../28-runtime-version-authority.md).** "Runtime skew
+> is unreachable" is false as written. It holds only while one lockfile governs
+> the closure. A `link:` dependency lets the resolution walk cross into a tree
+> that a second lockfile governs, and every frappe-ui island then died at
+> import. Skew is reachable, and the build now fails loudly on a bad crossing
+> instead of ruling the case out.
+
 **Skew becomes a build failure, contained by freeze-per-major.** Within a
 framework major, the shared runtime surface is append-only: frappe-ui can
 be patched and extended, never broken. Breaking bumps ride framework

@@ -4,9 +4,12 @@ Date: 2026-08-05
 
 ## Status
 
-Accepted. Amended 2026-08-09: the decision stands, the sequencing does not. This
-config change now follows the render swap instead of leading it. See *Amendment*
-at the end.
+Accepted, not yet implemented. `chart.ts` still defines `resetConfig` and
+`types/chart.types.ts` still carries a config type per chart type. Amended
+2026-08-09: the decision stands, the sequencing does not. This config change now
+follows the render swap instead of leading it, and the swap has shipped
+([ADR-0002](0002-charts-render-through-frappe-ui.md)). See *Amendment* at the
+end.
 
 ## Context
 
@@ -25,14 +28,6 @@ chart type reads its own slot names out of that config:
 
 These are eight names for two slots. Every chart is a set of dimensions and a
 set of measures, plus options that say how to draw them.
-
-Because the slots are named per type, a type switch leaves the old type's slots
-behind as garbage. `resetConfig` cleans up by emptying the config, but it runs
-only when the switch crosses the axis to non-axis boundary. That boundary means
-nothing to the user. It also destroys work: the selected x-axis is gone after a
-switch to Number, and it does not come back on a switch to Line.
-
-The reset also produced a crash. See the guard shipped alongside this ADR.
 
 frappe-ui charts v2 does not settle this question. Its props name the columns of
 already-shaped data (`x`, `y`, `series`, `category`, `value`). It takes rows and
@@ -61,6 +56,16 @@ fills the primary measure slot.
 
 If the new type reads fewer slots than the user filled, keep the extra entries
 and mark them as unused for this type. Never delete a selection on a type change.
+
+## Rejected
+
+**Per-type slots, cleaned up on a type switch** — the shape in place today.
+Because the slots are named per type, a switch leaves the old type's slots
+behind as garbage. `resetConfig` empties the config to clear them, and it runs
+only when the switch crosses the axis to non-axis boundary. That boundary means
+nothing to the user, and the reset destroys work: the selected x-axis is gone
+after a switch to Number, and it does not come back on a switch to Line. The
+reset also produced a crash, guarded alongside this ADR.
 
 ## Consequences
 
@@ -107,8 +112,8 @@ Two of the three gaps survive, and their status changed:
   GeoJSON, region-name resolution and a classification step — which is data
   cleaning, not rendering. **Table** is out for the same kind of reason: nothing
   in it maps a value to a visual property, so it is not a plot. frappe-ui's
-  frappe-ui's `spec/charts.md` holds the rule and
-  `spec/adr/0015-what-enters-charts.md` both rulings.
+  `spec/charts.md` holds the rule and `spec/adr/0015-what-enters-charts.md`
+  holds both rulings.
 
 Three consequences for this ADR:
 
@@ -132,6 +137,5 @@ Three consequences for this ADR:
    and only the plot inside them varies. So "Map and Table stay ours" means
    Insights owns two plots, not two chart implementations.
 
-The reasoning behind the seam and the ordering lives in the framework-integration
-effort docs, which are branch-scoped and will be removed when that branch merges.
-Whatever survives of it belongs in an ADR of its own before then.
+The seam and the ordering are recorded in
+[ADR-0002](0002-charts-render-through-frappe-ui.md).

@@ -1,12 +1,19 @@
 # 29 — What ambient does the host owe an island?
 
+> **Renamed since this ticket was written.** The compartment shipped as `desk`,
+> not `host`. Read every `host` below as `desk`. `host` now means only the
+> element that carries the shadow root, or the CSS `:host` selector. The
+> framework builds the context in `build_desk()`
+> (`frappe/public/js/frappe/ui/island/loader.js`) and an island reads it through
+> `Symbol.for('frappe:island-desk')`.
+
 Type: grilling
 Status: open
 Blocked by: none — both instances have a working floor; the contract gap does not
 
 ## Question
 
-[Ticket 04](04-v1-contract-surface.md) structured the mount envelope by ownership:
+[Ticket 04](resolved/04-v1-contract-surface.md) structured the mount envelope by ownership:
 `host` carries framework-injected ambient, `props`/`on` carry island-specific
 state. It did not say what belongs in `host`. Building the viewer surfaced two
 things an island needs, cannot reach, and currently degrades on — both of them
@@ -42,7 +49,7 @@ The candidates a rule has to choose between:
 
 - **The runtime carries it.** Icons already have a precedent — CSS is solved this
   way, one shared runtime sheet adopted into every shadow root
-  (`adoptedStyleSheets`, [ticket 08](08-build-ownership-and-preset.md)). A sprite
+  (`adoptedStyleSheets`, [ticket 08](resolved/08-build-ownership-and-preset.md)). A sprite
   adopted the same way costs one copy per page rather than one per island.
 - **`host` carries it.** Right for anything site- or user-scoped — locale, number
   and date format, timezone, theme. These are values, not assets, and they are
@@ -63,7 +70,7 @@ not.
 
 2026-08-06 — a third instance, and the first one designed rather than patched.
 
-[Ticket 30](30-desk-page-head-ownership.md) gave the dashboard island the whole
+[Ticket 30](resolved/30-desk-page-head-ownership.md) gave the dashboard island the whole
 desk page, so the island now draws the breadcrumb trail desk used to draw in its
 page head. It cannot know that trail: where the reader came from is the host's
 knowledge, and routing back to it is the host's capability — a click inside a

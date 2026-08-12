@@ -6,7 +6,7 @@ Blocked by: none — the check that makes this loud is in; the second authority 
 
 ## Question
 
-[Ticket 07](07-runtime-version-policy.md) is resolved and states that framework's
+[Ticket 07](resolved/07-runtime-version-policy.md) is resolved and states that framework's
 lockfile is the version authority for the whole runtime closure — Vue, frappe-ui,
 and everything they drag in — and that "versions reconcile at build time, so
 runtime skew is unreachable".

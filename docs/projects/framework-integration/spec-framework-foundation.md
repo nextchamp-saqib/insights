@@ -47,8 +47,8 @@ a built island stays compatible until the next major.
 
 1. As an app developer, I want to declare a mountable island in `hooks.py`, so that desk discovers it without framework code changes.
 2. As an app developer, I want one generic mount call, so that I write no per-app mount plumbing.
-3. As an app developer, I want framework to inject ambient host context (theme, locale, timezone, user, base URL), so that my island honors dark mode and translations without per-island wiring.
-4. As an app developer, I want live theme updates in the host context, so that my island follows a mid-session dark-mode switch.
+3. As an app developer, I want framework to inject ambient desk context (theme, locale, timezone, user, base URL), so that my island honors dark mode and translations without per-island wiring.
+4. As an app developer, I want live theme updates in the desk context, so that my island follows a mid-session dark-mode switch.
 5. As an app developer, I want to pass island-specific props, so that the host page configures my island without framework knowing the shape.
 6. As an app developer, I want island-specific callbacks, so that the host page reacts to navigation, errors, and filter changes.
 7. As an app developer, I want my island to own its loading and error states, so that the host page never reimplements them.
@@ -128,15 +128,16 @@ a built island stays compatible until the next major.
 - The legacy esbuild pipeline is untouched. Classic bundles and module islands
   coexist on one page.
 
-### Mount envelope
+### Mount contract
 
-The shape, from the grilling ticket:
+The shape, from the grilling ticket. The ambient compartment shipped as `desk`,
+not `host`:
 
 ```
-mount(el, { host, props, on }) → { update(props), unmount() }
+mount(el, { desk, props, on, styles }) → { update(props), unmount() }
 ```
 
-- `host` — framework-injected ambient context, identical for every island:
+- `desk` — framework-injected ambient context, identical for every island:
   theme (live), locale, timezone, current user, base URL. The caller never
   assembles it.
 - `props` — island-specific, opaque to framework.
@@ -144,8 +145,12 @@ mount(el, { host, props, on }) → { update(props), unmount() }
   delegation — the island renders its own error and loading states.
   `onNavigate` carries "open in Insights"-class intents. Drill-down stays
   internal to the island.
+- `styles` — framework-injected stylesheet URLs. The loader reads the island's
+  own CSS key from assets.json and passes it here. `mount_vue_island` adopts
+  the shared runtime sheet first and these after it, so app styles win ties.
 - Pinned by this spec: the `context` argument of `mount_island` is
-  `{ props, on }` only. Framework injects `host` before it reaches the island.
+  `{ props, on }` only. Framework injects `desk` and `styles` before they reach
+  the island.
 - `update(props)` pushes new props without a re-mount. Teardown stays
   idempotent.
 - `mountVueIsland` grows a `configure(app)` option, called at Vue app creation
@@ -212,7 +217,7 @@ ownership split already names — no new ones.
 
 - **`frappe.ui.mount_island` (the primary seam).** Test with a fixture island,
   never with Insights. Assert: resolution through hook registry and
-  assets.json, mount into a shadow root, `host` injected, `update(props)`
+  assets.json, mount into a shadow root, `desk` injected, `update(props)`
   without re-mount, idempotent unmount, `configure(app)` called at creation,
   a useful error for an unknown island name, the runtime sheet is one shared
   object across two mounted roots, and a classic bundle on the same page keeps
@@ -278,5 +283,5 @@ neighboring framework tests already use.
   The budget exists to catch exactly that class of entry.
 - **Pins made by this spec** (ambiguities in the tickets, resolved here, not
   contradictions): the island asset-key form is distinct from legacy
-  `.bundle.js` keys, and the caller's `context` is `{ props, on }` with `host`
-  framework-injected.
+  `.bundle.js` keys, and the caller's `context` is `{ props, on }` with `desk`
+  and `styles` framework-injected.

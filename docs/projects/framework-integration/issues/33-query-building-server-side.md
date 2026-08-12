@@ -8,10 +8,10 @@ Status: open
 The direction: the server owns the computation of queries, and the client
 holds only declarative state. Two slices are already on this path:
 
-- [Ticket 27](27-chart-query-derivation-owner.md) (resolved) — the server
+- [Ticket 27](resolved/27-chart-query-derivation-owner.md) (resolved) — the server
   derives a chart's query from `config` at execution time. The client keeps
   zero derivation. The Python deriver is route step 1.
-- [Ticket 11](11-drill-down-interaction.md) — the drill-down layer for read
+- [Ticket 11](resolved/11-drill-down-interaction.md) — the drill-down layer for read
   surfaces. Operations never reach a viewer client, so the drill fork
   (resolve effective operations, slice before the last summarize/pivot,
   apply segment filters — today `makeDrillDownQuery` in

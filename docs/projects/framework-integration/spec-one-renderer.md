@@ -36,7 +36,7 @@ the shipped format.
 
 The viewer becomes the one foundation. One chart-read store with two feeds —
 a saved chart name, or unsaved config for the builder's preview — and one
-`DashboardView` surface that owns everything inside the page, with chrome
+`DashboardViewer` surface that owns everything inside the page, with chrome
 gated by server-granted capabilities. The desk island, the public page, the
 SPA read page, and the builder are entry-point shims over the same surface.
 The builder is a viewer that can also write.
@@ -119,9 +119,9 @@ The builder is a viewer that can also write.
 - The builder's chart store shrinks to authoring state: the document, config
   editing, save. Its derivation-and-result half is deleted.
 
-### One `DashboardView`, entry points as shims
+### One `DashboardViewer`, entry points as shims
 
-- One `DashboardView` component owns everything inside the page: the grid,
+- One `DashboardViewer` component owns everything inside the page: the grid,
   the cards, the filter bar, and the chrome actions — refresh, export as
   image, edit, open workbook, duplicate. It lives with the dashboard
   components as their core; the islands folder keeps only desk mount glue.
@@ -129,11 +129,11 @@ The builder is a viewer that can also write.
   `can_duplicate`, the workbook pointer, the ladder rung) — a property of
   the surface, never of the host. An ungranted capability does not render.
 - Entry points are mount shims of roughly twenty lines, allowed to carry only
-  navigation context: the island shim carries desk mount lifecycle and host
-  ambient; the SPA route shim carries breadcrumbs and the document title; the
-  public route shim carries reference resolution from the URL.
+  navigation context: the island shim carries the desk mount lifecycle and the
+  desk ambient; the SPA route shim carries breadcrumbs and the document title;
+  the public route shim carries reference resolution from the URL.
 - The standing rule: anything that renders inside the page box goes in
-  `DashboardView` behind a capability. Only navigation context may live in a
+  `DashboardViewer` behind a capability. Only navigation context may live in a
   shim.
 
 ### Access: the viewer path already serves everyone
@@ -155,7 +155,7 @@ Each step ships on its own and leaves the app whole:
    fixtures. No behavior changes.
 2. **Read paths switch.** Chart data and the viewer endpoint derive instead
    of reading the cache. The client still writes the cache; nothing reads it.
-3. **Public and SPA read surfaces move.** `DashboardView` is extracted from
+3. **Public and SPA read surfaces move.** `DashboardViewer` is extracted from
    the island surface; the public page and the SPA read page become shims
    over it. The preview key moves. (This step is independent of steps 1–2.)
 4. **Builder moves.** The authoring endpoint lands; the builder consumes the
@@ -195,7 +195,7 @@ were produced".
 - Drill-down on read surfaces — ticket 11's common layer.
 - frappe-ui charts v2 as the per-card rendering primitive.
 - The legacy desk widget dashboard.
-- The host-ambient contract (ticket 29) — the island shim consumes it,
+- The desk-ambient contract (ticket 29) — the island shim consumes it,
   whatever it says.
 - Any change to the viewer response contract beyond capability flags already
   present.

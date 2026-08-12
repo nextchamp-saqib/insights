@@ -44,10 +44,56 @@ _Avoid_: metric
 A column that results are grouped or split by, optionally with a date granularity.
 _Avoid_: group-by column
 
+**Grain**:
+The size of the bucket a date or ordered column is grouped into — day, week,
+month, quarter, year. "Grain" is the prose word. The identifier stays
+`granularity`: the key on a Dimension, the doctype field, and the wire field a
+viewer receives. frappe-ui's own prop type is `TimeGrain`. Both words are
+correct in their own layer.
+_Avoid_: renaming `granularity` in code, or writing "granularity" in prose
+
 **Expression**:
 An inline calculated column, measure, or filter written in the ibis-based expression
 syntax.
 _Avoid_: formula
+
+### Drill-down
+
+**Drill**:
+Reading what a number in a chart is made of. A drill cuts the chart's pipeline
+just before the step that aggregated it, and reads the surface underneath. Every
+read surface offers the same drill: the desk island, the dashboard viewer, the
+public page, and the builder's preview.
+_Avoid_: drill-through, explore
+
+**Surface**:
+Three senses, all of them live, in three different layers.
+
+1. The rows under a chart's aggregation — the pipeline cut just before its
+   summarize or pivot step (`chart_drill.py`). This surface is the exposure
+   bound. A drill may name only its columns, so a drill never reaches past what
+   the chart already published.
+2. A screen a user works on: the viewer surface, an authoring surface, the desk
+   surface. Read surfaces and authoring surfaces get different answers from the
+   server.
+3. frappe-ui's `bg-surface-*` token, a background step in the design system.
+
+The three do not collide in practice, because each layer only ever means one of
+them. Say which one when a sentence could take two.
+_Avoid_: renaming any of the three
+
+**Segment**:
+The part of a chart a reader clicked — one bar, one slice, one point. It travels
+to the server as its dimension values, plain triples of column, operator and
+value. It never travels as operations. One level of a drill stack carries one
+segment, and levels accumulate, so each level narrows the rows further.
+_Avoid_: slice, data point, cell
+
+**Breakdown**:
+One of the two answers a drill level can ask for: group the segment by one more
+column of the surface. The other answer is records, the rows behind the segment.
+A breakdown draws as an ad-hoc Row chart, and a click on it recurses.
+_Avoid_: split, group-by (that is a Dimension)
 
 ### Data
 
@@ -126,8 +172,30 @@ The `{app}/{name}` identity of a shipped document, stored in `standard_id` on
 the workbook and the three content doctypes. The only reference currency across
 the app boundary; docnames are site-local hashes and never cross it. Only
 standard content has one.
-_Avoid_: logical id (the retired name), logical name (a bare `{name}`, as used
-inside a shipped folder's files)
+_Avoid_: logical id (the retired name)
+
+**Logical name**:
+The bare `{name}` half of a Standard ID, as written inside a shipped folder's
+files. A reference from one item of a workbook to another is a logical name.
+Sync resolves it against the shipping app into a Standard ID. It is a live term,
+distinct from Standard ID, and it never crosses an app boundary on its own.
+_Avoid_: using it for the cross-app identity — that is the Standard ID
+
+**Closure**:
+Everything a dashboard needs to stand alone: the dashboard, the charts its items
+name, and the queries those charts read. `dashboard_closure` walks it. Export to
+app and Duplicate both copy a closure, through the same walk, so the two paths
+cannot drift.
+_Avoid_: dependency tree, package
+
+**Library**:
+The browser for standard content — a dialog listing the shipped workbooks a site
+has, with Duplicate as its one action. "Library" is the user-facing word and the
+preferred one. The Python calls the same thing `gallery`
+(`standard_content.gallery`, `api/standard_content.py`). Both names are live for
+one thing.
+_Avoid_: gallery in the UI and in frontend code, template gallery (the retired
+import-a-copy channel), marketplace
 
 **Slug**:
 A dashboard's readable URL handle (`sales-performance`), assigned once and only
@@ -143,12 +211,58 @@ A strict ladder: `Private | Specific Roles | Everyone | Public`, declared as
 fields on the content. View-only; editing is governed separately.
 _Avoid_: sharing (person-level DocShare is the `Private` rung, not a separate axis)
 
+**Rung**:
+One step of the visibility ladder. The four rungs are `Private`,
+`Specific Roles`, `Everyone` and `Public`, from the narrowest reach to the
+widest. The ladder is strict, so a wider rung admits everyone a narrower one
+admits. No rung grants write or share, and no rung reads the `Insights User`
+role.
+_Avoid_: level, tier
+
+**Audience**:
+The people a rung admits — who may read this chart or dashboard. The mechanism
+is the **visibility ladder**, named for the `visibility` field it reads. "Ladder"
+is the head noun, and "visibility ladder" is the one name for it. "Audience"
+names the people, never the mechanism.
+_Avoid_: audience ladder, sharing list
+
+**Seat**:
+The right to enter the builder at all, answered by `check_app_permission` for
+the app rather than for a document. Viewing never consults it: a reader with no
+Insights role reaches a dashboard through the ladder. Editing needs both a seat
+and write rights on the document, and `can_edit` in `api/viewer.py` is the one
+place that joins them.
+_Avoid_: license, viewer role
+
+**Door**:
+One of the two API entrances to chart data. The viewer door
+(`insights/api/viewer.py`) is guest-callable and answers with rows only. The
+authoring door (`insights/api/authoring.py`) also answers with the derived
+operations and the SQL that ran, so it needs a seat. The door a request came
+through decides what the answer may carry.
+_Avoid_: endpoint group, channel
+
+**Gate**:
+The checks a door makes before it answers. The authoring gate is a seat plus
+read on the source query. A test can be a gate too: the vocabulary gate
+(`insights/tests/test_vocabulary.py`) fails the build on a retired word.
+_Avoid_: guard, barrier
+
+**Data Authority**:
+What a chart declares about whose permissions filter its rows: `Viewer`
+(default — it names nobody, so the execution keeps the **permission user** it
+already runs as) or `Author` (the owner, for whole numbers an audience is
+curated for). Declared on the content, resolved to a permission user, enforced
+by the engine.
+_Avoid_: permission mode, run-as
+
 **Permission User**:
 Whose permissions filter the rows an execution returns, when the caller's own
 cannot. A public link runs as Guest, a preview as Guest with a key, an alert as
 Administrator — so each names a user, recorded on the content when it was
-published or enabled. Empty means the viewer decides the rows.
-_Avoid_: data authority, permission mode, run-as, impersonation
+published or enabled. Empty means the viewer decides the rows. A chart's
+**data authority** is one of the things that names one.
+_Avoid_: permission mode, run-as, impersonation
 
 **Team**:
 A named group of users that grants access to resources (data sources, tables).

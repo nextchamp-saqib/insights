@@ -16,7 +16,10 @@ Don't create or triage GitHub issues unless explicitly asked.
 ## Conventions
 
 - One effort per directory: `docs/projects/<effort-slug>/`
-- The spec is `docs/projects/<effort-slug>/spec.md`
+- A spec is `docs/projects/<effort-slug>/spec-<slug>.md`. One effort writes as
+  many as it has bodies of work to hand to an agent, each named for what it
+  specs. The `Status:` line at the top says whether an agent may act on it:
+  `ready-for-agent`, or `shipped` with what shipped
 - Implementation issues are one file per ticket at
   `docs/projects/<effort-slug>/issues/<NN>-<slug>.md`, numbered from `01` —
   never a single combined tickets file

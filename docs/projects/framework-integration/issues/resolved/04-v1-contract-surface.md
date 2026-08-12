@@ -1,5 +1,11 @@
 # Mount and renderer API
 
+> **Renamed since this ticket was written.** The contract shipped as
+> `mount(el, { desk, props, on, styles })`. The ambient compartment below is
+> `desk`, not `host`, and framework injects a fourth compartment, `styles`,
+> carrying the island's own stylesheet URLs. `logical_id` is `standard_id`
+> ([ticket 24](24-shipping-unit-bundle-or-workbook.md)).
+
 Type: grilling
 Status: resolved
 

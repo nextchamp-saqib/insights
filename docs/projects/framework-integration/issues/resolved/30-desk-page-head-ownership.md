@@ -1,5 +1,9 @@
 # 30 — Who draws the desk page head?
 
+> **Renamed since this ticket was written.** `build_host()` shipped as
+> `build_desk()`, and the three fields are `desk.breadcrumbs`, `desk.navigate`
+> and `desk.set_title`. Read every `host.` prefix below as `desk.`.
+
 Type: grilling
 Status: resolved
 Blocked by: none

@@ -66,7 +66,7 @@ decision, not a task. This ticket amends that line.
   path exist here, which narrows ADR-0001's gap list. Re-audit before grilling.
 - [ADR-0001](../../../../adr/0001-type-independent-chart-config.md) — the config
   split, and the three gaps as recorded on 2026-08-05.
-- [Ticket 28](28-runtime-version-authority.md) — the second lockfile.
+- [Ticket 28](../28-runtime-version-authority.md) — the second lockfile.
 - [Ticket 31](31-one-dashboard-one-chart-renderer.md) — the renderer family
   below `ChartBody` is the one card set. This ticket decides what fills it.
 
@@ -144,7 +144,7 @@ enters.
 
 `develop` uses the published `^1.0.0-beta.24`, not the link, so this work is
 independent of the island chain and of the unmerged dependencies
-[ticket 28](28-runtime-version-authority.md) found.
+[ticket 28](../28-runtime-version-authority.md) found.
 
 ### Carried into the spec, not decided here
 

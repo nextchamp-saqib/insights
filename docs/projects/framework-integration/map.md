@@ -60,9 +60,9 @@ Resolved tickets:
 
 - [Integration surface audit](issues/resolved/01-integration-surface-audit.md) — public-flag sharing + bare iframe shipped in Insights (no tokens, no embed SDK, no custom-block code yet); framework side: vue-islands parked in PR frappe#39773, `@framework/ui` shipped without charts, DuckDB snapshot sync merged (Report-only), desk dashboards still render frappe-charts via `chart_widget`.
 - [Full-page mount mechanism for desk](issues/resolved/02-rendering-isolation-mechanism.md) — one mechanism at every granularity: dashboards and single charts both mount as Vue islands in a shadow root via framework's `mountVueIsland`. Iframe rejected (overlays can't escape the frame); vanilla/headless rejected (drill-down would mean a second UI on desk primitives). Requires Vue and frappe-ui to be framework-provided page singletons.
-- [Runtime version policy](issues/resolved/07-runtime-version-policy.md) — framework's lockfile is the version authority for the whole runtime closure (Vue + frappe-ui + everything it drags in); versions reconcile at build time, so runtime skew is unreachable; within a framework major the runtime surface is append-only, so an Insights release just targets a major; the rule is "one framework runtime per page", loadable in desk and Vue-frontend apps alike. The runtime artifact itself doesn't exist yet — a framework deliverable for the build ticket.
+- [Runtime version policy](issues/resolved/07-runtime-version-policy.md) — framework's lockfile is the version authority for the whole runtime closure (Vue + frappe-ui + everything it drags in); versions reconcile at build time, so runtime skew is unreachable — amended by [ticket 28](issues/28-runtime-version-authority.md), which found a second lockfile the walk can cross into; within a framework major the runtime surface is append-only, so an Insights release just targets a major; the rule is "one framework runtime per page", loadable in desk and Vue-frontend apps alike. The runtime artifact itself doesn't exist yet — a framework deliverable for the build ticket.
 - [Build ownership and island preset](issues/resolved/08-build-ownership-and-preset.md) — apps own their island builds; framework publishes an npm-installable Vite preset plus the runtime artifacts. Islands are native ESM linked through a desk-emitted import map (the convergence path for Vue-frontend apps); the generic enforcement is a per-entry size budget, import-boundary lint stays app-local; CSS splits like the JS — one shared runtime sheet via `adoptedStyleSheets`, islands ship only their own utilities; dev loop is preset watch + `hot_update` soft re-mount.
-- [Mount and renderer API](issues/resolved/04-v1-contract-surface.md) — islands are hook-declared (`ui_islands`) and mounted through one generic `frappe.ui.mount_island(name, el, context)`; the envelope is structured by ownership (`host` framework-injected ambient, `props`/`on` island-specific, generic `update`/`unmount` handle, `configure(app)` fixes the app-config gap); references are logical ids (`{app}/{name}` for shipped content, resolved by Insights — hash docnames never cross the boundary); the renderer toggle is one framework-owned bridge that retires without an Insights release. "Island" is the ratified term, in `CONTEXT.md`.
+- [Mount and renderer API](issues/resolved/04-v1-contract-surface.md) — islands are hook-declared (`ui_islands`) and mounted through one generic `frappe.ui.mount_island(name, el, context)`; the mount contract is structured by ownership (`desk` framework-injected ambient — the ticket calls it `host`, and it shipped as `desk` — plus framework-injected `styles`, `props`/`on` island-specific, generic `update`/`unmount` handle, `configure(app)` fixes the app-config gap); references are logical ids (`{app}/{name}` for shipped content, resolved by Insights — hash docnames never cross the boundary); the renderer toggle is one framework-owned bridge that retires without an Insights release. "Island" is the ratified term, in `CONTEXT.md`.
 - [Content lifecycle: author → ship → customize](issues/resolved/03-content-lifecycle.md) — one shipping channel: apps ship bundles of typed named documents (`insights/<bundle>/`, one JSON per query/chart/dashboard, logical-name references, workbook stays out of the format), synced as read-only standard docs via declarative reconcile; authoring = builder + "Export to app" + developer-mode round-trip, released through git; one append-only format major in `bundle.json`; template import-a-copy machinery retires. Customization split out to [Site customization of shipped content](issues/10-site-customization-of-shipped-content.md) with Duplicate as the interim floor.
 - [Data access for desk-rendered content](issues/resolved/09-desk-data-access.md) — three-axis model (authoring / visibility / data authority), semantics only, store-agnostic. The gate is a visibility ladder (`Private | Specific Roles | Everyone | Public`) declared as fields on chart and dashboard, enforced through one `frappe.has_permission` seam — no `Insights User` role in the viewing path. `data_authority: Viewer | Author` defaults to `Viewer`, doc-declared, engine-enforced. Viewing implies no Insights access. Drill-down exposes the chart's query rows under the chart's authority, never the query definition.
 - [Desk dashboard page UX](issues/resolved/05-desk-dashboard-page-ux.md) — viewer-first page rendering Insights dashboards only (legacy widgets never enter the island; legacy page stays behind the flag). Entry: workspace sidebar items + one route, `/app/dashboard-view/<reference>` — the existing desk dashboard route, so existing links upgrade in place (docname stays hash, slug editable, internal references stay on logical ids). Edit = "Edit in Insights" new-tab, rights-gated; "Duplicate to edit" for shipped. Per-card async states; denied leaks no existence. Drill split to [Drill-down interaction](issues/resolved/11-drill-down-interaction.md) as a common Insights+desk layer; prototype dropped as already-proven.
@@ -94,7 +94,7 @@ Resolved tickets:
   navbar chrome; v16 already moved global chrome to the workspace dock (logo,
   search, notifications, user menu); and the `frappe.ui.Page` is what the sidebar
   and dock resolve visibility against, so the page stays and only its head goes.
-  Framework gains `Page.toggle_page_head(show)`; `host` gains `breadcrumbs`
+  Framework gains `Page.toggle_page_head(show)`; `desk` gains `breadcrumbs`
   (ancestors only), `navigate` and `set_title`. No island→shell channel was
   built — the island draws its own title. Amends ticket 05's page layout.
 - [Who derives a chart's query?](issues/resolved/27-chart-query-derivation-owner.md) —
@@ -112,7 +112,7 @@ Resolved tickets:
   write. `useViewerChart` generalizes into the one chart-read store (saved-name
   feed and inline-config feed); the `Chart`-aggregate adapter and `chart.ts`'s
   result half die; the renderer family below `ChartBody` survives as the one
-  card set. One `DashboardView` in `dashboard/` owns grid, cards, filters, and
+  card set. One `DashboardViewer` in `dashboard/` owns grid, cards, filters, and
   capability-gated chrome; entry points (island, SPA route, public route) are
   ~20-line navigation shims. Viewer endpoints already serve guests through the
   ladder, so the public page needs no permission work — only the preview-image
@@ -152,7 +152,7 @@ Resolved tickets:
   Authoring extra: "open as query" into an ephemeral ad-hoc query, Insights
   surfaces only, edit-rights-gated. First shipped slice of
   [ticket 33](issues/33-query-building-server-side.md).
-- **Ownership split** (settled during ticket 02) — framework owns the desk page shell, the mount contract, the shared runtime (Vue + frappe-ui + chart primitives), and the renderer toggle; Insights provides doctypes, engine, and a mountable UI artifact built against framework-provided externals. The seam is one call: framework's page asks Insights to mount into an element with host context. The Insights→desk bridge (is Insights installed? is the flag on? is this an Insights dashboard?) lives in framework, so Insights never knows about the fallback.
+- **Ownership split** (settled during ticket 02) — framework owns the desk page shell, the mount contract, the shared runtime (Vue + frappe-ui + chart primitives), and the renderer toggle; Insights provides doctypes, engine, and a mountable UI artifact built against framework-provided externals. The seam is one call: framework's page asks Insights to mount into an element with desk context. The Insights→desk bridge (is Insights installed? is the flag on? is this an Insights dashboard?) lives in framework, so Insights never knows about the fallback.
 
 The framework-side foundation is specced from these tickets:
 [spec-framework-foundation.md](spec-framework-foundation.md) (`ready-for-agent`).
@@ -191,7 +191,7 @@ and indexed under Decisions so far. The reshape is specced from them:
 re-specced 2026-08-07 — see below).
 Tickets 27 and 31 resolved together on 2026-08-06 and specced as
 [spec-one-renderer.md](spec-one-renderer.md), which **shipped 2026-08-07**,
-all five steps: the Python deriver, the read-path switch, `DashboardView`
+all five steps: the Python deriver, the read-path switch, `DashboardViewer`
 with the preview key moved into the controller, the builder on the read
 store, and the cache retirement patch.
 
@@ -241,8 +241,9 @@ Still open in this wave:
   into a tree a second lockfile governs. The build now fails loudly on a bad
   crossing; the second authority stands, and 07's "runtime skew is unreachable"
   is false as written.
-- [What ambient does the host owe an island?](issues/29-host-ambient-for-islands.md)
-  — ticket 04 gave the envelope a `host` slot without saying what goes in it.
+- [What ambient does desk owe an island?](issues/29-host-ambient-for-islands.md)
+  — ticket 04 gave the mount contract a `host` slot without saying what goes in
+  it. The slot shipped under the name `desk`.
   Three instances now: frappe-ui icons need a sprite no shadow root can reach,
   number formatting drops Indian grouping the SPA applies, and ticket 30 added
   the breadcrumb trail and desk routing. The third was designed rather than

@@ -130,7 +130,7 @@ query builder's result table — the builder's drill moves onto the same new
 dialog, fed by an authoring endpoint variant that accepts inline
 config/operations, the same split ticket 27 made for preview. One UI, two
 feeds, one server-side derivation — the direction
-[ticket 33](33-query-building-server-side.md) records.
+[ticket 33](../33-query-building-server-side.md) records.
 
 **Prototype:** likely unnecessary — every level is a composition of parts
 that already exist (menu, dialog, Row chart, data table). If the back-stack

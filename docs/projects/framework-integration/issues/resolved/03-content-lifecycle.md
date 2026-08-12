@@ -74,7 +74,7 @@ This floor is explicitly interim — the duplicate-beside-original UX is
 acknowledged debt. The real model (and the fork-resolution policy the
 [Mount and renderer API](04-v1-contract-surface.md) ticket delegated here)
 moves to a new grilling ticket,
-[Site customization of shipped content](10-site-customization-of-shipped-content.md),
+[Site customization of shipped content](../10-site-customization-of-shipped-content.md),
 carrying as inputs: the
 [overlay-prior-art research](../../research/03-customization-overlay-prior-art.md)
 (verdict: item-keyed overlay is bounded under four rules — vendor-owned keys,

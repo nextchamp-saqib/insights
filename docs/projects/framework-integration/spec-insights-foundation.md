@@ -1,7 +1,15 @@
 # Spec: Insights-side island foundation
 
-Status: ready-for-agent
+Status: shipped, and partly superseded.
 Target: `apps/insights`, branch off `develop`, Insights v3.
+
+> **Superseded in part by
+> [spec-branch-reshape.md](spec-branch-reshape.md).** The shipping format below
+> is the retired one. Read the reshape spec instead for anything about the
+> format: the shipping unit is the workbook, the manifest is `workbook.json`,
+> the identity field is `standard_id`, and the site-side container workbook is
+> gone. This spec is kept as the record of the foundation as first built. Do not
+> build from its "Bundle format and shipping" or "Sync" sections.
 
 This spec covers the Insights-side deliverables of the framework-integration
 effort. The framework-side foundation is
@@ -91,7 +99,7 @@ version. Site customization of shipped content is Duplicate, nothing more.
   target beside the SPA build. Declared in `hooks.py`:
   `ui_islands = {"insights.dashboard": "<base>.island.js", "insights.chart": "<base>.island.js"}`.
 - Each entry exports the mount contract:
-  `mount(el, { host, props, on }) → { update(props), unmount() }`. The entry
+  `mount(el, { desk, props, on, styles }) → { update(props), unmount() }`. The entry
   uses `configure(app)` to register the plugins the viewer graph needs.
 - Registration is unconditional. No flag check, no fallback awareness — the
   renderer bridge owns all conditions.
@@ -112,7 +120,7 @@ version. Site customization of shipped content is Duplicate, nothing more.
 - The size budget is re-pinned from the first clean dashboard-island build
   plus slack, replacing the preset's default.
 - Dark mode: the island root element inside the shadow root carries
-  `data-theme` from `host.theme` and updates live. Tailwind's dark selector
+  `data-theme` from `desk.theme` and updates live. Tailwind's dark selector
   is a descendant selector, so the attribute must sit inside the shadow
   root, not on the host element.
 
