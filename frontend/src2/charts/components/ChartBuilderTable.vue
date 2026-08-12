@@ -16,7 +16,12 @@ const chart = inject('chart') as Chart
 const preview = inject('chartPreview') as ChartRead
 
 // A cell of the preview is a segment of the same card, so it opens the same
-// stack the picture above it does — the config says which columns a cell pins.
+// stack the picture above it does. The config says which columns a cell pins.
+//
+// No reset watcher here, unlike ChartRenderer. That component takes its chart
+// as a prop from a grid that swaps cards. This one injects the preview
+// ChartBuilder provided, and `useChartPreview` memoizes one store per chart
+// docname, so the injected object never changes identity under this component.
 const clicked = ref<ChartSegmentClick>()
 
 watchEffect(() => {
