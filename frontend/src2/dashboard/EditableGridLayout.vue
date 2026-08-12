@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref } from 'vue'
+import type { Layout } from '../types/workbook.types'
 import StaticGridLayout from './StaticGridLayout.vue'
-import {
-	GridLayoutItem,
-	ROW_HEIGHT,
-	SINGLE_COLUMN_MAX_WIDTH,
-	resolveLayouts,
-} from './grid_placement'
+import { GRID_COLUMNS, ROW_HEIGHT, SINGLE_COLUMN_MAX_WIDTH, resolveLayouts } from './grid_placement'
 
 // The dashboard grid an author gets: the reader's grid, plus a pointer.
 //
@@ -21,17 +17,15 @@ import {
 // The layout is only written back when the pointer is released. A drag is one
 // edit, not one per frame, so undo and autosave see a move rather than a trail.
 const props = defineProps<{
-	modelValue?: GridLayoutItem[]
-	cols?: number
+	modelValue?: Layout[]
 	disabled?: boolean
 	verticalCompact?: boolean
 }>()
 
-const emit = defineEmits<{ 'update:modelValue': [layouts: GridLayoutItem[]] }>()
+const emit = defineEmits<{ 'update:modelValue': [layouts: Layout[]] }>()
 
 const container = ref<HTMLElement>()
 const { width } = useElementSize(container)
-const columns = computed(() => props.cols || 12)
 
 // Collapsed to one column there is nowhere to drag a cell to, and the column is
 // the width of the screen, so every gesture would read as a move. The grid is
@@ -45,11 +39,11 @@ type Gesture = {
 	pointerX: number
 	pointerY: number
 	/** the grid as it stood when the pointer went down — see `resolveLayouts` */
-	from: GridLayoutItem[]
+	from: Layout[]
 	/** the cell the pointer is asking for, before the grid has its say */
-	asked: GridLayoutItem
+	asked: Layout
 	/** where the grid put it. What the card is held away from. */
-	landed: GridLayoutItem
+	landed: Layout
 	/** how far the card is held from `landed`, so it stays under the hand */
 	offsetX: number
 	offsetY: number
@@ -57,7 +51,7 @@ type Gesture = {
 
 const gesture = ref<Gesture>()
 // what the grid looks like mid-gesture. Nothing else may write it.
-const settling = ref<GridLayoutItem[]>()
+const settling = ref<Layout[]>()
 
 const layouts = computed(() => settling.value || props.modelValue || [])
 
@@ -69,7 +63,7 @@ function clamp(value: number, min: number, max: number) {
 	return Math.min(Math.max(value, min), max)
 }
 
-function sameCell(a: GridLayoutItem, b: GridLayoutItem) {
+function sameCell(a: Layout, b: Layout) {
 	return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h
 }
 
@@ -111,7 +105,7 @@ function track(event: PointerEvent) {
 	const current = gesture.value
 	if (!current) return
 
-	const columnWidth = width.value / columns.value
+	const columnWidth = width.value / GRID_COLUMNS
 	const dragged = current.from.find((item) => item.i === current.i)
 	if (!dragged || !columnWidth) return
 
@@ -124,12 +118,12 @@ function track(event: PointerEvent) {
 		current.kind === 'move'
 			? {
 					...dragged,
-					x: clamp(dragged.x + acrossColumns, 0, columns.value - dragged.w),
+					x: clamp(dragged.x + acrossColumns, 0, GRID_COLUMNS - dragged.w),
 					y: Math.max(dragged.y + downRows, 0),
 			  }
 			: {
 					...dragged,
-					w: clamp(dragged.w + acrossColumns, 1, columns.value - dragged.x),
+					w: clamp(dragged.w + acrossColumns, 1, GRID_COLUMNS - dragged.x),
 					h: Math.max(dragged.h + downRows, 1),
 			  }
 
@@ -146,18 +140,15 @@ function track(event: PointerEvent) {
 		settling.value = settled
 	}
 
-	// How far the card has to be held from the slot it will drop into, so that it
-	// stays under the hand.
+	// How far the card is held from the slot it will drop into, so it stays under
+	// the hand.
 	//
-	// Measured against where the cell *landed*, never against where the pointer
-	// asked it to go. The two differ whenever the grid overrules the request —
-	// drag a card into open space below the last row with compaction on and it
-	// lands back at the top, and an offset taken from the request would leave the
-	// card sitting up there while the hand carried on down. Sideways the grid
-	// never overrules anything, which is why only downward drags came apart.
+	// Measured against where the cell `landed`, never against where the pointer
+	// `asked`. Compaction can move a cell above the row the pointer asked for, and
+	// an offset taken from the request would leave the card up there.
 	//
 	// A resize is not held at all. It snaps outright, because a card drawn at a
-	// width it is not going to keep is a card whose contents lay out twice.
+	// width it will not keep is a card whose contents lay out twice.
 	const held = current.kind === 'move'
 	current.offsetX = held ? dx - (current.landed.x - dragged.x) * columnWidth : 0
 	current.offsetY = held ? dy - (current.landed.y - dragged.y) * ROW_HEIGHT : 0
@@ -193,12 +184,7 @@ const lifted = computed(() => {
 
 <template>
 	<div ref="container" class="w-full">
-		<StaticGridLayout
-			:modelValue="layouts"
-			:cols="columns"
-			:verticalCompact="verticalCompact"
-			:lifted="lifted"
-		>
+		<StaticGridLayout :modelValue="layouts" :verticalCompact="verticalCompact" :lifted="lifted">
 			<template #item="cell">
 				<!-- `touch-none` is what makes a finger drag a card rather than
 				     scroll the page. The browser decides between the two the moment

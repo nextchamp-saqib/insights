@@ -86,11 +86,8 @@ export function defaultFilters(items: ViewerDashboardItem[]): ViewerFilters {
 /**
  * One grid cell, as the page hands it over.
  *
- * Every feed answers with a component of this shape, and that component is the
- * one place the surfaces still differ: a reader gets a card, an author gets a
- * card they can move, edit and throw away. The page passes the same five props
- * to either and lets it use what it can — a reader's card routes filter state,
- * an author's routes it through links the reader never receives.
+ * Every feed answers with a component of this shape. The page passes the same
+ * props to either and lets it use what it can.
  */
 export type DashboardCellProps = {
 	item: ViewerDashboardItem
@@ -110,12 +107,10 @@ export type DashboardMenuOption = {
 }
 
 /**
- * Writing, for whoever holds it. Absent on every read surface, and nothing it
- * carries is drawn without it.
+ * Writing, for whoever holds it. Absent on every read surface.
  *
- * The edit chrome itself is not here: the builder draws its own header, so it
- * reaches `DashboardEditActions` by import. What stays on the feed is state —
- * what is being edited, and what that adds to the page's menu.
+ * The edit chrome is not here. The builder draws its own header and reaches
+ * `DashboardEditActions` by import.
  */
 export type DashboardAuthoring = {
 	// true while the reader is moving things about
@@ -132,8 +127,8 @@ export type DashboardAuthoring = {
 /**
  * Everything a dashboard page draws itself from.
  *
- * Each capability is present only where it was granted, so a surface never has
- * to ask which surface it is: it draws what the feed carries and nothing else.
+ * Each capability is present only where the server granted it. A surface draws
+ * what the feed carries and never asks which surface it is.
  */
 export type DashboardSource = {
 	loading: boolean

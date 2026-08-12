@@ -6,7 +6,7 @@ import type { DashboardMenuOption } from './viewer'
 // The two controls every dashboard header carries, wherever that header is
 // drawn: re-run the cards, and the page's one menu.
 //
-// The variant is the host's, not ours. Desk draws its own page controls subtle
+// The variant is desk's, not ours. Desk draws its own page controls subtle
 // and an outline button next to them reads as an intrusion; inside Insights the
 // buttons beside these are outline, so a subtle one reads as disabled. Whoever
 // mounts the page knows which chrome it sits in and says so.

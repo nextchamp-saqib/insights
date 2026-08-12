@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
 import { computed, ref } from 'vue'
-import { GridLayoutItem, ROW_HEIGHT, placeGrid } from './grid_placement'
+import type { Layout } from '../types/workbook.types'
+import { GRID_COLUMNS, ROW_HEIGHT, placeGrid } from './grid_placement'
 
 // The dashboard grid, drawn. It works out where every cell goes and puts it
 // there — no pointer, no measurement beyond its own width, and it never writes a
@@ -24,8 +25,7 @@ import { GridLayoutItem, ROW_HEIGHT, placeGrid } from './grid_placement'
 // and taking the prop lets the feed carry either grid without the page asking
 // which one it has.
 const props = defineProps<{
-	modelValue?: GridLayoutItem[]
-	cols?: number
+	modelValue?: Layout[]
 	disabled?: boolean
 	verticalCompact?: boolean
 	/**
@@ -46,7 +46,7 @@ const { width } = useElementSize(container)
 
 const placement = computed(() =>
 	placeGrid(layouts.value, {
-		columns: props.cols || 12,
+		columns: GRID_COLUMNS,
 		width: width.value,
 		verticalCompact: props.verticalCompact ?? true,
 	}),
@@ -75,7 +75,7 @@ function slotStyle(i: string) {
 	}
 }
 
-function cellStyle(layout: GridLayoutItem) {
+function cellStyle(layout: Layout) {
 	const slot = slotStyle(layout.i)
 	if (!slot) return undefined
 

@@ -1,17 +1,10 @@
 // The dashboard page's other feed: the document being edited, rather than a
-// saved dashboard named to the server.
-//
-// It has to be a feed of its own because the builder needs a document it can
-// write. It saves, it adds and removes items, and it tracks what is being
-// edited — none of which a rendering response can carry, whatever that response
-// includes. So it loads the document resource and everything above the fetch is
-// the same page.
+// saved dashboard named to the server. It loads the document resource, and
+// everything above the fetch is the same page.
 //
 // It lives apart from `viewer.ts` for the same reason `chart_preview` lives
-// apart from `chart_read`: the editing layer drags in the workbook's stores and
-// its forms, which an island carries neither the weight nor the rights for. A
-// read surface imports `viewer` and gets none of it — and `DashboardViewer`,
-// which both feeds fill, imports neither.
+// apart from `chart_read`. The editing layer pulls in the workbook's stores and
+// forms, which an island carries neither the weight nor the rights for.
 
 import { useStorage, useWindowSize } from '@vueuse/core'
 import { computed, markRaw, provide, reactive, watchEffect } from 'vue'

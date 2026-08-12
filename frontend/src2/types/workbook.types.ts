@@ -135,13 +135,16 @@ export type WorkbookDashboardItem =
 	| WorkbookDashboardText
 	| WorkbookDashboardFilter
 
+/** One grid cell as the document stores it: a column, a row, and a span of each. */
 export type Layout = {
+	/** The cell's identity, stable across a move. */
 	i: string
 	x: number
 	y: number
 	w: number
 	h: number
 }
+
 export type WorkbookDashboardChart = {
 	type: 'chart'
 	chart: string

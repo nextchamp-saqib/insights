@@ -9,30 +9,19 @@ import type {
 	ViewerFilters,
 	ViewerFilterState,
 } from './viewer'
+import { layoutRank } from './grid_placement'
 
-// A dashboard's content: the filters a reader moves, the grid of cards, and
-// every state the page can be in before there is a grid to draw. This is the
-// whole of what a dashboard *is*, on every surface that shows one — the desk
-// island, the public link, the SPA's own page and the builder.
+// A dashboard's content, on every surface that shows one: the filters a reader
+// moves, the grid of cards, and every state the page can be in before there is a
+// grid to draw.
 //
-// It draws no header of its own. What sits above the grid is the one thing that
-// genuinely differs between surfaces: a desk page needs the band desk hides, and
-// the builder already has the workbook's navbar over it. So the band is a slot,
-// and the two things a header needs — a refresh and the page's menu — are handed
-// to it. `DashboardPage` fills it with a page header; the builder fills it with
-// a title row that blends into the dashboard.
+// The header is a slot, because it is the one part that differs between
+// surfaces. It receives a refresh and the page's menu. Everything else arrives
+// on the feed, as a capability that is either there or not, so nothing here asks
+// which surface it is.
 //
-// Everything else that changes between surfaces arrives on the feed, as a
-// capability that is either there or not. Nothing here asks which surface it is,
-// and an ungranted capability draws nothing at all — no disabled button, no
-// action that answers with a refusal.
-//
-// The layout arrives in one request and is drawn straight away; every card then
-// fetches on its own, so one slow or failing card never holds up the rest.
-//
-// A surface hands this a bounded box and it fills it: the header band stays, one
-// scrolling body under it. That is what lets the grid scroll without the page
-// around it scrolling too.
+// The surface hands this a bounded box and it fills it. The grid then scrolls
+// without the page around it scrolling too.
 const props = defineProps<{
 	// where the page's content comes from: `useSavedDashboard` on a read surface,
 	// `useDashboardAuthoring` in the builder
@@ -40,8 +29,6 @@ const props = defineProps<{
 	// where the reader starts. What they last chose on this dashboard wins over it
 	filters?: ViewerFilters
 }>()
-
-const GRID_COLS = 20
 
 const filters = ref<ViewerFilters>({})
 const refreshToken = ref(0)
@@ -89,12 +76,6 @@ function setFilter(item: ViewerDashboardItem, state?: ViewerFilterState) {
 	if (state) moved[item.filter_name!] = state
 	else delete moved[item.filter_name!]
 	filters.value = moved
-}
-
-// Cards reach the execution queue in whatever order they mount, so rank them by
-// grid position instead: top row first, left to right within a row.
-function layoutRank(item: ViewerDashboardItem) {
-	return item.layout.y * GRID_COLS + item.layout.x
 }
 
 // Every action is offered on the strength of what the feed carries, never of
@@ -181,7 +162,6 @@ function exportImage() {
 				v-else
 				class="h-fit w-full"
 				:class="source.authoring?.editing ? 'mb-[20rem] !select-none' : ''"
-				:cols="GRID_COLS"
 				:disabled="!source.authoring?.editing"
 				:verticalCompact="source.verticalCompact"
 				:modelValue="source.items.map((item) => item.layout)"
@@ -194,7 +174,7 @@ function exportImage() {
 						:index="index"
 						:dashboard="source.name"
 						:filters="cellFilters(source.items[index])"
-						:priority="layoutRank(source.items[index])"
+						:priority="layoutRank(source.items[index].layout)"
 						:refresh-token="refreshToken"
 						@filter="setFilter(source.items[index], $event)"
 						@reset-filters="filters = {}"

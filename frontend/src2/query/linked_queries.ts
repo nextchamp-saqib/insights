@@ -17,10 +17,6 @@ export function getLinkedQueries(query_name: string, _visited: Set<string> = new
 	const query = useQuery(query_name)
 	const linkedQueries = new Set<string>()
 
-	if (!query.isloaded) {
-		console.log('Operations not loaded yet for query', query_name)
-	}
-
 	const operations = copy(query.currentOperations)
 	if (query.activeEditIndex > -1) {
 		operations.splice(query.activeEditIndex)

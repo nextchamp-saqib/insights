@@ -1,14 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import {
-	compactLayouts,
-	placeGrid,
-	resolveLayouts,
-	stackLayouts,
-	type GridLayoutItem,
-} from './grid_placement'
+import type { Layout } from '../types/workbook.types'
+import { compactLayouts, placeGrid, resolveLayouts, stackLayouts } from './grid_placement'
 
 // A cell, named so a case reads as the grid it describes.
-function cell(i: string, x: number, y: number, w: number, h: number): GridLayoutItem {
+function cell(i: string, x: number, y: number, w: number, h: number): Layout {
 	return { i, x, y, w, h }
 }
 

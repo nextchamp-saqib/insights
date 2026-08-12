@@ -1,23 +1,13 @@
 // Where each cell of a dashboard grid sits.
 //
-// This is the whole layout engine a dashboard has. Both surfaces run it: the
-// reader's grid to draw a saved layout, and the author's grid on every pointer
-// move to work out what a drag has done to the cells around it. Neither one
-// owns a rule the other does not, so a reader cannot tell which surface drew
-// the grid, and an author sees while dragging exactly what will be saved.
+// The reader's grid runs this to draw a saved layout. The author's grid runs it
+// on every pointer move, to work out what a drag did to the cells around it.
+// Neither surface holds a rule the other does not.
 //
-// It is a function of the stored layout alone — no element, no measurement, no
-// pointer — so it is tested without a DOM. The pixels stay in the components.
+// It reads the stored layout alone — no element, no measurement, no pointer. A
+// test runs it without a DOM, and the pixels stay in the components.
 
-/** A cell as the document stores it: a column, a row, and a span of each. */
-export type GridLayoutItem = {
-	/** The cell's identity, stable across a move. */
-	i: string
-	x: number
-	y: number
-	w: number
-	h: number
-}
+import type { Layout } from '../types/workbook.types'
 
 /**
  * Below this container width the grid collapses to one column. Read against the
@@ -29,7 +19,20 @@ export const SINGLE_COLUMN_MAX_WIDTH = 768
 /** Height of one grid row in px. */
 export const ROW_HEIGHT = 52
 
-function overlaps(a: GridLayoutItem, b: GridLayoutItem) {
+/** Columns a dashboard grid places against. */
+export const GRID_COLUMNS = 20
+
+/**
+ * Rank a cell by where it sits: top row first, left to right within a row.
+ *
+ * Charts reach the execution queue in whatever order their documents load, so
+ * both surfaces rank them by grid position instead.
+ */
+export function layoutRank(layout: Layout) {
+	return layout.y * GRID_COLUMNS + layout.x
+}
+
+function overlaps(a: Layout, b: Layout) {
 	return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 }
 
@@ -40,8 +43,8 @@ function overlaps(a: GridLayoutItem, b: GridLayoutItem) {
  * obeys, and an author can turn compaction on after laying a grid out loosely,
  * so the gaps have to close here rather than at save time.
  */
-export function compactLayouts(layouts: GridLayoutItem[]): GridLayoutItem[] {
-	const placed: GridLayoutItem[] = []
+export function compactLayouts(layouts: Layout[]): Layout[] {
+	const placed: Layout[] = []
 	// top row first, then left to right — a cell can only rest on one already placed
 	const order = [...layouts].sort((a, b) => a.y - b.y || a.x - b.x)
 
@@ -57,7 +60,7 @@ export function compactLayouts(layouts: GridLayoutItem[]): GridLayoutItem[] {
 }
 
 /** Stack every cell full width, in reading order. The one-column collapse. */
-export function stackLayouts(layouts: GridLayoutItem[]): GridLayoutItem[] {
+export function stackLayouts(layouts: Layout[]): Layout[] {
 	let y = 0
 	return [...layouts]
 		.sort((a, b) => a.y - b.y || a.x - b.x)
@@ -69,34 +72,27 @@ export function stackLayouts(layouts: GridLayoutItem[]): GridLayoutItem[] {
 }
 
 /**
- * Settle a grid the author has just disturbed: put one cell where they dragged
- * it, and push whatever it landed on out of the way.
- *
- * `pinned` is the cell under the pointer. It is placed first and so wins every
- * overlap — everything else settles around it. The rest keep their reading
- * order, top row first, so a cell pushed aside lands where the author expects
- * and does not swap places with its neighbour half way through a drag.
+ * Settle a grid the author has just disturbed. The `pinned` cell keeps the place
+ * the pointer gave it, and every cell it lands on moves down.
  *
  * The caller passes the grid as it stood when the drag began, with the pinned
- * cell moved to where the pointer is now. That makes the result a function of
- * where the pointer is rather than of how it got there: the same position always
- * settles the same way, and a slow drag over a crowded grid cannot ratchet the
- * other cells further and further down.
+ * cell moved to the pointer. The result is then a function of where the pointer
+ * is, not of how it got there. A slow drag cannot ratchet the other cells down.
  *
  * Cells come back in the order they went in, because the caller matches them to
  * its own items by position.
  */
 export function resolveLayouts(
-	layouts: GridLayoutItem[],
+	layouts: Layout[],
 	options: { pinned?: string; verticalCompact?: boolean },
-): GridLayoutItem[] {
+): Layout[] {
 	const order = [...layouts].sort((a, b) => {
 		if (a.i === options.pinned) return -1
 		if (b.i === options.pinned) return 1
 		return a.y - b.y || a.x - b.x
 	})
 
-	const settled: GridLayoutItem[] = []
+	const settled: Layout[] = []
 	for (const item of order) {
 		let y = item.y
 		// drop past each cell it lands on until it clears them all
@@ -122,7 +118,7 @@ export type GridPlacement = {
 	/** Column count the cells were placed against. */
 	columns: number
 	/** Placement by cell identity, so the caller can draw in its own order. */
-	cells: Record<string, GridLayoutItem>
+	cells: Record<string, Layout>
 }
 
 /**
@@ -133,7 +129,7 @@ export type GridPlacement = {
  * what it meant.
  */
 export function placeGrid(
-	layouts: GridLayoutItem[],
+	layouts: Layout[],
 	options: { columns: number; width: number; verticalCompact?: boolean },
 ): GridPlacement {
 	const single = options.width > 0 && options.width <= SINGLE_COLUMN_MAX_WIDTH
@@ -143,7 +139,7 @@ export function placeGrid(
 		  ? compactLayouts(layouts)
 		  : layouts
 
-	const cells: Record<string, GridLayoutItem> = {}
+	const cells: Record<string, Layout> = {}
 	for (const item of placed) cells[item.i] = item
 
 	return { columns: single ? 1 : options.columns, cells }
