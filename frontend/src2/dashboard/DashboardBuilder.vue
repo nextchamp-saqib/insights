@@ -4,13 +4,12 @@ import ContentEditable from '../components/ContentEditable.vue'
 import { WorkbookChart } from '../types/workbook.types'
 import { useDashboardAuthoring } from './authoring'
 import DashboardActions from './DashboardActions.vue'
+import DashboardBody from './DashboardBody.vue'
 import DashboardEditActions from './DashboardEditActions.vue'
-import DashboardViewer from './DashboardViewer.vue'
 
 // A dashboard inside the workbook that owns it. It shows what every other
-// surface shows — the builder is a viewer that can also write — so all it adds
-// is the one thing only the workbook knows: which charts this dashboard may draw
-// from.
+// surface shows, so all it adds is the one thing only the workbook knows: which
+// charts this dashboard may draw from.
 //
 // It is the one surface that draws its own header instead of mounting
 // `DashboardPage`. The workbook's navbar is already above it, so a second band
@@ -26,7 +25,7 @@ const source = useDashboardAuthoring(props.dashboard_name, props.charts)
 </script>
 
 <template>
-	<DashboardViewer :source="source">
+	<DashboardBody :source="source">
 		<template #header="{ refresh, menuOptions }">
 			<div class="flex flex-shrink-0 items-center justify-between gap-2 px-4 pt-3">
 				<ContentEditable
@@ -47,5 +46,5 @@ const source = useDashboardAuthoring(props.dashboard_name, props.charts)
 				</div>
 			</div>
 		</template>
-	</DashboardViewer>
+	</DashboardBody>
 </template>

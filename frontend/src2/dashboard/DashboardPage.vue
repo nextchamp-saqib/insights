@@ -3,7 +3,7 @@ import { Breadcrumbs } from 'frappe-ui'
 import { computed, watch } from 'vue'
 import { __ } from '../translation'
 import DashboardActions from './DashboardActions.vue'
-import DashboardViewer from './DashboardViewer.vue'
+import DashboardBody from './DashboardBody.vue'
 import type { DashboardSource, ViewerFilters } from './viewer'
 
 // A dashboard as a page of its own: a header band with the trail through it, and
@@ -13,7 +13,7 @@ import type { DashboardSource, ViewerFilters } from './viewer'
 // sits in already has a navbar.
 //
 // It carries nothing but the feed it reads from and the navigation context of
-// where it sits. Everything a dashboard actually is belongs to `DashboardViewer`.
+// where it sits. Everything a dashboard actually is belongs to `DashboardBody`.
 type PageCrumb = {
 	label: string
 	/** an SPA route. A surface without a router passes `onClick` instead. */
@@ -45,7 +45,7 @@ watch(pageTitle, (title) => emit('title', title), { immediate: true })
 </script>
 
 <template>
-	<DashboardViewer :source="source" :filters="filters">
+	<DashboardBody :source="source" :filters="filters">
 		<!-- 48px is desk's `--page-head-height`: this header stands in for the page
 		     head desk hides, so it has to be the same band an ordinary desk page
 		     draws, not merely a similar one. -->
@@ -83,5 +83,5 @@ watch(pageTitle, (title) => emit('title', title), { immediate: true })
 				</div>
 			</div>
 		</template>
-	</DashboardViewer>
+	</DashboardBody>
 </template>

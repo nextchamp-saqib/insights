@@ -7,6 +7,10 @@ modules this spec touches. It landed first instead, and the cost was the
 reverse of the one feared: this spec deleted code the reshape would otherwise
 have had to rename.
 
+This spec calls the shared surface `DashboardViewer`, the name it shipped
+under. That component is now `frontend/src2/dashboard/DashboardBody.vue`. The
+text below is left as it shipped.
+
 Sources: the resolved tickets
 [27](issues/resolved/27-chart-query-derivation-owner.md) (query derivation owner) and
 [31](issues/resolved/31-one-dashboard-one-chart-renderer.md) (one dashboard renderer).

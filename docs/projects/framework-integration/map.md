@@ -112,7 +112,7 @@ Resolved tickets:
   write. `useViewerChart` generalizes into the one chart-read store (saved-name
   feed and inline-config feed); the `Chart`-aggregate adapter and `chart.ts`'s
   result half die; the renderer family below `ChartBody` survives as the one
-  card set. One `DashboardViewer` in `dashboard/` owns grid, cards, filters, and
+  card set. One `DashboardBody` in `dashboard/` owns grid, cards, filters, and
   capability-gated chrome; entry points (island, SPA route, public route) are
   ~20-line navigation shims. Viewer endpoints already serve guests through the
   ladder, so the public page needs no permission work — only the preview-image
@@ -191,7 +191,7 @@ and indexed under Decisions so far. The reshape is specced from them:
 re-specced 2026-08-07 — see below).
 Tickets 27 and 31 resolved together on 2026-08-06 and specced as
 [spec-one-renderer.md](spec-one-renderer.md), which **shipped 2026-08-07**,
-all five steps: the Python deriver, the read-path switch, `DashboardViewer`
+all five steps: the Python deriver, the read-path switch, `DashboardBody`
 with the preview key moved into the controller, the builder on the read
 store, and the cache retirement patch.
 

@@ -86,7 +86,7 @@
 									"!./DashboardPage.vue",
 									"!**/dashboard/DashboardPage.vue"
 								],
-								"message": "An entry point mounts DashboardPage and draws nothing itself. Anything that renders inside the page box — the grid, a card, the filter bar, an action — belongs in DashboardPage or DashboardViewer, behind the capability its feed carries. A shim names the feed it reads from and carries navigation context, nothing more."
+								"message": "An entry point mounts DashboardPage and draws nothing itself. Anything that renders inside the page box — the grid, a card, the filter bar, an action — belongs in DashboardPage or DashboardBody, behind the capability its feed carries. A shim names the feed it reads from and carries navigation context, nothing more."
 							}
 						],
 						"paths": [
@@ -120,11 +120,11 @@
 								"group": [
 									"./*.vue",
 									"**/dashboard/*.vue",
-									"!./DashboardViewer.vue",
+									"!./DashboardBody.vue",
 									"!./DashboardActions.vue",
 									"!./DashboardEditActions.vue"
 								],
-								"message": "The builder is the one dashboard surface that draws its own header, because the workbook's navbar is already above it. That header is a title row and the actions — nothing else. The grid, the cards and the filter bar stay in DashboardViewer, which every surface shares."
+								"message": "The builder is the one dashboard surface that draws its own header, because the workbook's navbar is already above it. That header is a title row and the actions — nothing else. The grid, the cards and the filter bar stay in DashboardBody, which every surface shares."
 							}
 						],
 						"paths": [
