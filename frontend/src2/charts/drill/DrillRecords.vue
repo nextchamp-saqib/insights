@@ -7,13 +7,13 @@ import { EMPTY_RESULT, formatResultRows, rawRowOf } from '../../query/helpers'
 import type { ResultTable } from '../../query/result_table'
 import { __ } from '../../translation'
 import type { QueryResultRow } from '../../types/query.types'
-import { drillGranularity, type DrillLevelData } from './drill_stack'
+import { recordDateGranularity, type DrillLevelData } from './drill_stack'
 
-// The floor of the ladder: the rows behind the segment, every column the query
+// The floor of the stack: the rows behind the segment, every column the query
 // selects and no more. What the author chose to publish is the query itself, so
 // there is no column picking here, no group-by, and no way further down — the
 // crumbs above are the way back up.
-const props = defineProps<{ data: DrillLevelData }>()
+const props = defineProps<{ answer: DrillLevelData }>()
 
 // The rows arrive whole, in one response, so there is one page and none of the
 // authoring half. `ResultTable` is written for exactly that: what is not handed
@@ -21,16 +21,16 @@ const props = defineProps<{ data: DrillLevelData }>()
 const table = computed<ResultTable>(() => {
 	const result = {
 		...EMPTY_RESULT,
-		columns: props.data.columns,
-		rows: props.data.rows,
+		columns: props.answer.columns,
+		rows: props.answer.rows,
 	}
 	return {
 		ready: true,
 		executing: false,
 		result: {
 			...result,
-			formattedRows: formatResultRows(result, drillGranularity(props.data.columns)),
-			totalRowCount: props.data.total_row_count ?? props.data.rows.length,
+			formattedRows: formatResultRows(result, recordDateGranularity(props.answer.columns)),
+			totalRowCount: props.answer.total_row_count ?? props.answer.rows.length,
 		},
 	}
 })
@@ -38,7 +38,7 @@ const table = computed<ResultTable>(() => {
 // Whether a row names a desk document is the server's answer, carried on the
 // response. Nothing here guesses a doctype from a column name: a miss shows no
 // control rather than a control that lands on the wrong record.
-const link = computed(() => props.data.record_link)
+const link = computed(() => props.answer.record_link)
 
 // The table draws the formatted rows, so the crossing back happens here — a
 // document is named by what the query returned, not by what was printed.

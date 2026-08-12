@@ -1,16 +1,6 @@
-// The drill stack: what a segment click means, what the reader has drilled
-// through, and what has already come back for it.
-//
-// Everything here is a function of plain values — a Chart's config, the raw row
-// a click reported, the levels pushed so far. No network and no component: the
-// stack holds refs so a dialog can render it, and that is the whole of its
-// reach into Vue. The dialog above is a rendering concern — it pushes, it pops,
-// it reads the trail, and it asks `drill_api` for what the cache has not got.
-//
-// The one model, for every chart type: a click reduces to a set of **segment
-// filters** — the dimension values it pins, as (column, operator, literal)
-// triples against the query's pre-summarize surface. A number card pins the
-// empty set. Nothing past `segmentOf` knows which type was clicked.
+// A click reduces to a set of segment filters — the dimension values it pins, as
+// (column, operator, literal) triples against the query's pre-summarize surface.
+// A number card pins the empty set. Nothing past `segmentOf` reads a chart type.
 
 import { computed, reactive, shallowRef } from 'vue'
 import { FIELDTYPES, getGranularityOptions } from '../../helpers/constants'
@@ -51,18 +41,12 @@ export type DrillFilter = {
 }
 
 /**
- * What a level does with its segment.
+ * What a level does with its segment. Both carry the Measure the click landed
+ * on, because a Measure can carry a condition of its own.
  *
- * Both carry the Measure the click landed on. A breakdown re-measures the number
- * the reader pointed at rather than the Chart's first one — and a records level
- * needs it too, because a Measure can carry a condition of its own ("count the
- * overdue ones"), and rows that ignored it would not add up to the number that
- * was clicked.
- *
- * `granularity` is the grain a date breakdown is read at. Left off, the server
- * picks the one the segment's span deserves; said, it wins. So the absent field
- * is not "no grain" — it is "you choose", and it is absent only until the first
- * answer, which says which and is written back onto the level.
+ * The server picks a granularity when this field is absent. A granularity set
+ * here overrides the server's choice. The first response writes its granularity
+ * back onto the level.
  */
 export type DrillAction =
 	| { breakdown: string; measure?: string; granularity?: string }
@@ -210,18 +194,10 @@ function declaredDimensions(chart: DrillChart): DeclaredDimensions {
 }
 
 /**
- * A query builder's own result, read as a Chart.
+ * A query builder's own result, read as a Chart. The last aggregating step says
+ * which columns a click pins, so it is read straight into a Table config.
  *
- * The query builder has no Chart — it has the pipeline it is editing — but the
- * step that aggregated its rows says the same thing a Chart's config does: which
- * columns a click pins, and which numbers it can land on. So the aggregating
- * step is read straight into a Table config, and every other reader of a
- * `DrillChart` works unchanged.
- *
- * This is not the retired client-side derivation coming back. Nothing is sliced
- * and nothing is sent: the server is still told the whole pipeline and still
- * decides where to cut it. Undefined when nothing aggregated, which is a result
- * with nothing behind it.
+ * @returns undefined when nothing in the pipeline aggregates.
  */
 export function queryResultChart(operations: Operation[]): DrillChart | undefined {
 	const aggregating = operations.filter(
@@ -332,13 +308,12 @@ export function segmentOf(chart: DrillChart, target: DrillDownTarget): DrillSegm
 /**
  * The grain a records level's date columns are printed at.
  *
- * A records level groups nothing, so its dates carry no grain of their own —
- * and printed raw they read as machine output. The column's own type is the
- * honest grain there: a `Date` is a day, a `Datetime` is a moment. A grouped
- * date is a different reading: the answer names the one grain it grouped by,
- * and the chart drawing it is told directly.
+ * A records level groups nothing, so its dates carry no grain of their own.
+ * The column's own type is the honest grain there: a `Date` is a day, a
+ * `Datetime` is a moment. A grouped date is a different reading, and the chart
+ * that draws it is told the grain directly.
  */
-export function drillGranularity(columns: QueryResultColumn[]): Record<string, string> {
+export function recordDateGranularity(columns: QueryResultColumn[]): Record<string, string> {
 	const byType: Record<string, string> = { Date: 'day', Datetime: 'second', Time: 'second' }
 
 	const granularity: Record<string, string> = {}
@@ -363,7 +338,7 @@ export function columnLabel(name: string): string {
 
 /**
  * What "Break down by" offers: the pre-summarize Dimensions the response
- * carried, less every column the path has pinned — this click's, and the ones
+ * carried, less every column the stack has pinned — this click's, and the ones
  * the levels above it fixed. The Chart's own other Dimensions come first — a
  * reader reaches for a column the chart already talks about — and the rest
  * follow alphabetically.
@@ -412,7 +387,7 @@ export type DrillEntry = {
 }
 
 /**
- * One crumb of the trail. `depth` is the stack this crumb stands for, so
+ * One crumb of the stack. `depth` is the stack this crumb stands for, so
  * clicking it pops to exactly that many levels. Both of a level's crumbs carry
  * the same depth: "Overdue › by Region" is one level read as two words.
  */
@@ -426,11 +401,8 @@ export type DrillLevelData = {
 	columns: QueryResultColumn[]
 	rows: QueryResultRow[]
 	/**
-	 * Whether the Dimension this level broke down has an order of its own. A date
-	 * does; a status does not. It decides the whole reading: an ordered level came
-	 * back in that order, cut to the most recent stretch, and a ranked one came
-	 * back biggest first. The server answers it — no client sniffs a column type
-	 * to guess at it, because the cut and the reading have to agree.
+	 * Whether the Dimension this level broke down has an order of its own. The
+	 * server answers it, because the cut and the reading have to agree.
 	 */
 	ordered?: boolean
 	/** the grain an ordered breakdown was grouped by, whoever chose it */
@@ -441,38 +413,25 @@ export type DrillLevelData = {
 	record_link?: { doctype: string; column: string }
 	/**
 	 * The pipeline the server sliced for this level, and the connection it ran
-	 * on. The authoring door alone answers with them — they are what "open as
-	 * query" hands to the builder — and a reading surface never sees either.
+	 * on. The authoring door alone answers with them.
 	 */
 	operations?: Operation[]
 	use_live_connection?: boolean
 }
 
-/**
- * What the dialog drills, as the surface that opened it hands it over: the shape
- * a click is read against, what a breakdown may offer, and the one call that
- * answers a level.
- *
- * Which door `fetch` goes through is the surface's business — a saved chart's
- * name from a reading surface, the config or the pipeline being edited from an
- * authoring one. The dialog cannot tell them apart, and has no reason to: the
- * only difference it ever sees is that an authoring answer carries `operations`.
- */
+/** What the dialog drills, as the surface that opened it hands it over. */
 export type DrillSubject = {
 	chart: DrillChart
-	/** the head of the breadcrumb trail — what the reader clicked into */
+	/** the first crumb — what the reader clicked into */
 	title: string
 	dimensions: DrillDimension[]
 	fetch: (levels: DrillLevel[]) => Promise<DrillLevelData>
 }
 
 /**
- * The reader's path through one dialog. Push to go deeper, pop to retrace.
- *
- * Pops cost nothing: every level's answer is held against the exact stack that
- * produced it, so retracing never asks the server again. Keying on the stack
- * rather than on the depth is what makes "pop, then drill somewhere else" serve
- * the new level instead of the old one's rows.
+ * The reader's descent through one dialog. Push to go deeper, pop to retrace.
+ * Each answer is held against the exact stack that produced it, so a pop asks
+ * the server nothing and a re-drill gets the new level rather than the old rows.
  */
 export function makeDrillStack() {
 	// shallow on purpose: an entry is replaced, never edited, and the rows a
@@ -484,25 +443,19 @@ export function makeDrillStack() {
 	const signature = () => JSON.stringify(levels.value)
 
 	const crumbs = computed<DrillCrumb[]>(() => {
-		const trail: DrillCrumb[] = []
+		const list: DrillCrumb[] = []
 		entries.value.forEach((entry, index) => {
 			const depth = index + 1
-			if (entry.segmentLabel) trail.push({ label: entry.segmentLabel, depth })
-			trail.push({ label: entry.actionLabel, depth })
+			if (entry.segmentLabel) list.push({ label: entry.segmentLabel, depth })
+			list.push({ label: entry.actionLabel, depth })
 		})
-		return trail
+		return list
 	})
 
 	/**
-	 * The level the reader is standing on, read at a grain.
-	 *
-	 * It replaces the level rather than pushing one: a grain is how this level
-	 * reads, not a step below it, so the trail and the way back out are the same
-	 * afterwards as before.
-	 *
-	 * The answer already held is left where it is. It answers the level as it was
-	 * asked then, and an answer is filed under the whole path — so a level whose
-	 * action has changed simply has none yet, and the dialog fetches.
+	 * Read the level the reader is standing on at another grain. It replaces the
+	 * level rather than pushing one, so the way back out does not change. The
+	 * answer already held stays where it is, under the level as it was asked then.
 	 */
 	function regrain(granularity: string) {
 		const entry = entries.value[entries.value.length - 1]
@@ -524,7 +477,7 @@ export function makeDrillStack() {
 		depth: computed(() => entries.value.length),
 		current: computed(() => entries.value[entries.value.length - 1]),
 		/**
-		 * Every column the path has fixed. A Dimension already pinned upstream is
+		 * Every column the stack has fixed. A Dimension already pinned upstream is
 		 * not a way of splitting anything further down, so the menu stops offering
 		 * it as the reader descends.
 		 */
@@ -537,7 +490,7 @@ export function makeDrillStack() {
 				),
 			),
 		),
-		/** the trail, in reading order. The last crumb is where the reader is. */
+		/** the crumbs, in reading order. The last one is where the reader is. */
 		crumbs,
 
 		push: (entry: DrillEntry) => {
@@ -556,19 +509,13 @@ export function makeDrillStack() {
 		/** What the server already answered for where the reader now stands. */
 		answer: (): DrillLevelData | undefined => answers.get(signature()),
 		/**
-		 * File an answer under the level it answers — and take the grain out of it
-		 * first, because the answer is what finishes saying what the level is.
-		 *
-		 * A grain the server derived is as much a part of the level as one the
-		 * reader chose: the levels below need it, since a click on one of these
-		 * buckets pins its first moment and only the grain says how far the bucket
-		 * runs. Writing it back is also what settles the level's identity — asking
-		 * for a breakdown and asking for it at the grain that came back are the
-		 * same question, and until the level says so they are two keys for it.
+		 * File an answer under the level it answers, and write its grain back onto
+		 * the level first. A click on one of these buckets pins the bucket's first
+		 * moment, and only the grain says how far the bucket runs.
 		 */
-		remember: (data: DrillLevelData) => {
-			if (data.granularity) regrain(data.granularity)
-			answers.set(signature(), data)
+		remember: (answer: DrillLevelData) => {
+			if (answer.granularity) regrain(answer.granularity)
+			answers.set(signature(), answer)
 		},
 	})
 }

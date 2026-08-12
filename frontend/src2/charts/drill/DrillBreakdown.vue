@@ -12,19 +12,19 @@ import { segmentClickEvents, type ChartSegmentClick, type ClickPoint } from './s
 // any card, so a click inside it comes back through the same resolver a card's
 // click does — which is what makes the next level ride a path that already exists.
 const props = defineProps<{
-	data: DrillLevelData
+	answer: DrillLevelData
 	dimension: string
 	measure: string
 }>()
 
 const emit = defineEmits<{ segmentClick: [click: ChartSegmentClick] }>()
 
-const chart = computed(() => breakdownChart(props.dimension, props.measure, props.data))
+const chart = computed(() => breakdownChart(props.dimension, props.measure, props.answer))
 
 const result = computed<QueryResult>(() => ({
 	...EMPTY_RESULT,
-	columns: props.data.columns,
-	rows: props.data.rows,
+	columns: props.answer.columns,
+	rows: props.answer.rows,
 }))
 
 const filler = computed(() =>

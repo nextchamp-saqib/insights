@@ -15,7 +15,7 @@ import { __ } from '../../translation'
 import type { MapChartProps } from '../adapter/map'
 
 // The choropleth Insights draws itself. Everything around the plot is v2's, so
-// a Map card on a dashboard reads as one of the family; only the geography is
+// a Map card on a dashboard reads as one of the family. Only the geography is
 // ours. The arithmetic behind it — which region a row belongs to and which
 // class its value falls in — is `adapter/map.ts`, and this file holds what
 // needs a DOM: the tokens, the GeoJSON, and the mount.

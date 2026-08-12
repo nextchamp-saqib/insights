@@ -16,7 +16,7 @@ const chart = inject('chart') as Chart
 const preview = inject('chartPreview') as ChartRead
 
 // A cell of the preview is a segment of the same card, so it opens the same
-// ladder the picture above it does — the config says which columns a cell pins.
+// stack the picture above it does — the config says which columns a cell pins.
 const clicked = ref<ChartSegmentClick>()
 
 watchEffect(() => {

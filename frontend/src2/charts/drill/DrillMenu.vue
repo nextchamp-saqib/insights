@@ -55,12 +55,9 @@ const matches = computed(() => {
 // undefined outside an island, which is Teleport's own default target anyway
 const portalTarget = usePortalTarget()
 
-// A row is a ghost Button and not frappe-ui's ItemListRow, which is the shell a
-// menu row is made of. ItemListRow's utilities reach this menu on no surface I
-// could find — the same panel styles its Button, its FormControl and its own
-// shell — so the row it draws lands unstyled. Left as a Button until that is
-// understood; a row that has to look right in an island is not the place to
-// find out.
+// ItemListRow renders unstyled inside this menu. Its utility classes do not
+// apply here, and the cause is not known. Use a ghost Button until someone
+// diagnoses it.
 const rowClass = 'w-full !justify-start'
 
 function openDimensions() {

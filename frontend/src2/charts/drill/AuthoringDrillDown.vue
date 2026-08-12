@@ -31,8 +31,8 @@ const emit = defineEmits<{ close: [] }>()
 // carries one is a level an author is reading. The client owns the other half:
 // a workbook this user only reads is not one to open a query editor in.
 const workbook = inject(workbookKey, null)
-function openable(level: DrillLevelData) {
-	return Boolean(level.operations?.length) && !workbook?.doc.read_only
+function openable(answer: DrillLevelData) {
+	return Boolean(answer.operations?.length) && !workbook?.doc.read_only
 }
 
 const lifted = ref<DrillLevelData>()
@@ -40,8 +40,8 @@ const lifted = ref<DrillLevelData>()
 
 <template>
 	<ChartDrillDown :subject="props.subject" :clicked="props.clicked" @close="emit('close')">
-		<template #actions="{ level }">
-			<Button v-if="openable(level)" :label="__('Open as query')" @click="lifted = level">
+		<template #actions="{ answer }">
+			<Button v-if="openable(answer)" :label="__('Open as query')" @click="lifted = answer">
 				<template #prefix>
 					<SquareArrowOutUpRight class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 				</template>
@@ -50,10 +50,10 @@ const lifted = ref<DrillLevelData>()
 	</ChartDrillDown>
 
 	<!-- over the drill rather than in place of it, so closing the query returns
-	     the author to the path they lifted it out of -->
+	     the author to the stack they lifted it out of -->
 	<DrillQuery
 		v-if="lifted"
-		:level="lifted"
+		:answer="lifted"
 		:title="props.subject.title"
 		:adhoc-filters="props.adhocFilters"
 		@closed="lifted = undefined"

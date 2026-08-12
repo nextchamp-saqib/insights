@@ -12,7 +12,7 @@ import {
 import {
 	breakdownCandidates,
 	declaredDimensionColumns,
-	drillGranularity,
+	recordDateGranularity,
 	grainsFor,
 	makeDrillStack,
 	queryResultChart,
@@ -22,12 +22,16 @@ import {
 	type DrillEntry,
 } from './drill_stack'
 
-// Everything here asserts on the descriptor a click produces and on the trail
+// Everything here asserts on the descriptor a click produces and on the crumbs
 // the reader ends up reading. What the dialog draws from either is the dialog's
 // business, and it stays on manual verification.
 
 /** Clicks a value column on the row the given category came back on. */
-function click(input: { config: ChartConfig; chart_type: string; result: any }, column: string, category?: any) {
+function click(
+	input: { config: ChartConfig; chart_type: string; result: any },
+	column: string,
+	category?: any,
+) {
 	const chart = { chart_type: input.chart_type, config: input.config } as DrillChart
 	const rows = input.result.rows
 	const row =
@@ -51,7 +55,7 @@ describe('what a segment click pins', () => {
 	})
 
 	it('files the pin under the column the query has, and reads the value off the column the result has', () => {
-		// A summarize names its output after the Dimension; the drill is validated
+		// A summarize names its output after the Dimension. The drill is validated
 		// against the surface *before* it, which still calls the column its own name.
 		const dimension: Dimension = {
 			dimension_name: 'Status',
@@ -71,7 +75,10 @@ describe('what a segment click pins', () => {
 	})
 
 	it('pins nothing at all for a number card, which is the whole of the reading', () => {
-		const segment = click(numberChart({ values: [{ name: 'revenue', readings: [100] }] }), 'revenue')
+		const segment = click(
+			numberChart({ values: [{ name: 'revenue', readings: [100] }] }),
+			'revenue',
+		)
 		expect(segment.filters).toEqual([])
 		expect(segment.pins).toEqual([])
 		expect(segment.label).toBe('')
@@ -79,7 +86,11 @@ describe('what a segment click pins', () => {
 	})
 
 	it('pins the slice a donut was clicked on', () => {
-		const segment = click(donutChart({ category: 'status', measure: 'count' }), 'count', 'South')
+		const segment = click(
+			donutChart({ category: 'status', measure: 'count' }),
+			'count',
+			'South',
+		)
 		expect(segment.filters).toEqual([{ column: 'status', operator: '=', value: 'South' }])
 	})
 
@@ -87,7 +98,11 @@ describe('what a segment click pins', () => {
 		const chart: DrillChart = {
 			chart_type: 'Donut',
 			config: {
-				label_column: { dimension_name: 'owner', column_name: 'owner', data_type: 'String' },
+				label_column: {
+					dimension_name: 'owner',
+					column_name: 'owner',
+					data_type: 'String',
+				},
 				value_column: { measure_name: 'count' },
 			} as unknown as ChartConfig,
 		}
@@ -131,10 +146,7 @@ describe('a segment a split or a pivot drew', () => {
 	})
 
 	it('reads the Measure off the config when a lone Measure left the column unnamed', () => {
-		const segment = click(
-			axisChart({ ...split, measures: ['revenue'] }),
-			'Women',
-		)
+		const segment = click(axisChart({ ...split, measures: ['revenue'] }), 'Women')
 		expect(segment.filters).toContainEqual({
 			column: 'department',
 			operator: '=',
@@ -166,7 +178,11 @@ describe('a segment on a date', () => {
 		click(
 			axisChart({
 				type: 'Line',
-				dimension: { name: 'order_date', type: 'Date', ...(granularity ? { granularity } : {}) } as any,
+				dimension: {
+					name: 'order_date',
+					type: 'Date',
+					...(granularity ? { granularity } : {}),
+				} as any,
 				measures: ['revenue'],
 				categories: [category ?? '2026-03-01'],
 			}),
@@ -202,16 +218,19 @@ describe('what "break down by" offers', () => {
 	]
 
 	it('drops the columns the click already pins', () => {
-		const segment = click(axisChart({ type: 'Bar', dimension: 'status', measures: ['count'] }), 'count')
+		const segment = click(
+			axisChart({ type: 'Bar', dimension: 'status', measures: ['count'] }),
+			'count',
+		)
 		expect(breakdownCandidates(available, segment.pins, []).map((d) => d.name)).not.toContain(
 			'status',
 		)
 	})
 
 	it('drops a column a level further up already fixed', () => {
-		expect(
-			breakdownCandidates(available, ['status', 'region'], []).map((d) => d.name),
-		).toEqual(['owner', 'priority'])
+		expect(breakdownCandidates(available, ['status', 'region'], []).map((d) => d.name)).toEqual(
+			['owner', 'priority'],
+		)
 	})
 
 	it('offers the Chart’s own other Dimensions first, in the order it declares them', () => {
@@ -223,9 +242,11 @@ describe('what "break down by" offers', () => {
 		})
 		const chart = card as DrillChart
 		expect(
-			breakdownCandidates(available, click(card, 'count').pins, declaredDimensionColumns(chart)).map(
-				(d) => d.name,
-			),
+			breakdownCandidates(
+				available,
+				click(card, 'count').pins,
+				declaredDimensionColumns(chart),
+			).map((d) => d.name),
 		).toEqual(['priority', 'owner', 'region', 'status'])
 	})
 
@@ -264,7 +285,7 @@ const west: DrillEntry = {
 	actionLabel: 'Records',
 }
 
-describe('the trail', () => {
+describe('the crumbs', () => {
 	it('reads as the path the reader took', () => {
 		const stack = makeDrillStack()
 		stack.push(overdue)
@@ -326,7 +347,10 @@ describe('retracing', () => {
 })
 
 describe('what the dialog has already been told', () => {
-	const rows = { columns: [{ name: 'name', type: 'String' as const }], rows: [{ name: 'TODO-1' }] }
+	const rows = {
+		columns: [{ name: 'name', type: 'String' as const }],
+		rows: [{ name: 'TODO-1' }],
+	}
 
 	it('serves a level it has already asked for, so a pop costs nothing', () => {
 		const stack = makeDrillStack()
@@ -354,7 +378,7 @@ describe('what the dialog has already been told', () => {
 describe('reading a level at another grain', () => {
 	// A breakdown by a date comes back in that date's own order, at a grain the
 	// server picked from the span. Asking for another is the same level, asked
-	// again — the ladder is unchanged and the reader has not gone anywhere.
+	// again — the stack is unchanged and the reader has not gone anywhere.
 	const byDate: DrillEntry = {
 		level: {
 			segment_filters: [{ column: 'status', operator: '=', value: 'Overdue' }],
@@ -418,7 +442,11 @@ describe('reading a level at another grain', () => {
 		// The unsaid grain and the one the answer named are the same question. Left
 		// unsaid on the level, they file under two keys, and the reader asking for
 		// the grain they are already reading pays for it a second time.
-		const monthly = { columns: [], rows: [{ due_date: '2026-03-01', count: 30 }], granularity: 'month' }
+		const monthly = {
+			columns: [],
+			rows: [{ due_date: '2026-03-01', count: 30 }],
+			granularity: 'month',
+		}
 		const stack = makeDrillStack()
 		stack.push(byDate)
 		stack.remember(monthly)
@@ -467,7 +495,9 @@ describe('the grains a breakdown can be read at', () => {
 
 	it('offers the calendar grains for a date', () => {
 		expect(grainsFor(dimensions, 'due_date').map((grain) => grain.value)).toContain('month')
-		expect(grainsFor(dimensions, 'creation').map((grain) => grain.value)).toContain('fiscal_year')
+		expect(grainsFor(dimensions, 'creation').map((grain) => grain.value)).toContain(
+			'fiscal_year',
+		)
 	})
 
 	it('offers none for a column with no order of its own', () => {
@@ -549,12 +579,12 @@ describe('the grain a records level prints its dates at', () => {
 	]
 
 	it('reads what the column type honestly is, so a records date reads as a date', () => {
-		const granularity = drillGranularity(columns)
+		const granularity = recordDateGranularity(columns)
 		expect(granularity.creation).toBe('second')
 		expect(granularity.due_date).toBe('day')
 	})
 
 	it('says nothing about a column that is not a date', () => {
-		expect(drillGranularity(columns).description).toBeUndefined()
+		expect(recordDateGranularity(columns).description).toBeUndefined()
 	})
 })

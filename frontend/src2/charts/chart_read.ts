@@ -67,16 +67,16 @@ type ChartDataResponse = {
 
 export type ChartFeed = {
 	doc: ChartReadDoc | ComputedRef<ChartReadDoc>
-	// the saved feed draws its frame from a second round trip; the preview feed
-	// already holds the document it is editing
+	// the saved feed draws its frame from a second round trip. The preview feed
+	// already holds the document it is editing.
 	fetchDoc?: () => Promise<void>
 	fetchData: (
 		force: boolean,
 		filterContext?: DashboardFilterContext,
 	) => Promise<ChartDataResponse | undefined>
 	// one level of a drill, through the door this feed came in by. The stack the
-	// dialog holds is the whole of the request — no operations cross either way,
-	// except back out of the authoring door, which is ticket 11's business.
+	// dialog holds is the whole of the request. No operations cross either way,
+	// except back out of the authoring door.
 	fetchDrillData: (
 		levels: DrillLevel[],
 		filterContext?: DashboardFilterContext,
@@ -183,7 +183,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 	}
 
 	// Everything the drill dialog needs from this card. The card knows the shape a
-	// click is read against and the candidates a breakdown may offer; the feed
+	// click is read against and the candidates a breakdown may offer. The feed
 	// knows the door. Nothing above has to hold both halves.
 	const drillSubject = computed<DrillSubject>(() => ({
 		chart: { chart_type: doc.value.chart_type as ChartType, config: doc.value.config },
@@ -228,9 +228,9 @@ export type SavedChartOptions = {
 	priority?: number
 }
 
-export function useSavedChart(reference: string, options: SavedChartOptions = {}) {
+export function useSavedChart(chart_name: string, options: SavedChartOptions = {}) {
 	const doc = reactive<ChartReadDoc>({
-		name: reference,
+		name: chart_name,
 		title: '',
 		chart_type: '',
 		config: normalizeChartConfig({}, ''),
@@ -242,7 +242,7 @@ export function useSavedChart(reference: string, options: SavedChartOptions = {}
 			doc,
 			fetchDoc: async () => {
 				const chart_doc = await call('insights.api.viewer.get_chart', {
-					chart: reference,
+					chart: chart_name,
 					dashboard: options.dashboard,
 				})
 				Object.assign(doc, chart_doc)
@@ -250,14 +250,14 @@ export function useSavedChart(reference: string, options: SavedChartOptions = {}
 			},
 			fetchData: (force) =>
 				call('insights.api.viewer.get_chart_data', {
-					chart: reference,
+					chart: chart_name,
 					dashboard: options.dashboard,
 					filters: options.filters?.(),
 					force,
 				}),
 			fetchDrillData: (drill_stack) =>
 				fetchDrillData({
-					chart: reference,
+					chart: chart_name,
 					dashboard: options.dashboard,
 					filters: options.filters?.(),
 					drill_stack,

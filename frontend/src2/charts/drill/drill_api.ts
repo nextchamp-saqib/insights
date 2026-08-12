@@ -5,7 +5,7 @@
 // what this expects. Nothing above this module knows an endpoint's name, its
 // argument names, or the shape of its answer beyond `DrillLevelData`.
 //
-// The contract, as ticket 11 ratified it:
+// The wire contract:
 //
 //     viewer.get_drill_data(chart, dashboard?, filters?, drill_stack)
 //

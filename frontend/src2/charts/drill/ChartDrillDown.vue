@@ -24,9 +24,9 @@ import type { ChartSegmentClick } from './segment_click'
 // dialog behind whichever item they chose.
 //
 // A surface mounts this and hands over what was clicked. Everything past that
-// lives here and dies with it — the stack is ephemeral by design, so closing is
-// all it takes to forget the path. Which door the levels come through is the
-// subject's business; nothing here knows whether a chart was ever saved.
+// lives here and dies with it, so closing is all it takes to forget the stack.
+// Which door the levels come through is the subject's business. Nothing here
+// knows whether a chart was ever saved.
 //
 // `#actions` is what a surface may add to the level it is reading. It is a slot
 // rather than a prop so that an authoring affordance and everything it imports
@@ -42,12 +42,12 @@ const emit = defineEmits<{ close: [] }>()
 
 defineSlots<{
 	// eslint-disable-next-line no-unused-vars
-	actions?: (props: { level: DrillLevelData }) => any
+	actions?: (props: { answer: DrillLevelData }) => any
 }>()
 
 const stack = makeDrillStack()
 const open = ref(false)
-const data = ref<DrillLevelData>()
+const answer = ref<DrillLevelData>()
 const loading = ref(false)
 const failed = ref(false)
 
@@ -59,7 +59,11 @@ const pending = ref<{ segment: DrillSegment; point: { x: number; y: number } }>(
 const clickedChart = computed<DrillChart>(() => {
 	const action = stack.current?.level.action
 	if (action && 'breakdown' in action) {
-		return breakdownChart(action.breakdown, action.measure || '', data.value || { columns: [] })
+		return breakdownChart(
+			action.breakdown,
+			action.measure || '',
+			answer.value || { columns: [] },
+		)
 	}
 	return props.subject.chart
 })
@@ -141,9 +145,9 @@ async function load() {
 	const token = ++inFlight
 
 	// a level already answered for costs nothing to return to
-	const remembered = stack.answer()
-	if (remembered) {
-		data.value = remembered
+	const cached = stack.answer()
+	if (cached) {
+		answer.value = cached
 		loading.value = false
 		failed.value = false
 		return
@@ -152,15 +156,15 @@ async function load() {
 	loading.value = true
 	failed.value = false
 	try {
-		const answer = await props.subject.fetch(stack.levels)
+		const fetched = await props.subject.fetch(stack.levels)
 		if (token !== inFlight) return
-		stack.remember(answer)
-		data.value = answer
+		stack.remember(fetched)
+		answer.value = fetched
 	} catch (error) {
 		if (token !== inFlight) return
 		console.error('[insights] Could not drill down.', error)
 		failed.value = true
-		data.value = undefined
+		answer.value = undefined
 	} finally {
 		if (token === inFlight) loading.value = false
 	}
@@ -183,7 +187,7 @@ async function load() {
 		v-model="open"
 		:stack="stack"
 		:title="props.subject.title"
-		:data="data"
+		:answer="answer"
 		:grains="grains"
 		:loading="loading"
 		:failed="failed"
@@ -192,8 +196,8 @@ async function load() {
 		@pop-to="popTo"
 		@closed="emit('close')"
 	>
-		<template v-if="data" #actions>
-			<slot name="actions" :level="data" />
+		<template v-if="answer" #actions>
+			<slot name="actions" :answer="answer" />
 		</template>
 	</DrillDialog>
 </template>

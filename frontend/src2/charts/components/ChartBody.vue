@@ -58,10 +58,9 @@ const adapted = computed(() => {
 	})
 })
 
-// The store holds on to the rows when the server answers with config errors, so
-// the card goes on showing what it last drew while a slot is being filled — the
-// adapter cannot run against a config the server refused, but its last output is
-// still a true picture of those rows. A type switch is not that case: the
+// The card keeps its last picture while the server reports config errors. The
+// adapter cannot run against a config the server refused, and the last output is
+// still a true picture of those rows. A type switch discards it, because the
 // picture belongs to the type that drew it.
 type Drawn = { chart_type: string; filler: NonNullable<ReturnType<typeof adaptChart>> }
 const lastDrawn = shallowRef<Drawn>()
@@ -74,12 +73,8 @@ const filler = computed(() => {
 	return lastDrawn.value?.chart_type === chart_type.value ? lastDrawn.value.filler : undefined
 })
 
-// A table that already has rows keeps them while the next run is in flight.
-// Every other type blanks, so this is a restoration and not a rule: a table on a
-// filtered dashboard would otherwise blank on every filter move, which reads as
-// the card breaking rather than the card catching up. The rule the exception
-// wants — every type holding its last picture while it reloads — is a bigger
-// change than this one, and belongs with the one the config errors already make.
+// A table keeps its rows while the next run is in flight. Other types blank. A
+// table on a filtered dashboard would otherwise blank on every filter move.
 const keepsLastPicture = computed(
 	() => chart_type.value === 'Table' && Boolean(result.value.rows?.length),
 )

@@ -54,8 +54,8 @@ watch(
 )
 
 // Drilling is row exploration, and an anonymous reader is not offered it — a
-// public chart stays a picture. The endpoint refuses Guest as well; this is so
-// nothing is drawn that would only answer with a refusal.
+// public chart stays a picture. The endpoint refuses Guest as well. This check
+// keeps the app from drawing a control that would only answer with a refusal.
 const clicked = ref<ChartSegmentClick>()
 function onSegmentClick(click: ChartSegmentClick) {
 	if (!session.isLoggedIn) return

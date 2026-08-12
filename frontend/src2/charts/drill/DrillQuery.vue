@@ -17,8 +17,8 @@ import type { DrillLevelData } from './drill_stack'
 // document nobody owns until someone saves it: closing this leaves the workbook
 // exactly as it was.
 const props = defineProps<{
-	/** an authoring level, which is the only kind that carries a pipeline */
-	level: DrillLevelData
+	/** an authoring level's answer, which is the only kind that carries a pipeline */
+	answer: DrillLevelData
 	title: string
 	/** what the surface's own filters narrowed to, which the slice does not carry */
 	adhocFilters?: AdhocFilters
@@ -31,8 +31,8 @@ const ready = ref(false)
 
 const query = makeAdhocQuery()
 query.doc.title = `${props.title} — ${__('Drill Down')}`
-query.doc.use_live_connection = props.level.use_live_connection
-query.setOperations(props.level.operations || [])
+query.doc.use_live_connection = props.answer.use_live_connection
+query.setOperations(props.answer.operations || [])
 if (props.adhocFilters) query.adhocFilters = props.adhocFilters
 // from here on it is the reader's query: every edit in the sidebar re-runs it
 query.autoExecute = true
@@ -52,8 +52,8 @@ provide('query', query)
 					<QueryExecutionStatus />
 				</QueryToolbar>
 				<div class="flex flex-1 overflow-hidden rounded-4 border border-outline-gray-2">
-					<!-- no drill from here: the ladder is behind this dialog, and a
-					     second one started inside it is the recursion ticket 11 retired -->
+					<!-- no drill from here: the stack is behind this dialog, and a
+					     second one started inside it recurses -->
 					<QueryDataTable :query="query" :enable-sort="true" />
 				</div>
 			</div>

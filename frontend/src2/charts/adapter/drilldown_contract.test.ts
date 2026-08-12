@@ -11,13 +11,9 @@ import {
 import { adaptChart } from './index'
 import type { ChartAdapterInput } from './types'
 
-// A drill-down resolver is keyed by the name of the event that carries the
-// click, and nothing else ever names it: the chrome binds the keys blind, and
-// every other suite calls the resolver by the same name it registered under. So
-// a chart renaming its event takes the drill-down down with it and every test
-// stays green — which is how the v2 charts going from `datapointClick` to
-// `select` reached a release. This is the one place the key is read against the
-// component that has to emit it.
+// Other suites call each resolver by the name it registered under, so a renamed
+// event breaks nothing they assert. This suite checks each key against the
+// component that emits it.
 
 const drillable: Array<[string, ChartAdapterInput]> = [
 	['Bar', axisChart({ type: 'Bar', dimension: 'month', measures: ['revenue'] })],

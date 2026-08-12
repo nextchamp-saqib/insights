@@ -1,17 +1,13 @@
 // A breakdown level as a Chart.
 //
-// The level is the clicked Measure read across the chosen Dimension, and that is
-// one of the two charts the dashboard already draws. So the level builds their
-// config and hands it to the same adapter every card goes through. There is no
-// bar list of the drill's own: if the reading ever wants denser bars, the Row
-// chart gets them, and every dashboard gets them with it.
+// The drill uses the Row chart rather than a bar list of its own. Any change to
+// bar density belongs in the Row chart.
 //
-// Which of the two is the answer's own reading of the Dimension. A Dimension
-// with an order of its own — a date — came back in that order, cut to the most
-// recent stretch, and a line is how a stretch of time is read. Anything else
-// came back ranked by the Measure, largest first, which is a Row chart. The flag
-// is the server's; nothing here looks at a column's type to decide, because the
-// order the rows arrived in and the shape drawn from them have to agree.
+// Which of the two charts draws the level is the answer's own reading of the
+// Dimension. An ordered Dimension came back in that order and reads as a line.
+// Anything else came back ranked by the Measure and reads as a Row chart. The
+// server sets the flag, because the order the rows arrived in and the shape
+// drawn from them have to agree.
 
 import type { ChartConfig } from '../../types/chart.types'
 import type { DrillChart, DrillLevelData } from './drill_stack'

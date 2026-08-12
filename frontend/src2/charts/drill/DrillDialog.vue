@@ -10,16 +10,16 @@ import type { ChartSegmentClick } from './segment_click'
 
 // One dialog for the whole drill, with a back-stack inside it.
 //
-// The reader's path is the breadcrumb trail, and every crumb pops to the level
-// it reads. Nothing is fetched twice: the stack holds each level's answer for as
-// long as the dialog is open, so back and crumb clicks are instant.
+// Every crumb pops to the level it reads. Nothing is fetched twice: the stack
+// holds each level's answer for as long as the dialog is open, so back and crumb
+// clicks are instant.
 //
 // Nothing here is a destination. There is no route, nothing is persisted, and
-// closing loses the path — this is an inspection.
+// closing loses the stack — this is an inspection.
 const props = defineProps<{
 	stack: DrillStack
 	title: string
-	data?: DrillLevelData
+	answer?: DrillLevelData
 	/** the grains this level could be asked for. Empty unless it is a date. */
 	grains?: readonly { label: string; value: string }[]
 	loading?: boolean
@@ -32,7 +32,7 @@ const emit = defineEmits<{
 	popTo: [depth: number]
 	// eslint-disable-next-line no-unused-vars
 	regrain: [granularity: string]
-	/** after the dialog has gone, so the path it held goes with it */
+	/** after the dialog has gone, so the stack it held goes with it */
 	closed: []
 }>()
 
@@ -44,9 +44,9 @@ const breakdown = computed(() => {
 	return current && 'breakdown' in current ? current : undefined
 })
 
-// The trail, with the page's own name at the head of it, so a reader three
+// The crumbs, with the page's own name at the head of them, so a reader three
 // levels down still knows which card they came from. The last crumb is where
-// they are; frappe-ui draws it as the plain one.
+// they are, and frappe-ui draws it as the plain one.
 const crumbs = computed(() => [
 	{ label: props.title, onClick: () => emit('popTo', 0) },
 	...props.stack.crumbs.map((crumb) => ({
@@ -56,11 +56,11 @@ const crumbs = computed(() => [
 ])
 
 // A Dimension with an order of its own is read in that order, at a grain. The
-// server picks one from the span it is looking at; this says which, and lets the
+// server picks one from the span it is looking at. This says which, and lets the
 // reader ask for another. Nothing to choose on a ranked breakdown or on records.
-const ordered = computed(() => Boolean(breakdown.value && props.data?.ordered))
+const ordered = computed(() => Boolean(breakdown.value && props.answer?.ordered))
 const grain = computed(
-	() => props.grains?.find((option) => option.value === props.data?.granularity),
+	() => props.grains?.find((option) => option.value === props.answer?.granularity),
 )
 
 const grainOptions = computed(() =>
@@ -79,9 +79,9 @@ const grainOptions = computed(() =>
  * "top" and the other says "latest".
  */
 const bound = computed(() => {
-	if (!props.data) return ''
-	const shown = props.data.rows.length
-	const total = props.data.total_row_count
+	if (!props.answer) return ''
+	const shown = props.answer.rows.length
+	const total = props.answer.total_row_count
 	const unit = breakdown.value ? (ordered.value ? __('periods') : __('groups')) : __('rows')
 	if (!total || total <= shown) return `${shown.toLocaleString()} ${unit}`
 	if (ordered.value) {
@@ -122,7 +122,7 @@ const bound = computed(() => {
 					</Button>
 				</Dropdown>
 				<!-- what a surface may do with the level it is reading. Empty on a
-				     reading surface, which has nothing to offer beyond the ladder. -->
+				     reading surface, which has nothing to offer beyond the stack. -->
 				<div class="ml-auto flex flex-shrink-0 items-center gap-2 pl-2">
 					<slot name="actions" />
 				</div>
@@ -135,7 +135,7 @@ const bound = computed(() => {
 			</div>
 
 			<div
-				v-else-if="props.failed || !props.data"
+				v-else-if="props.failed || !props.answer"
 				class="flex h-full w-full flex-col items-center justify-center gap-2"
 			>
 				<AlertTriangle class="h-6 w-6 text-ink-gray-4" stroke-width="1" />
@@ -146,12 +146,12 @@ const bound = computed(() => {
 				<div class="min-h-0 flex-1 overflow-hidden rounded border border-outline-gray-2">
 					<DrillBreakdown
 						v-if="breakdown"
-						:data="props.data"
+						:answer="props.answer"
 						:dimension="breakdown.breakdown"
 						:measure="breakdown.measure || ''"
 						@segment-click="emit('segmentClick', $event)"
 					/>
-					<DrillRecords v-else :data="props.data" />
+					<DrillRecords v-else :answer="props.answer" />
 				</div>
 				<p class="flex-shrink-0 px-1 text-p-sm text-ink-gray-5">{{ bound }}</p>
 			</template>

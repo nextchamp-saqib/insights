@@ -7,7 +7,7 @@
 // server still decides where to cut it.
 //
 // The candidates are the one thing that cannot ride along. A chart's arrive with
-// its rows; a query fetches its rows through its own document, so there is no
+// its rows. A query fetches its rows through its own document, so there is no
 // response for them to arrive on and they are asked for on their own. That is
 // one round trip between the double-click and the menu, on this surface only.
 
