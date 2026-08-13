@@ -71,8 +71,7 @@ def column_granularity(operations: list[dict]) -> dict:
 
         for dimension in dimensions:
             if dimension.get("granularity"):
-                name = dimension.get("dimension_name") or dimension.get("column_name")
-                granularity[name] = dimension["granularity"]
+                granularity[_result_column(dimension)] = dimension["granularity"]
 
     return granularity
 
@@ -287,12 +286,20 @@ def _add_sankey_operation(operations: list[dict], config: dict):
 
 def _add_heatmap_operation(operations: list[dict], config: dict):
     # a cell is one row per pair of the two dimensions, so the two of them group it
+    x_column = config.get("x_column") or {}
+    y_column = config.get("y_column") or {}
     operations.append(
         _summarize(
             measures=[config.get("value_column") or {}],
-            dimensions=[config.get("x_column") or {}, config.get("y_column") or {}],
+            dimensions=[x_column, y_column],
         )
     )
+    # A grid reads its axes off the row order: the renderer registers a category
+    # the first time a row names it, so the order rows arrive in is the order the
+    # axes are drawn in. Unsorted rows draw the months of a date column scattered.
+    # Sorting on both cuts is what puts each axis in its own order.
+    _add_order_by(operations, _result_column(x_column), "asc")
+    _add_order_by(operations, _result_column(y_column), "asc")
 
 
 def _add_bubble_operation(operations: list[dict], config: dict):
@@ -491,6 +498,14 @@ def _slot_errors(value, shape, slot: str) -> list[str]:
         for key, inner in shape.items()
         for error in _slot_errors(value.get(key), inner, f"{slot}.{key}" if slot else key)
     ]
+
+
+def _result_column(dimension: dict) -> str:
+    """The name a dimension's column comes back under, which is what a sort names.
+
+    A dimension renames its output column, and falls back to the column it reads.
+    """
+    return (dimension or {}).get("dimension_name") or (dimension or {}).get("column_name") or ""
 
 
 def _named_measures(measures) -> list[dict]:

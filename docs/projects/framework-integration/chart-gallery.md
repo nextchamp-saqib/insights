@@ -112,6 +112,10 @@ does. These are the parts that surprised us.
 - **A heatmap aggregates the same way.** `_add_heatmap_operation` groups by both
   of the grid's dimensions, so one row is one cell. A pair with no rows returns
   no row, and the grid leaves that cell empty rather than coloring it zero.
+- **A heatmap sorts both of its cuts, and has to.** The renderer registers a
+  category the first time a row names it, so the row order is the axis order.
+  Derivation sorts on the x column and then the y column. Without it a date
+  column draws its months scattered.
 - **Pivot column names depend on the measure count.** One measure and a split
   gives one column per split value, such as `Men`. Two or more measures joins
   the names, such as `Revenue___Men`. Conditional formatting on a pivoted table

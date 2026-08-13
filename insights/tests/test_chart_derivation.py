@@ -107,6 +107,30 @@ class TestChartDerivation(unittest.TestCase):
         config = {**case["config"], "y_column": case["config"]["x_column"]}
         self.assertTrue(config_errors("Heatmap", case["query"], config))
 
+    def test_a_heatmap_sorts_both_of_its_cuts(self):
+        """The renderer draws each axis in the order rows name its categories, so
+        the grid's order is the row order and the chart has to ask for it."""
+        case = derivation_case("Heatmap")
+        operations = derive_operations("Heatmap", case["query"], case["config"])
+        sorts = [
+            (op["column"]["column_name"], op["direction"]) for op in operations if op["type"] == "order_by"
+        ]
+        self.assertEqual(sorts, [("posting_date", "asc"), ("territory", "asc")])
+
+    def test_a_heatmap_lets_the_config_turn_a_cut_around(self):
+        """The chart's own sort is a default, not a rule: a config sorting the
+        same column the other way moves that sort rather than adding a second."""
+        case = derivation_case("Heatmap")
+        config = {
+            **case["config"],
+            "order_by": [{"column": {"type": "column", "column_name": "posting_date"}, "direction": "desc"}],
+        }
+        operations = derive_operations("Heatmap", case["query"], config)
+        sorts = [
+            (op["column"]["column_name"], op["direction"]) for op in operations if op["type"] == "order_by"
+        ]
+        self.assertEqual(sorts, [("posting_date", "desc"), ("territory", "asc")])
+
     def test_a_config_whose_slots_hold_the_wrong_thing_is_reported_not_raised(self):
         """A slot names a column or a measure. One holding a bare string names nothing.
 

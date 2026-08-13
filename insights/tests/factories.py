@@ -729,6 +729,16 @@ def chart_derivation_fixtures():
                         },
                     ],
                 },
+                {
+                    "type": "order_by",
+                    "column": {"type": "column", "column_name": "posting_date"},
+                    "direction": "asc",
+                },
+                {
+                    "type": "order_by",
+                    "column": {"type": "column", "column_name": "territory"},
+                    "direction": "asc",
+                },
             ],
         },
     ]
