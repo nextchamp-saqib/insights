@@ -59,11 +59,7 @@ const pending = ref<{ segment: DrillSegment; point: { x: number; y: number } }>(
 const clickedChart = computed<DrillChart>(() => {
 	const action = stack.current?.level.action
 	if (action && 'breakdown' in action) {
-		return breakdownChart(
-			action.breakdown,
-			action.measure || '',
-			answer.value || { columns: [] },
-		)
+		return breakdownChart(action.breakdown, answer.value || { columns: [], rows: [] })
 	}
 	return props.subject.chart
 })

@@ -92,8 +92,17 @@ _Avoid_: slice, data point, cell
 **Breakdown**:
 One of the two answers a drill level can ask for: group the segment by one more
 column of the surface. The other answer is records, the rows behind the segment.
-A breakdown draws as an ad-hoc Row chart, and a click on it recurses.
+A breakdown draws as an ad-hoc chart the answer picks for itself, and a click on
+it recurses.
 _Avoid_: split, group-by (that is a Dimension)
+
+**Additive**:
+Whether a level's group values add up to the value of the segment above them.
+True of a sum and a count, false of an average, a distinct count and an
+expression. The server says it on the answer, beside the order the rows run in,
+because a column of decimals does not say which aggregation made it. A breakdown
+reads it to decide whether it may draw itself as parts of one whole.
+_Avoid_: summable, part-of-whole (that is what being additive licenses)
 
 ### Data
 

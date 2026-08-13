@@ -417,6 +417,13 @@ export type DrillLevelData = {
 	ordered?: boolean
 	/** the grain an ordered breakdown was grouped by, whoever chose it */
 	granularity?: string | null
+	/**
+	 * Whether this level's groups add up to the segment above them. The server
+	 * answers it for the same reason it answers `ordered`: the response carries
+	 * column types, and nothing in a column of decimals says whether they hold
+	 * sums or averages.
+	 */
+	additive?: boolean
 	/** how many rows there are behind the bounded few that came back */
 	total_row_count?: number
 	/** only on a records level, and only when the convention held */

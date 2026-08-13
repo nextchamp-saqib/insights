@@ -11,15 +11,17 @@ import { segmentClickEvents, type ChartSegmentClick, type ClickPoint } from './s
 // the chart the answer's own reading calls for. It goes through `adaptChart` like
 // any card, so a click inside it comes back through the same resolver a card's
 // click does — which is what makes the next level ride a path that already exists.
+//
+// Which measures the level holds is the answer's to say, not the caller's: a
+// click on a number card named none of them and kept them all.
 const props = defineProps<{
 	answer: DrillLevelData
 	dimension: string
-	measure: string
 }>()
 
 const emit = defineEmits<{ segmentClick: [click: ChartSegmentClick] }>()
 
-const chart = computed(() => breakdownChart(props.dimension, props.measure, props.answer))
+const chart = computed(() => breakdownChart(props.dimension, props.answer))
 
 const result = computed<QueryResult>(() => ({
 	...EMPTY_RESULT,

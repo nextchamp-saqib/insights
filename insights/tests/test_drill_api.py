@@ -90,12 +90,27 @@ def count(measure_name="Todos"):
     }
 
 
-def bar_config():
-    """Todos by status, counted — the chart every mechanics test clicks on."""
+def average(measure_name="Average Order"):
+    """A measure whose group values do not add up to the value of the whole."""
+    return {
+        "measure_name": measure_name,
+        "column_name": "idx",
+        "aggregation": "avg",
+        "data_type": "Decimal",
+    }
+
+
+def bar_config(measures=None):
+    """Todos by status, counted — the chart every mechanics test clicks on.
+
+    A chart that declares no series of its own counts rows, which is what the
+    mechanics tests click. `measures` names them instead, for the tests that
+    turn on which measure a level carries.
+    """
     return {
         "limit": 50,
         "x_axis": {"dimension": dimension("status")},
-        "y_axis": {"series": []},
+        "y_axis": {"series": [{"measure": measure} for measure in measures or []]},
         "order_by": [],
     }
 
@@ -383,6 +398,28 @@ class TestDrillAPI(InsightsIntegrationTestCase):
         self.assertEqual((ordered["ordered"], ordered["granularity"]), (True, "month"))
         self.assertEqual((ranked["ordered"], ranked["granularity"]), (False, None))
         self.assertEqual((records["ordered"], records["granularity"]), (False, None))
+
+    def test_the_answer_says_whether_its_groups_add_up_to_the_segment_above_them(self):
+        """A level read as parts of one whole rests on this, and the answer's own
+        columns cannot supply it: nothing in a column of decimals says whether
+        they hold sums or averages."""
+        _, counted, dashboard = self.timeline()
+        _, averaged, average_dashboard = self.timeline(config=bar_config(measures=[average()]))
+
+        added = self.drill(DESK_USER, counted.name, dashboard.name, drill_stack=[breakdown_level("priority")])
+        averages = self.drill(
+            DESK_USER,
+            averaged.name,
+            average_dashboard.name,
+            drill_stack=[breakdown_level("priority")],
+        )
+        records = self.drill(DESK_USER, counted.name, dashboard.name, drill_stack=[records_level()])
+
+        self.assertTrue(added["additive"])
+        # two groups' averages do not average, so these are not parts of anything
+        self.assertFalse(averages["additive"])
+        # a records level groups nothing, so it has no groups to add
+        self.assertFalse(records["additive"])
 
     def test_the_grain_follows_the_span_of_the_segment_being_drilled(self):
         """A fixed default is arbitrary: one month of data is not ten years of it."""

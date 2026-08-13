@@ -56,6 +56,12 @@ DIMENSION_TYPES = ("String", "Date", "Datetime", "Time")
 # number moved, not which of its slices is biggest.
 ORDERED_TYPES = ("Date", "Datetime", "Time")
 
+# The aggregations whose group values add up to the value of the whole. Only
+# these let a level be read as parts of one total: two groups' averages do not
+# average, and two distinct counts do not add. An expression measure names no
+# aggregation at all, so it is never one of them.
+ADDITIVE_AGGREGATIONS = ("sum", "count")
+
 # how long each grain runs, in seconds
 SECOND = 1
 MINUTE = 60 * SECOND
@@ -212,10 +218,11 @@ def drill_data(
         "rows": list(reversed(result["rows"])) if ordered else result["rows"],
         "total_row_count": total_row_count,
         # what the client draws this answer by, said outright rather than left
-        # to be inferred from a column type: which way the rows run, and the
-        # grain they were grouped by
+        # to be inferred from a column type: which way the rows run, the grain
+        # they were grouped by, and whether they add up to the segment above
         "ordered": ordered,
         "granularity": breakdown["granularity"] if breakdown else None,
+        "additive": bool(breakdown and breakdown["additive"]),
         "time_taken": result["time_taken"],
         "executed_at": frappe.utils.now(),
     }
@@ -326,7 +333,23 @@ def _breakdown(chart, segment: list[dict], action: dict, step: dict, surface: li
         },
         "direction": "desc",
     }
-    return {"operations": [summarize, order_by], "ordered": ordered, "granularity": granularity}
+    return {
+        "operations": [summarize, order_by],
+        "ordered": ordered,
+        "granularity": granularity,
+        "additive": _additive(measures),
+    }
+
+
+def _additive(measures: list[dict]) -> bool:
+    """Whether this level's groups add up to the value of the segment above it.
+
+    The client is told, because the answer it receives carries column types and
+    not aggregations — there is nothing in a column of decimals that says
+    whether they are sums or averages. A level drawn as parts of one whole rests
+    on this, and a whole made of averages is a lie the reader cannot see.
+    """
+    return bool(measures) and all(measure.get("aggregation") in ADDITIVE_AGGREGATIONS for measure in measures)
 
 
 # the grain an ordered breakdown groups by

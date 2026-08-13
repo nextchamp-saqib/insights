@@ -148,7 +148,6 @@ const bound = computed(() => {
 						v-if="breakdown"
 						:answer="props.answer"
 						:dimension="breakdown.breakdown"
-						:measure="breakdown.measure || ''"
 						@segment-click="emit('segmentClick', $event)"
 					/>
 					<DrillRecords v-else :answer="props.answer" />
