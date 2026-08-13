@@ -892,6 +892,61 @@
 					"orient": "horizontal",
 					"node_align": "justify"
 				}
+			},
+			"c_heatmap_month_category": {
+				"name": "c_heatmap_month_category",
+				"title": "Revenue by month and category",
+				"workbook": "gallery",
+				"folder": "f_relational",
+				"sort_order": 15,
+				"query": "q_sales",
+				"chart_type": "Heatmap",
+				"config": {
+					"order_by": [],
+					"filters": {
+						"logical_operator": "And",
+						"filters": [
+							{
+								"column": {
+									"type": "column",
+									"column_name": "category"
+								},
+								"operator": "in",
+								"value": [
+									"Intimates",
+									"Jeans",
+									"Tops & Tees",
+									"Sweaters",
+									"Fashion Hoodies & Sweatshirts",
+									"Shorts",
+									"Swim",
+									"Outerwear & Coats"
+								]
+							}
+						]
+					},
+					"limit": 500,
+					"x_column": {
+						"dimension_name": "created_at",
+						"column_name": "created_at",
+						"data_type": "Datetime",
+						"granularity": "month"
+					},
+					"y_column": {
+						"dimension_name": "category",
+						"column_name": "category",
+						"data_type": "String"
+					},
+					"value_column": {
+						"measure_name": "Revenue",
+						"column_name": "sale_price",
+						"aggregation": "sum",
+						"data_type": "Decimal",
+						"format": "currency"
+					},
+					"palette": "sequential",
+					"show_values": false
+				}
 			}
 		},
 		"dashboards": {
@@ -1118,6 +1173,17 @@
 							"y": 53,
 							"w": 10,
 							"h": 9
+						}
+					},
+					{
+						"type": "chart",
+						"chart": "c_heatmap_month_category",
+						"layout": {
+							"i": "c_heatmap_month_category",
+							"x": 0,
+							"y": 62,
+							"w": 20,
+							"h": 10
 						}
 					}
 				]

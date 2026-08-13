@@ -6,6 +6,7 @@ import {
 	BubbleChartConfig,
 	DonutChartConfig,
 	FunnelChartConfig,
+	HeatmapChartConfig,
 	LineChartConfig,
 	MapChartConfig,
 	NumberChartConfig,
@@ -18,6 +19,7 @@ import type { ChartRead } from '../chart_read'
 import BarChartConfigForm from './BarChartConfigForm.vue'
 import DonutChartConfigForm from './DonutChartConfigForm.vue'
 import FunnelChartConfigForm from './FunnelChartConfigForm.vue'
+import HeatmapChartConfigForm from './HeatmapChartConfigForm.vue'
 import LineChartConfigForm from './LineChartConfigForm.vue'
 import MapChartConfigForm from './MapChartConfigForm.vue'
 import NumberChartConfigForm from './NumberChartConfigForm.vue'
@@ -104,6 +106,12 @@ const queryResult = computed(() => chartQuery.value.result)
 	<SankeyChartConfigForm
 		v-if="props.chart.doc.chart_type == 'Sankey'"
 		v-model="props.chart.doc.config as SankeyChartConfig"
+		:dimensions="dimensions"
+		:column-options="columnOptions"
+	/>
+	<HeatmapChartConfigForm
+		v-if="props.chart.doc.chart_type == 'Heatmap'"
+		v-model="props.chart.doc.config as HeatmapChartConfig"
 		:dimensions="dimensions"
 		:column-options="columnOptions"
 	/>

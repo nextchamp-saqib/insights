@@ -673,6 +673,64 @@ def chart_derivation_fixtures():
                 },
             ],
         },
+        {
+            # a cell is one row per pair of the two dimensions, the same shape a
+            # Sankey link has
+            "title": "Revenue by Territory and Month",
+            "chart_type": "Heatmap",
+            "query": "sales-invoice-items",
+            "config": {
+                "filters": {"filters": [], "logical_operator": "And"},
+                "limit": 100,
+                "order_by": [],
+                "palette": "sequential",
+                "show_values": True,
+                "x_column": {
+                    "column_name": "posting_date",
+                    "data_type": "Date",
+                    "dimension_name": "posting_date",
+                    "granularity": "month",
+                },
+                "y_column": {
+                    "column_name": "territory",
+                    "data_type": "String",
+                    "dimension_name": "territory",
+                },
+                "value_column": {
+                    "aggregation": "sum",
+                    "column_name": "base_net_amount",
+                    "data_type": "Decimal",
+                    "measure_name": "Revenue",
+                },
+            },
+            "operations": [
+                _source_operation("sales-invoice-items"),
+                {
+                    "type": "summarize",
+                    "measures": [
+                        {
+                            "aggregation": "sum",
+                            "column_name": "base_net_amount",
+                            "data_type": "Decimal",
+                            "measure_name": "Revenue",
+                        }
+                    ],
+                    "dimensions": [
+                        {
+                            "column_name": "posting_date",
+                            "data_type": "Date",
+                            "dimension_name": "posting_date",
+                            "granularity": "month",
+                        },
+                        {
+                            "column_name": "territory",
+                            "data_type": "String",
+                            "dimension_name": "territory",
+                        },
+                    ],
+                },
+            ],
+        },
     ]
 
 

@@ -19,7 +19,19 @@ import unittest
 from insights.insights.doctype.insights_chart_v3.chart_query import config_errors, derive_operations
 from insights.tests.factories import chart_derivation_fixtures, derivation_case
 
-CHART_TYPES = {"Bar", "Line", "Row", "Number", "Donut", "Funnel", "Table", "Map", "Bubble", "Sankey"}
+CHART_TYPES = {
+    "Bar",
+    "Line",
+    "Row",
+    "Number",
+    "Donut",
+    "Funnel",
+    "Table",
+    "Map",
+    "Bubble",
+    "Sankey",
+    "Heatmap",
+}
 
 
 def comparable(operations):
@@ -56,7 +68,17 @@ class TestChartDerivation(unittest.TestCase):
         self.assertEqual(covered, CHART_TYPES)
 
     def test_a_config_that_names_no_columns_cannot_be_drawn(self):
-        for chart_type in ("Bar", "Number", "Donut", "Funnel", "Table", "Map", "Bubble", "Sankey"):
+        for chart_type in (
+            "Bar",
+            "Number",
+            "Donut",
+            "Funnel",
+            "Table",
+            "Map",
+            "Bubble",
+            "Sankey",
+            "Heatmap",
+        ):
             with self.subTest(chart_type=chart_type):
                 self.assertTrue(config_errors(chart_type, "some-query", {}))
 
@@ -70,6 +92,20 @@ class TestChartDerivation(unittest.TestCase):
             with self.subTest(slot=slot):
                 config = {**case["config"], slot: {}}
                 self.assertTrue(config_errors("Sankey", case["query"], config))
+
+    def test_a_heatmap_needs_two_dimensions_and_a_value(self):
+        case = derivation_case("Heatmap")
+
+        for slot in ("x_column", "y_column", "value_column"):
+            with self.subTest(slot=slot):
+                config = {**case["config"], slot: {}}
+                self.assertTrue(config_errors("Heatmap", case["query"], config))
+
+    def test_a_heatmap_cannot_cut_the_grid_by_one_column_twice(self):
+        """Both cuts on one column collapses the grid to a diagonal line."""
+        case = derivation_case("Heatmap")
+        config = {**case["config"], "y_column": case["config"]["x_column"]}
+        self.assertTrue(config_errors("Heatmap", case["query"], config))
 
     def test_a_config_whose_slots_hold_the_wrong_thing_is_reported_not_raised(self):
         """A slot names a column or a measure. One holding a bare string names nothing.

@@ -23,7 +23,17 @@ import copy
 from frappe import _
 
 AXIS_CHARTS = ("Bar", "Line", "Row")
-CHART_TYPES = ("Number", *AXIS_CHARTS, "Donut", "Funnel", "Table", "Map", "Bubble", "Sankey")
+CHART_TYPES = (
+    "Number",
+    *AXIS_CHARTS,
+    "Donut",
+    "Funnel",
+    "Table",
+    "Map",
+    "Bubble",
+    "Sankey",
+    "Heatmap",
+)
 
 DEFAULT_MAX_COLUMN_VALUES = 10
 
@@ -142,6 +152,18 @@ def config_errors(chart_type: str, query: str, config: dict | None) -> list[str]
         if not (config.get("value_column") or {}).get("measure_name"):
             errors.append(_("Value column is required"))
 
+    if chart_type == "Heatmap":
+        x_column = config.get("x_column") or {}
+        y_column = config.get("y_column") or {}
+        if not x_column.get("column_name"):
+            errors.append(_("X-axis is required"))
+        if not y_column.get("column_name"):
+            errors.append(_("Y-axis is required"))
+        if x_column.get("column_name") and x_column.get("column_name") == y_column.get("column_name"):
+            errors.append(_("X-axis and Y-axis cannot be the same"))
+        if not (config.get("value_column") or {}).get("measure_name"):
+            errors.append(_("Value column is required"))
+
     return errors
 
 
@@ -165,6 +187,8 @@ def _add_chart_operation(operations: list[dict], chart_type: str, config: dict):
         _add_bubble_operation(operations, config)
     elif chart_type == "Sankey":
         _add_sankey_operation(operations, config)
+    elif chart_type == "Heatmap":
+        _add_heatmap_operation(operations, config)
 
 
 def _add_axis_operation(operations: list[dict], config: dict):
@@ -257,6 +281,16 @@ def _add_sankey_operation(operations: list[dict], config: dict):
         _summarize(
             measures=[config.get("value_column") or {}],
             dimensions=[config.get("source_column") or {}, config.get("target_column") or {}],
+        )
+    )
+
+
+def _add_heatmap_operation(operations: list[dict], config: dict):
+    # a cell is one row per pair of the two dimensions, so the two of them group it
+    operations.append(
+        _summarize(
+            measures=[config.get("value_column") or {}],
+            dimensions=[config.get("x_column") or {}, config.get("y_column") or {}],
         )
     )
 
@@ -407,6 +441,8 @@ SLOT_SHAPES = {
     "location_column": {},
     "source_column": {},
     "target_column": {},
+    "x_column": {},
+    "y_column": {},
     "xAxis": {},
     "yAxis": {},
     "size_column": {},

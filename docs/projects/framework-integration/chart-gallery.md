@@ -33,6 +33,7 @@ returns rows.
 | Revenue by country | Map | The world map with region mappings |
 | Category revenue vs profit | Bubble | Two measures, a size column, and quadrant reference lines |
 | Traffic source to category revenue | Sankey | A source, a target, a value, and a chart-level filter |
+| Revenue by month and category | Heatmap | A grid cut by a date grain and a category, colored by one measure |
 
 Both funnel shapes are present because the config admits both, and the spec
 keeps both.
@@ -108,6 +109,9 @@ does. These are the parts that surprised us.
 
 - **Sankey aggregates.** `_add_sankey_operation` groups by the source and the
   target. Its base query stays per-row like every other type.
+- **A heatmap aggregates the same way.** `_add_heatmap_operation` groups by both
+  of the grid's dimensions, so one row is one cell. A pair with no rows returns
+  no row, and the grid leaves that cell empty rather than coloring it zero.
 - **Pivot column names depend on the measure count.** One measure and a split
   gives one column per split value, such as `Men`. Two or more measures joins
   the names, such as `Revenue___Men`. Conditional formatting on a pivoted table

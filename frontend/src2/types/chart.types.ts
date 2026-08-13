@@ -4,7 +4,17 @@ import { Dimension, Measure } from './query.types'
 export const AXIS_CHARTS = ['Bar', 'Line', 'Row']
 export type AxisChartType = (typeof AXIS_CHARTS)[number]
 
-export const CHARTS = ['Number', ...AXIS_CHARTS, 'Donut', 'Funnel', 'Table', 'Map', 'Bubble', 'Sankey']
+export const CHARTS = [
+	'Number',
+	...AXIS_CHARTS,
+	'Donut',
+	'Funnel',
+	'Table',
+	'Map',
+	'Bubble',
+	'Sankey',
+	'Heatmap',
+]
 export type ChartType = (typeof CHARTS)[number]
 
 export type AxisChartConfig = {
@@ -167,6 +177,19 @@ export type SankeyChartConfig = {
 	node_align?: 'left' | 'right' | 'justify'
 }
 
+export type HeatmapChartConfig = {
+	// The two dimensions the grid is cut by: `x_column` runs along the bottom,
+	// `y_column` up the side. One cell is one pair of their values.
+	x_column: Dimension
+	y_column: Dimension
+	value_column: Measure
+	show_values?: boolean
+	// 'sequential' reads as a magnitude, 'diverging' centers on zero for signed data
+	palette?: 'sequential' | 'diverging'
+	min?: number
+	max?: number
+}
+
 export type ChartConfig =
 	| LineChartConfig
 	| BarChartConfig
@@ -177,6 +200,7 @@ export type ChartConfig =
 	| MapChartConfig
 	| BubbleChartConfig
 	| SankeyChartConfig
+	| HeatmapChartConfig
 
 export interface Suggestion {
 		region: string

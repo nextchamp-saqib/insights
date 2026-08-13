@@ -434,6 +434,61 @@ export function sankeyChart(spec: SankeyChartSpec): ChartAdapterInput {
 	}
 }
 
+export type HeatmapCellSpec = { x: string; y: string; value: number }
+
+export type HeatmapChartSpec = {
+	title?: string
+	/** The Dimensions the grid is cut by: one along the bottom, one up the side. */
+	x: DimensionSpec
+	y: DimensionSpec
+	measure: string
+	/** One row per cell, the way the server groups them. */
+	cells?: HeatmapCellSpec[]
+	showValues?: boolean
+	palette?: 'sequential' | 'diverging'
+	min?: number
+	max?: number
+}
+
+export function heatmapChart(spec: HeatmapChartSpec): ChartAdapterInput {
+	const x_column = toDimension(spec.x)
+	const y_column = toDimension(spec.y)
+	const value_column = toMeasure(spec.measure)
+	const cells = spec.cells ?? [
+		{ x: 'Mon', y: 'Morning', value: 30 },
+		{ x: 'Mon', y: 'Evening', value: 12 },
+		{ x: 'Tue', y: 'Morning', value: 41 },
+	]
+
+	const config = {
+		x_column,
+		y_column,
+		value_column,
+		...(spec.showValues ? { show_values: true } : {}),
+		...(spec.palette ? { palette: spec.palette } : {}),
+		...(spec.min !== undefined ? { min: spec.min } : {}),
+		...(spec.max !== undefined ? { max: spec.max } : {}),
+	} as unknown as ChartConfig
+
+	return {
+		chart_type: 'Heatmap',
+		title: spec.title,
+		config,
+		result: resultWith(
+			[
+				columnOfDimension(x_column),
+				columnOfDimension(y_column),
+				columnOfMeasure(value_column),
+			],
+			cells.map((cell) => ({
+				[x_column.dimension_name]: cell.x,
+				[y_column.dimension_name]: cell.y,
+				[value_column.measure_name]: cell.value,
+			})),
+		),
+	}
+}
+
 export type NumberValueSpec = {
 	name: string
 	/** One reading per period, oldest first, the way the summarize returns them. */

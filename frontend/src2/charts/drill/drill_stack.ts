@@ -13,6 +13,7 @@ import type {
 	ChartType,
 	DonutChartConfig,
 	FunnelChartConfig,
+	HeatmapChartConfig,
 	MapChartConfig,
 	NumberChartConfig,
 	SankeyChartConfig,
@@ -178,6 +179,15 @@ function declaredDimensions(chart: DrillChart): DeclaredDimensions {
 				...empty,
 				rows: dims([sankey.source_column, sankey.target_column]),
 				measures: nums([sankey.value_column]),
+			}
+		}
+		case 'Heatmap': {
+			const heatmap = config as HeatmapChartConfig
+			// A cell stands for one pair, so a click pins both of the grid's cuts.
+			return {
+				...empty,
+				rows: dims([heatmap.x_column, heatmap.y_column]),
+				measures: nums([heatmap.value_column]),
 			}
 		}
 		case 'Number': {
