@@ -51,6 +51,25 @@ describe('a heatmap', () => {
 		expect(props.showValues).toBeUndefined()
 	})
 
+	it('prints a date cut at the grain it was grouped by', () => {
+		// A grid cuts by categories, so neither axis is the time axis that prints
+		// an axis chart's dates. The grain has to come across as a formatter.
+		const props = adapt({
+			x: { name: 'created_at', type: 'Datetime', granularity: 'month' },
+			y: 'category',
+			measure: 'revenue',
+		}).props
+
+		expect(props.xFormat('2024-03-01 00:00:00')).toBe('March, 2024')
+		expect(props.yFormat).toBeUndefined()
+	})
+
+	it('leaves a plain category to print itself', () => {
+		const props = adapt({ x: 'day', y: 'hour', measure: 'orders' }).props
+		expect(props.xFormat).toBeUndefined()
+		expect(props.yFormat).toBeUndefined()
+	})
+
 	it('draws nothing until the Chart names all three columns', () => {
 		expect(adaptChart(heatmapChart({ x: '', y: 'hour', measure: 'orders' }))).toBeUndefined()
 		expect(adaptChart(heatmapChart({ x: 'day', y: '', measure: 'orders' }))).toBeUndefined()

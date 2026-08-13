@@ -1,5 +1,8 @@
 import { HeatmapChart } from 'frappe-ui/charts'
 import type { HeatmapCellEvent, HeatmapChartProps } from 'frappe-ui/charts'
+import { isCalendarDateType } from '../../helpers/constants'
+import { getFormattedDate } from '../../query/helpers'
+import type { Dimension } from '../../types/query.types'
 import type { HeatmapChartConfig } from '../../types/chart.types'
 import type { ChartAdapterInput, ChartFiller } from './types'
 
@@ -21,6 +24,14 @@ export function adaptHeatmapChart(input: ChartAdapterInput): ChartFiller | undef
 		y,
 		value,
 	}
+	// Both cuts of a grid are category axes, so neither gets the time axis that
+	// prints an axis chart's dates. The grain the Dimension was grouped by is
+	// what says how to print them, the same grain `xAxisFor` reads.
+	const xFormat = dateFormatFor(config.x_column)
+	const yFormat = dateFormatFor(config.y_column)
+	if (xFormat) props.xFormat = xFormat
+	if (yFormat) props.yFormat = yFormat
+
 	if (config.show_values) props.showValues = true
 	if (config.palette) props.palette = config.palette
 	if (typeof config.min === 'number') props.min = config.min
@@ -33,4 +44,11 @@ export function adaptHeatmapChart(input: ChartAdapterInput): ChartFiller | undef
 			select: (event: HeatmapCellEvent) => ({ column: value, row: event.row }),
 		},
 	}
+}
+
+/** How a cut prints, when it is a date one. A plain category prints itself. */
+function dateFormatFor(dimension?: Dimension) {
+	if (!dimension?.granularity || !isCalendarDateType(dimension.data_type)) return
+	const granularity = dimension.granularity
+	return (value: any) => getFormattedDate(value, granularity)
 }
