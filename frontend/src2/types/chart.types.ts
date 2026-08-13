@@ -41,12 +41,18 @@ export type YAxis = {
 	show_data_labels?: boolean
 	reference_lines?: ReferenceLine[]
 }
+export type ReferenceAggregate = 'average' | 'median' | 'min' | 'max' | 'sum'
 export type ReferenceLine = {
 	// 'y' draws a horizontal line at a measure value, 'x' a vertical line at a category/date value
 	axis?: 'x' | 'y'
 	// which value axis a 'y' line targets on a dual-axis chart; defaults to the primary (left)
 	align?: 'Left' | 'Right'
+	// A line sits at a constant, or at an aggregate of one of the chart's own
+	// Measures. The Measure is named rather than copied: the series holds the
+	// definition, so a copy is a second answer waiting to disagree.
 	value?: number | string
+	measure_name?: string
+	aggregate?: ReferenceAggregate
 	label?: string
 	color?: string
 	dashed?: boolean

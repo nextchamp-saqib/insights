@@ -171,6 +171,13 @@ export function downloadImage(element: HTMLElement, filename: string, scale = 2,
 		.catch((err) => showErrorToast(err, false))
 }
 
+/** A cell read as a number, or nothing: null, blank and text are not zero. */
+export function toNumber(value: any): number | null {
+	if (value === null || value === undefined || value === '') return null
+	const number = Number(value)
+	return Number.isNaN(number) ? null : number
+}
+
 export function formatNumber(number: number, precision = 0) {
 	if (isNaN(number)) return number
 	precision = precision || guessPrecision(number)

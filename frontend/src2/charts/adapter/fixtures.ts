@@ -62,6 +62,13 @@ export type AxisChartSpec = {
 	splitBy?: { dimension: DimensionSpec; into: string[] }
 	/** The categories the result came back with. Two, unless a case needs more. */
 	categories?: any[]
+	/**
+	 * What each value column came back with, one reading per category, for a case
+	 * that reads the numbers rather than only their column names. Keyed by the
+	 * column the server sent — a Measure's name, or a split value. Left out, the
+	 * builder fills numbers of its own.
+	 */
+	readings?: Record<string, (number | string | null)[]>
 	stacked?: boolean
 	normalized?: boolean
 	overlap?: boolean
@@ -107,7 +114,7 @@ export function axisChart(spec: AxisChartSpec): ChartAdapterInput {
 		chart_type: spec.type,
 		title: spec.title,
 		config,
-		result: resultOf(dimension, categories, columns),
+		result: resultOf(dimension, categories, columns, spec.readings),
 	}
 }
 
@@ -127,6 +134,7 @@ function resultOf(
 	dimension: Dimension,
 	categories: any[],
 	columns: string[],
+	readings?: AxisChartSpec['readings'],
 ): QueryResult {
 	const resultColumns: QueryResultColumn[] = [
 		{ name: dimension.dimension_name, type: dimension.data_type },
@@ -135,7 +143,8 @@ function resultOf(
 	const rows = categories.map((category, index) => {
 		const row: Record<string, any> = { [dimension.dimension_name]: category }
 		columns.forEach((name, column) => {
-			row[name] = (index + 1) * 10 + column
+			const reading = readings?.[name]?.[index]
+			row[name] = reading === undefined ? (index + 1) * 10 + column : reading
 		})
 		return row
 	})

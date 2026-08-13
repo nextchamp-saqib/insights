@@ -1,5 +1,6 @@
 import { BarChart, LineChart } from 'frappe-ui/charts'
 import { describe, expect, it } from 'vitest'
+import type { ReferenceLine } from '../../types/chart.types'
 import { adaptChart } from './index'
 import { axisChart, type AxisChartSpec } from './fixtures'
 
@@ -324,6 +325,144 @@ describe('reference lines', () => {
 	it('adds nothing at all when the Chart has none', () => {
 		expect(
 			propsOf({ type: 'Bar', dimension: 'region', measures: ['revenue'] }).referenceLines,
+		).toBeUndefined()
+	})
+})
+
+describe('a reference line at an aggregate', () => {
+	// Three readings with no aggregate in common, so every case below names one
+	// number and one number only.
+	const readings = { revenue: [10, 20, 60] }
+	const spec = (line: ReferenceLine): AxisChartSpec => ({
+		type: 'Bar',
+		dimension: 'region',
+		categories: ['North', 'South', 'East'],
+		measures: ['revenue'],
+		readings,
+		referenceLines: [line],
+	})
+	const valueOf = (line: ReferenceLine) => propsOf(spec(line)).referenceLines?.[0]?.value
+
+	it('reads the average of what the Chart draws', () => {
+		expect(valueOf({ aggregate: 'average', measure_name: 'revenue' })).toBe(30)
+	})
+
+	it('reads the median, min, max and sum off the same numbers', () => {
+		expect(valueOf({ aggregate: 'median', measure_name: 'revenue' })).toBe(20)
+		expect(valueOf({ aggregate: 'min', measure_name: 'revenue' })).toBe(10)
+		expect(valueOf({ aggregate: 'max', measure_name: 'revenue' })).toBe(60)
+		expect(valueOf({ aggregate: 'sum', measure_name: 'revenue' })).toBe(90)
+	})
+
+	it('averages the two middle readings when there is no middle one', () => {
+		expect(
+			propsOf({
+				type: 'Bar',
+				dimension: 'region',
+				categories: ['North', 'South'],
+				measures: ['revenue'],
+				readings: { revenue: [10, 30] },
+				referenceLines: [{ aggregate: 'median', measure_name: 'revenue' }],
+			}).referenceLines,
+		).toEqual([{ value: 20, axis: 'y', label: 'Median revenue: 20' }])
+	})
+
+	it('reads every column a split named after its own values', () => {
+		// One Measure, four cells. The rule sits at the average cell, which is what
+		// a reader compares each bar against.
+		expect(
+			propsOf({
+				type: 'Bar',
+				dimension: 'region',
+				categories: ['North', 'South'],
+				measures: ['revenue'],
+				splitBy: { dimension: 'channel', into: ['Retail', 'Online'] },
+				readings: { Retail: [10, 20], Online: [30, 40] },
+				referenceLines: [{ aggregate: 'average', measure_name: 'revenue' }],
+			}).referenceLines,
+		).toEqual([{ value: 25, axis: 'y', label: 'Avg revenue: 25' }])
+	})
+
+	it('reads its own Measure and no other', () => {
+		expect(
+			propsOf({
+				type: 'Bar',
+				dimension: 'region',
+				categories: ['North', 'South'],
+				measures: ['revenue', 'refunds'],
+				readings: { revenue: [10, 20], refunds: [100, 200] },
+				referenceLines: [{ aggregate: 'average', measure_name: 'revenue' }],
+			}).referenceLines?.[0]?.value,
+		).toBe(15)
+	})
+
+	it('skips a cell it cannot read rather than counting it as zero', () => {
+		expect(
+			propsOf({
+				type: 'Bar',
+				dimension: 'region',
+				categories: ['North', 'South', 'East'],
+				measures: ['revenue'],
+				readings: { revenue: [10, null, 'n/a'] },
+				referenceLines: [{ aggregate: 'average', measure_name: 'revenue' }],
+			}).referenceLines?.[0]?.value,
+		).toBe(10)
+	})
+
+	it('reads a right-aligned computed line against the second axis', () => {
+		expect(
+			propsOf({
+				type: 'Bar',
+				dimension: 'region',
+				categories: ['North', 'South'],
+				measures: ['revenue', { name: 'margin_rate', axis: 'right' }],
+				readings: { margin_rate: [4, 8] },
+				referenceLines: [
+					{ aggregate: 'max', measure_name: 'margin_rate', align: 'Right' },
+				],
+			}).referenceLines,
+		).toEqual([{ value: 8, axis: 'y2', label: 'Max margin_rate: 8' }])
+	})
+
+	it('names itself after the aggregate it read, in short form', () => {
+		expect(
+			propsOf({
+				type: 'Bar',
+				dimension: 'region',
+				categories: ['North', 'South'],
+				measures: ['revenue'],
+				readings: { revenue: [1000000, 1400000] },
+				referenceLines: [{ aggregate: 'average', measure_name: 'revenue' }],
+			}).referenceLines,
+		).toEqual([{ value: 1200000, axis: 'y', label: 'Avg revenue: 1.2M' }])
+	})
+
+	it('prints the label the author typed instead of its own', () => {
+		expect(
+			propsOf(spec({ aggregate: 'average', measure_name: 'revenue', label: 'Target' }))
+				?.referenceLines,
+		).toEqual([{ value: 30, axis: 'y', label: 'Target' }])
+	})
+
+	it('drops a line whose Measure the Chart does not draw', () => {
+		expect(valueOf({ aggregate: 'average', measure_name: 'target' })).toBeUndefined()
+	})
+
+	it('drops a line with a Measure but no aggregate, and an aggregate but no Measure', () => {
+		expect(valueOf({ measure_name: 'revenue' })).toBeUndefined()
+		expect(valueOf({ aggregate: 'average' })).toBeUndefined()
+	})
+
+	it('drops a line whose Measure came back with nothing numeric', () => {
+		expect(
+			propsOf({
+				type: 'Bar',
+				dimension: 'region',
+				categories: ['North', 'South'],
+				measures: ['revenue'],
+				readings: { revenue: [null, ''] },
+				referenceLines: [{ aggregate: 'average', measure_name: 'revenue' }],
+			}).referenceLines,
 		).toBeUndefined()
 	})
 })

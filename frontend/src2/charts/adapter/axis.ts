@@ -10,16 +10,19 @@ import type {
 	TimeGrain,
 } from 'frappe-ui/charts'
 import type { Component } from 'vue'
+import { getShortNumber, toNumber } from '../../helpers'
 import { FIELDTYPES, isCalendarDateType } from '../../helpers/constants'
 import { getFormattedDate } from '../../query/helpers'
 import type {
 	MixedChartConfig,
+	ReferenceAggregate,
+	ReferenceLine,
 	Series,
 	SeriesLine,
 	YAxisBar,
 	YAxisLine,
 } from '../../types/chart.types'
-import type { Dimension } from '../../types/query.types'
+import type { Dimension, QueryResultRow } from '../../types/query.types'
 import type { ChartAdapterInput, ChartFiller } from './types'
 
 // Bar, Line and Row. One family, because they differ in two values: the mark an
@@ -88,7 +91,7 @@ function adaptAxisChart(
 	const yAxis = valueAxisFor(y_axis, Boolean(stacked === 'normalized'))
 	if (Object.keys(yAxis).length) props.yAxis = yAxis
 
-	const referenceLines = referenceLinesFor(y_axis)
+	const referenceLines = referenceLinesFor(config, columns, input.result.rows)
 	if (referenceLines.length) props.referenceLines = referenceLines
 
 	return {
@@ -201,18 +204,108 @@ function valueAxisFor(
 	return axis
 }
 
-function referenceLinesFor(y_axis: MixedChartConfig['y_axis']): PlotReferenceLine[] {
-	return (y_axis?.reference_lines || [])
-		.filter((line) => line.value !== undefined && line.value !== null && line.value !== '')
-		.map((line) => {
-			const onCategoryAxis = line.axis === 'x'
-			const reference: PlotReferenceLine = {
-				value: line.value as number | string,
-				axis: onCategoryAxis ? 'x' : line.align === 'Right' ? 'y2' : 'y',
-			}
-			if (line.label) reference.label = line.label
-			if (line.color) reference.color = line.color
-			if (line.dashed) reference.dashed = true
-			return reference
-		})
+/**
+ * A reference line sits at a constant the author typed, or at an aggregate of a
+ * Measure. v2 draws a rule at a value and computes nothing — it cannot, because
+ * it hangs every rule on an empty host series so a legend toggle cannot take the
+ * rule away with the data. So Insights reads the aggregate off the result, the
+ * same way it derives the comparison delta, and hands over a plain value.
+ */
+function referenceLinesFor(
+	config: MixedChartConfig,
+	columns: string[],
+	rows: QueryResultRow[],
+): PlotReferenceLine[] {
+	const lines: PlotReferenceLine[] = []
+	for (const line of config.y_axis?.reference_lines || []) {
+		const at = positionOf(line, config, columns, rows)
+		if (!at) continue
+
+		const reference: PlotReferenceLine = {
+			value: at.value,
+			axis: line.axis === 'x' ? 'x' : line.align === 'Right' ? 'y2' : 'y',
+		}
+		// A computed line labels itself, so a reader is never left with a rule and
+		// no reason for it. What the author typed wins.
+		const label = line.label || at.label
+		if (label) reference.label = label
+		if (line.color) reference.color = line.color
+		if (line.dashed) reference.dashed = true
+		lines.push(reference)
+	}
+	return lines
+}
+
+/** Where a line sits, and the label it names itself. Undrawable lines answer nothing. */
+type ReferencePosition = { value: number | string; label?: string }
+
+/**
+ * The kind of a line is read, not stored: an `aggregate` and a Measure make it
+ * computed, and anything else is a constant. So a line saved before computed
+ * lines existed carries a `value` alone and still reads as one.
+ */
+function positionOf(
+	line: ReferenceLine,
+	config: MixedChartConfig,
+	columns: string[],
+	rows: QueryResultRow[],
+): ReferencePosition | undefined {
+	if (line.aggregate) return aggregatePositionOf(line, config, columns, rows)
+	if (line.value === undefined || line.value === null || line.value === '') return
+	return { value: line.value as number | string }
+}
+
+function aggregatePositionOf(
+	line: ReferenceLine,
+	config: MixedChartConfig,
+	columns: string[],
+	rows: QueryResultRow[],
+): ReferencePosition | undefined {
+	const aggregate = line.aggregate
+	const measure = line.measure_name
+	if (!aggregate || !measure) return
+
+	// Which columns the Measure produced, asked of `seriesFor` so it is the same
+	// answer a series gets: under a split the columns are named after the split's
+	// values, so one Measure owns several of them.
+	const sources = columns.filter(
+		(column) => seriesFor(config, column)?.measure?.measure_name === measure,
+	)
+
+	// Every number the chart draws for those columns. Not the category totals: a
+	// stack is the one picture they read better on, and one rule that holds
+	// everywhere beats two that are each right once.
+	const values = sources
+		.flatMap((column) => rows.map((row) => toNumber(row[column])))
+		.filter((value): value is number => value !== null)
+	// A Measure the query no longer returns, or one with nothing numeric in it,
+	// leaves the line with nowhere to sit. Drawing it at zero would be a lie.
+	if (!values.length) return
+
+	const value = aggregateOf(aggregate, values)
+	return { value, label: `${AGGREGATE_LABELS[aggregate]} ${measure}: ${getShortNumber(value, 1)}` }
+}
+
+/** What a computed line's own label leads with. Short: it is printed on the plot. */
+const AGGREGATE_LABELS: Record<ReferenceAggregate, string> = {
+	average: 'Avg',
+	median: 'Median',
+	min: 'Min',
+	max: 'Max',
+	sum: 'Sum',
+}
+
+function aggregateOf(aggregate: ReferenceAggregate, values: number[]): number {
+	if (aggregate === 'min') return Math.min(...values)
+	if (aggregate === 'max') return Math.max(...values)
+
+	if (aggregate === 'median') {
+		const sorted = [...values].sort((a, b) => a - b)
+		const middle = Math.floor(sorted.length / 2)
+		// An even count has no middle value, so the two either side of it average.
+		return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+	}
+
+	const total = values.reduce((sum, value) => sum + value, 0)
+	return aggregate === 'sum' ? total : total / values.length
 }

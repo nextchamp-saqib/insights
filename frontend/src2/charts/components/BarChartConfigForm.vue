@@ -2,6 +2,7 @@
 import { computed, watchEffect } from 'vue'
 import { BarChartConfig, XAxis, YAxisBar } from '../../types/chart.types'
 import { ColumnOption, DimensionOption } from '../../types/query.types'
+import ReferenceLinesConfig from './ReferenceLinesConfig.vue'
 import SplitByConfig from './SplitByConfig.vue'
 import XAxisConfig from './XAxisConfig.vue'
 import YAxisConfig from './YAxisConfig.vue'
@@ -59,4 +60,6 @@ watchEffect(() => {
 	</YAxisConfig>
 
 	<SplitByConfig v-model="config.split_by" :dimensions="props.dimensions" />
+
+	<ReferenceLinesConfig v-model="config.y_axis" />
 </template>

@@ -1,4 +1,5 @@
 import type { NumberCardProps, NumberCardSparkline } from 'frappe-ui/charts'
+import { toNumber } from '../../helpers'
 import { granularityOptions } from '../../helpers/constants'
 import { __ } from '../../translation'
 import type { NumberChartConfig } from '../../types/chart.types'
@@ -120,11 +121,4 @@ function percentChange(readings: (number | null)[]): number | null {
 function comparisonCaption(dimension?: Dimension): string | undefined {
 	const grain = granularityOptions.find((option) => option.value === dimension?.granularity)
 	return grain && __('vs previous {0}', grain.label.toLowerCase())
-}
-
-/** A reading with no number is not a zero, so a missing one stays missing. */
-function toNumber(value: any): number | null {
-	if (value === null || value === undefined || value === '') return null
-	const number = Number(value)
-	return Number.isNaN(number) ? null : number
 }
