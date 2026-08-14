@@ -76,7 +76,7 @@ const grains = computed(() => {
 const candidates = computed<DrillDimension[]>(() =>
 	breakdownCandidates(
 		props.subject.dimensions,
-		[...stack.pinnedColumns, ...(pending.value?.segment.pins || [])],
+		[...stack.pinnedColumns, ...(pending.value?.segment.pins || []).map((pin) => pin.column)],
 		declaredDimensionColumns(props.subject.chart),
 	),
 )
@@ -94,7 +94,7 @@ function descend(action: DrillAction) {
 
 	stack.push({
 		level: { segment_filters: offered.segment.filters, action },
-		segmentLabel: offered.segment.label,
+		pins: offered.segment.pins,
 		actionLabel:
 			'records' in action ? __('Records') : `${__('by')} ${columnLabel(action.breakdown)}`,
 	})

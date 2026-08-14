@@ -68,14 +68,27 @@ export type DrillDimension = {
 // The descriptor a click produces
 // ---------------------------------------------------------------------------
 
+/**
+ * One pinned value: the column it holds, and the value as a reader reads it.
+ *
+ * Both halves, because a value alone does not say what it is a value of. "FY
+ * 2024-25" and "Lighting" name no columns, and a reader three levels down has
+ * no way left to ask.
+ */
+export type DrillPin = {
+	column: string
+	value: string
+}
+
 /** What a segment click pins, before the reader has said what to do with it. */
 export type DrillSegment = {
 	/** The pins, as the wire carries them. Empty for a number card. */
 	filters: DrillFilter[]
-	/** Pre-summarize columns this segment pins — subtracted from the candidates. */
-	pins: string[]
-	/** The pinned values, for the crumb. Empty when nothing is pinned. */
-	label: string
+	/**
+	 * What this segment pins. The columns are subtracted from the breakdown
+	 * candidates, and the values are what the reader is shown.
+	 */
+	pins: DrillPin[]
 	/** The result column clicked, reduced to the Measure behind it. */
 	measure?: string
 }
@@ -294,25 +307,24 @@ export function segmentOf(chart: DrillChart, target: DrillDownTarget): DrillSegm
 	const pivot = readPivotedColumn(target.column, declared.columns, declared.measures)
 
 	const filters: DrillFilter[] = []
-	const pins: string[] = []
-	const labels: string[] = []
+	const pins: DrillPin[] = []
+
+	const pin = (dimension: Dimension, value: any) => {
+		filters.push(filterForDimension(dimension, value))
+		pins.push({ column: dimension.column_name, value: labelForDimension(dimension, value) })
+	}
 
 	for (const dimension of declared.rows) {
-		const value = target.row?.[dimension.dimension_name]
-		filters.push(filterForDimension(dimension, value))
-		pins.push(dimension.column_name)
-		labels.push(labelForDimension(dimension, value))
+		pin(dimension, target.row?.[dimension.dimension_name])
 	}
 
 	declared.columns.forEach((dimension, index) => {
 		const value = pivot.values[index]
 		if (value === undefined) return
-		filters.push(filterForDimension(dimension, value))
-		pins.push(dimension.column_name)
-		labels.push(labelForDimension(dimension, value))
+		pin(dimension, value)
 	})
 
-	return { filters, pins, label: labels.join(' · '), measure: pivot.measure }
+	return { filters, pins, measure: pivot.measure }
 }
 
 /**
@@ -387,11 +399,11 @@ export function grainsFor(dimensions: DrillDimension[], column: string) {
 // The stack
 // ---------------------------------------------------------------------------
 
-/** One level, plus the two things only the reader needs: its crumbs. */
+/** One level, plus the two things only the reader needs: its crumb and its pins. */
 export type DrillEntry = {
 	level: DrillLevel
-	/** the segment the reader clicked to get here. Empty when it pins nothing. */
-	segmentLabel: string
+	/** what the reader clicked to get here. Empty when it pins nothing. */
+	pins: DrillPin[]
 	/** what this level does — "by Region", "Records" */
 	actionLabel: string
 }
@@ -466,12 +478,10 @@ export function makeDrillStack() {
 		entries.value.map((entry, index) => ({ label: entry.actionLabel, depth: index + 1 })),
 	)
 
-	// The values the reader passed through, in the order they were pinned. A
-	// level whose segment pins nothing contributes none, which is what a click on
-	// a number card does.
-	const pinnedValues = computed<string[]>(() =>
-		entries.value.map((entry) => entry.segmentLabel).filter(Boolean),
-	)
+	// Everything the stack has pinned, in the order it was pinned. A level whose
+	// segment pins nothing contributes none, which is what a click on a number
+	// card does.
+	const pins = computed<DrillPin[]>(() => entries.value.flatMap((entry) => entry.pins))
 
 	/**
 	 * Read the level the reader is standing on at another grain. It replaces the
@@ -498,26 +508,21 @@ export function makeDrillStack() {
 		depth: computed(() => entries.value.length),
 		current: computed(() => entries.value[entries.value.length - 1]),
 		/**
-		 * Every column the stack has fixed. A Dimension already pinned upstream is
-		 * not a way of splitting anything further down, so the menu stops offering
-		 * it as the reader descends.
+		 * Everything the stack has pinned, read in order.
+		 *
+		 * They are read, never clicked: the levels under a pin were reached
+		 * through it, so dropping one is not dropping a filter, it is re-rooting
+		 * the stack. That move is the crumb for that level.
+		 */
+		pins,
+		/**
+		 * The columns those pins hold. A Dimension already pinned upstream is not
+		 * a way of splitting anything further down, so the menu stops offering it
+		 * as the reader descends.
 		 */
 		pinnedColumns: computed(() =>
-			Array.from(
-				new Set(
-					entries.value.flatMap((entry) =>
-						entry.level.segment_filters.map((filter) => filter.column),
-					),
-				),
-			),
+			Array.from(new Set(pins.value.map((pin) => pin.column))),
 		),
-		/**
-		 * The same pins, printed — what a reader sees rather than what the menu
-		 * subtracts. They are read, never clicked: the levels under a pin were
-		 * reached through it, so dropping one is not dropping a filter, it is
-		 * re-rooting the stack. That move is the crumb for that level.
-		 */
-		pinnedValues,
 		/** the crumbs, in reading order. The last one is where the reader is. */
 		crumbs,
 

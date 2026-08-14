@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Badge, Breadcrumbs, Button, Dialog, Dropdown } from 'frappe-ui'
+import { Badge, Button, Dialog, Dropdown } from 'frappe-ui'
 import { ChartCard, ChartContainer } from 'frappe-ui/charts'
-import { AlertTriangle, ChevronDown, X } from 'lucide-vue-next'
+import { AlertTriangle, ChevronDown, ChevronRight, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { __ } from '../../translation'
 import DrillBreakdown from './DrillBreakdown.vue'
 import DrillRecords from './DrillRecords.vue'
-import type { DrillLevelData, DrillStack } from './drill_stack'
+import { columnLabel, type DrillLevelData, type DrillStack } from './drill_stack'
 import type { ChartSegmentClick } from './segment_click'
 
 // One card for the whole drill, with a back-stack inside it.
@@ -65,15 +65,13 @@ const breakdown = computed(() => {
 })
 
 // One crumb per level, and every one of them goes somewhere its neighbour does
-// not. The chart's own name is not among them: it heads the card as a title,
+// not. The chart's own name is not among them: it heads the trail as a title,
 // which is what it is. A title is not a destination, and the way back to the
 // chart is the close button in the same row.
-const crumbs = computed(() =>
-	props.stack.crumbs.map((crumb) => ({
-		label: crumb.label,
-		onClick: () => emit('popTo', crumb.depth),
-	})),
-)
+//
+// The stack's own crumbs, unwrapped: the trail is drawn here, so nothing has to
+// be reshaped into what a Breadcrumbs component wants.
+const crumbs = computed(() => props.stack.crumbs)
 
 // A Dimension with an order of its own is read in that order, at a grain. The
 // server picks one from the span it is looking at. This says which, and lets the
@@ -125,11 +123,52 @@ const bound = computed(() => {
 			     is tall enough for a ranking at the server's bound, and still short
 			     enough for a laptop. -->
 			<div class="flex h-[clamp(24rem,60vh,40rem)] w-full flex-col gap-2 px-4 py-3">
-				<!-- The card's title row: what is being drilled, and what may be done
-				     to it. The title starts at the padding edge, in line with the
-				     plot's y-axis, so nothing sits in front of it. -->
+				<!-- The card's title row, and the whole of where the reader is: the
+				     chart's name and every level under it, in one trail at one type
+				     size. Only the levels are links — the chart's name navigates
+				     nowhere, and closing is the button at the end of this row.
+
+				     Hand-rolled rather than `Breadcrumbs`, which carries a type scale
+				     of its own and would set the trail against the title it continues.
+				     Position is said in ink weight instead: where the reader is stands
+				     out, and everything they came through steps back.
+
+				     The trail starts at the padding edge, in line with the plot's
+				     y-axis. Nothing sits in front of it — that is why there is no back
+				     button, and with one crumb per level the crumb before the last is
+				     already the way back. -->
 				<div class="flex min-w-0 flex-shrink-0 items-center gap-2">
-					<p class="truncate text-p-base text-ink-gray-8">{{ props.title }}</p>
+					<div class="flex min-w-0 items-center gap-1.5 text-p-base">
+						<span class="truncate text-ink-gray-5">{{ props.title }}</span>
+						<template v-for="(crumb, index) in crumbs" :key="crumb.depth">
+							<ChevronRight
+								class="h-3.5 w-3.5 flex-shrink-0 text-ink-gray-4"
+								stroke-width="1.5"
+							/>
+							<button
+								class="max-w-48 truncate hover:underline"
+								:class="
+									index === crumbs.length - 1
+										? 'text-ink-gray-8'
+										: 'text-ink-gray-5'
+								"
+								@click="emit('popTo', crumb.depth)"
+							>
+								{{ crumb.label }}
+							</button>
+						</template>
+						<!-- the grain the last crumb is read at, after the crumb it
+						     qualifies: part of where the reader is, not an action on it -->
+						<Dropdown v-if="ordered && grainOptions.length" :options="grainOptions">
+							<button
+								class="flex flex-shrink-0 items-center gap-0.5 text-ink-gray-5 hover:text-ink-gray-7"
+							>
+								{{ grain?.label || __('Grain') }}
+								<ChevronDown class="h-3.5 w-3.5" stroke-width="1.5" />
+							</button>
+						</Dropdown>
+					</div>
+
 					<!-- what a surface may do with the level it is reading. Empty on a
 					     reading surface, which has nothing to offer beyond the stack. -->
 					<div class="ml-auto flex flex-shrink-0 items-center gap-2 pl-2">
@@ -144,40 +183,25 @@ const bound = computed(() => {
 					</div>
 				</div>
 
-				<!-- Where the reader is, and what the stack has pinned to get them
-				     there. Two readings of one path, and they are not interchangeable:
-				     a crumb is somewhere to go, a pin is something that is true. There
-				     is no back button — with one crumb per level, back is the crumb
-				     before the last, and a button in front of the title would push it
-				     out of line with the y-axis.
-				     The pins are where a chart's own filters would surface if charts
-				     grow a filter affordance; this row is the place for it. -->
+				<!-- What the stack has pinned to get the reader here. A row of its
+				     own, under the trail rather than in it: a crumb is somewhere to
+				     go, a pin is something that is true, and reading them as one line
+				     is what made the two hard to tell apart.
+
+				     Each names its column. "FY 2024-25" and "Lighting" say nothing
+				     about what they are values of, and a reader three levels down has
+				     no way left to ask.
+
+				     This row is where a chart's own filters would surface, if charts
+				     grow a filter affordance of their own. -->
 				<div
-					v-if="crumbs.length"
-					class="flex min-w-0 flex-shrink-0 items-center gap-2 overflow-hidden"
+					v-if="stack.pins.length"
+					class="flex flex-shrink-0 flex-wrap items-center gap-1.5"
 				>
-					<Breadcrumbs class="min-w-0" :items="crumbs" />
-					<!-- the grain the level is read at, after the crumb that names it:
-					     part of where the reader is, not an action on the level -->
-					<Dropdown v-if="ordered && grainOptions.length" :options="grainOptions">
-						<Button
-							variant="ghost"
-							size="sm"
-							class="flex-shrink-0"
-							:label="grain?.label || __('Grain')"
-						>
-							<template #suffix>
-								<ChevronDown class="h-4 w-4 text-ink-gray-5" stroke-width="1.5" />
-							</template>
-						</Button>
-					</Dropdown>
-					<div v-if="stack.pinnedValues.length" class="flex items-center gap-1.5">
-						<Badge
-							v-for="(pin, index) in stack.pinnedValues"
-							:key="`${index}-${pin}`"
-							:label="pin"
-						/>
-					</div>
+					<Badge v-for="(pin, index) in stack.pins" :key="`${index}-${pin.column}`">
+						<span class="text-ink-gray-5">{{ columnLabel(pin.column) }}</span>
+						<span class="ml-1 text-ink-gray-7">{{ pin.value }}</span>
+					</Badge>
 				</div>
 
 				<div class="min-h-0 flex-1">

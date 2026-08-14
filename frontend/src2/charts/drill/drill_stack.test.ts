@@ -41,6 +41,10 @@ function click(
 	return segmentOf(chart, { column, row })
 }
 
+/** The columns a segment pins, which is what the candidate list subtracts. */
+const columnsOf = (segment: { pins: { column: string }[] }) =>
+	segment.pins.map((pin) => pin.column)
+
 describe('what a segment click pins', () => {
 	it('pins the Dimension the bar stands at, as an equality on a literal', () => {
 		const segment = click(
@@ -49,8 +53,7 @@ describe('what a segment click pins', () => {
 			'South',
 		)
 		expect(segment.filters).toEqual([{ column: 'region', operator: '=', value: 'South' }])
-		expect(segment.pins).toEqual(['region'])
-		expect(segment.label).toBe('South')
+		expect(segment.pins).toEqual([{ column: 'region', value: 'South' }])
 		expect(segment.measure).toBe('revenue')
 	})
 
@@ -81,7 +84,6 @@ describe('what a segment click pins', () => {
 		)
 		expect(segment.filters).toEqual([])
 		expect(segment.pins).toEqual([])
-		expect(segment.label).toBe('')
 		expect(segment.measure).toBe('revenue')
 	})
 
@@ -120,7 +122,10 @@ describe('what a segment click pins', () => {
 			{ column: 'channel', operator: '=', value: 'Search' },
 			{ column: 'category', operator: '=', value: 'Tops' },
 		])
-		expect(segment.label).toBe('Search · Tops')
+		expect(segment.pins).toEqual([
+			{ column: 'channel', value: 'Search' },
+			{ column: 'category', value: 'Tops' },
+		])
 	})
 })
 
@@ -141,7 +146,7 @@ describe('a segment a split or a pivot drew', () => {
 			{ column: 'month', operator: '=', value: 'North' },
 			{ column: 'department', operator: '=', value: 'Women' },
 		])
-		expect(segment.pins).toEqual(['month', 'department'])
+		expect(segment.pins.map((pin) => pin.column)).toEqual(['month', 'department'])
 		expect(segment.measure).toBe('profit')
 	})
 
@@ -204,8 +209,8 @@ describe('a segment on a date', () => {
 		])
 	})
 
-	it('reads the crumb at the grain the bar was grouped by', () => {
-		expect(dated('month').label).toBe('March, 2026')
+	it('reads the pin at the grain the bar was grouped by', () => {
+		expect(dated('month').pins[0].value).toBe('March, 2026')
 	})
 })
 
@@ -222,7 +227,7 @@ describe('what "break down by" offers', () => {
 			axisChart({ type: 'Bar', dimension: 'status', measures: ['count'] }),
 			'count',
 		)
-		expect(breakdownCandidates(available, segment.pins, []).map((d) => d.name)).not.toContain(
+		expect(breakdownCandidates(available, columnsOf(segment), []).map((d) => d.name)).not.toContain(
 			'status',
 		)
 	})
@@ -244,7 +249,7 @@ describe('what "break down by" offers', () => {
 		expect(
 			breakdownCandidates(
 				available,
-				click(card, 'count').pins,
+				columnsOf(click(card, 'count')),
 				declaredDimensionColumns(chart),
 			).map((d) => d.name),
 		).toEqual(['priority', 'owner', 'region', 'status'])
@@ -255,7 +260,7 @@ describe('what "break down by" offers', () => {
 			{ chart_type: 'Number', config: { number_columns: [] } as unknown as ChartConfig },
 			{ column: 'count', row: {} },
 		)
-		expect(breakdownCandidates(available, segment.pins, []).map((d) => d.name)).toEqual([
+		expect(breakdownCandidates(available, columnsOf(segment), []).map((d) => d.name)).toEqual([
 			'owner',
 			'priority',
 			'region',
@@ -270,7 +275,7 @@ const overdue: DrillEntry = {
 		segment_filters: [{ column: 'status', operator: '=', value: 'Overdue' }],
 		action: { breakdown: 'region', measure: 'count' },
 	},
-	segmentLabel: 'Overdue',
+	pins: [{ column: 'status', value: 'Overdue' }],
 	actionLabel: 'by Region',
 }
 const west: DrillEntry = {
@@ -281,7 +286,7 @@ const west: DrillEntry = {
 		],
 		action: { records: true },
 	},
-	segmentLabel: 'West',
+	pins: [{ column: 'region', value: 'West' }],
 	actionLabel: 'Records',
 }
 
@@ -310,24 +315,27 @@ describe('the crumbs', () => {
 
 	it('carries a crumb for a level whose segment pins nothing, as a number card does', () => {
 		const stack = makeDrillStack()
-		stack.push({ ...overdue, segmentLabel: '' })
+		stack.push({ ...overdue, pins: [] })
 		expect(stack.crumbs).toEqual([{ label: 'by Region', depth: 1 }])
 	})
 })
 
 describe('the pins', () => {
-	it('reads as the values the reader passed through', () => {
+	it('reads as the values the reader passed through, each under its column', () => {
 		const stack = makeDrillStack()
 		stack.push(overdue)
 		stack.push(west)
-		expect(stack.pinnedValues).toEqual(['Overdue', 'West'])
+		expect(stack.pins).toEqual([
+			{ column: 'status', value: 'Overdue' },
+			{ column: 'region', value: 'West' },
+		])
 	})
 
 	it('skips a level that pins nothing', () => {
 		const stack = makeDrillStack()
-		stack.push({ ...overdue, segmentLabel: '' })
+		stack.push({ ...overdue, pins: [] })
 		stack.push(west)
-		expect(stack.pinnedValues).toEqual(['West'])
+		expect(stack.pins).toEqual([{ column: 'region', value: 'West' }])
 	})
 
 	it('drops away with the levels a pop removes', () => {
@@ -335,7 +343,7 @@ describe('the pins', () => {
 		stack.push(overdue)
 		stack.push(west)
 		stack.popTo(1)
-		expect(stack.pinnedValues).toEqual(['Overdue'])
+		expect(stack.pins).toEqual([{ column: 'status', value: 'Overdue' }])
 	})
 
 	it('collects every column the path has fixed, so the menu stops offering them', () => {
@@ -405,7 +413,7 @@ describe('reading a level at another grain', () => {
 			segment_filters: [{ column: 'status', operator: '=', value: 'Overdue' }],
 			action: { breakdown: 'due_date', measure: 'count' },
 		},
-		segmentLabel: 'Overdue',
+		pins: [{ column: 'status', value: 'Overdue' }],
 		actionLabel: 'by Due Date',
 	}
 
