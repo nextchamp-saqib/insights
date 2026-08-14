@@ -107,7 +107,11 @@ function readingOf(
 				// the percent Measure's scaling applies to it too.
 				card.delta = latest === null || against === null ? null : scale(latest - against)
 				if (prefix) card.deltaPrefix = prefix
-				if (unit) card.deltaSuffix = unit
+				// A percent Measure's gap is points, not percent: the reading and its
+				// comparison are both percentages, so the shift between them is a
+				// change in percentage points, not a further percent change.
+				if (percent) card.deltaSuffix = ' ' + __('pts')
+				else if (unit) card.deltaSuffix = unit
 			} else {
 				card.delta = percentChange(latest, against)
 				card.deltaSuffix = '%'

@@ -203,6 +203,22 @@ describe('the comparison', () => {
 		expect(card.deltaCaption).toBe('vs plan')
 	})
 
+	it("prints a percent measure's gap in points, not percent", () => {
+		// 42% against a 42.8% target is a gap of 0.8 points, not -0.8%.
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Margin',
+					readings: [0.42],
+					percent: true,
+					comparison: { source: 'constant', value: 0.428, show: 'delta' },
+				},
+			],
+		})[0]
+		expect(card.delta).toBeCloseTo(-0.8)
+		expect(card.deltaSuffix).toBe(' pts')
+	})
+
 	it('signs the change the way the data moved, and leaves the coloring to v2', () => {
 		// The card flips its colors for a metric where a fall is good news, so
 		// flipping the number here as well would flip it back.
