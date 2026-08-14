@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Breadcrumbs, Button, Dialog, Dropdown } from 'frappe-ui'
+import { Badge, Breadcrumbs, Button, Dialog, Dropdown } from 'frappe-ui'
 import { ChartCard, ChartContainer } from 'frappe-ui/charts'
-import { AlertTriangle, ChevronDown, ChevronLeft, X } from 'lucide-vue-next'
+import { AlertTriangle, ChevronDown, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { __ } from '../../translation'
 import DrillBreakdown from './DrillBreakdown.vue'
@@ -64,16 +64,16 @@ const breakdown = computed(() => {
 	return current && 'breakdown' in current ? current : undefined
 })
 
-// The crumbs, with the page's own name at the head of them, so a reader three
-// levels down still knows which card they came from. The last crumb is where
-// they are, and frappe-ui draws it as the plain one.
-const crumbs = computed(() => [
-	{ label: props.title, onClick: () => emit('popTo', 0) },
-	...props.stack.crumbs.map((crumb) => ({
+// One crumb per level, and every one of them goes somewhere its neighbour does
+// not. The chart's own name is not among them: it heads the card as a title,
+// which is what it is. A title is not a destination, and the way back to the
+// chart is the close button in the same row.
+const crumbs = computed(() =>
+	props.stack.crumbs.map((crumb) => ({
 		label: crumb.label,
 		onClick: () => emit('popTo', crumb.depth),
 	})),
-])
+)
 
 // A Dimension with an order of its own is read in that order, at a grain. The
 // server picks one from the span it is looking at. This says which, and lets the
@@ -125,30 +125,11 @@ const bound = computed(() => {
 			     is tall enough for a ranking at the server's bound, and still short
 			     enough for a laptop. -->
 			<div class="flex h-[clamp(24rem,60vh,40rem)] w-full flex-col gap-2 px-4 py-3">
-				<!-- Where the reader is, what they are reading it at, and the ways
-				     out. A card's header row, not a dialog's title. -->
+				<!-- The card's title row: what is being drilled, and what may be done
+				     to it. The title starts at the padding edge, in line with the
+				     plot's y-axis, so nothing sits in front of it. -->
 				<div class="flex min-w-0 flex-shrink-0 items-center gap-2">
-					<!-- Back one level, or out of the card when that level was the
-					     first. It only opens on a level, so there is always one. -->
-					<Button variant="ghost" @click="emit('popTo', stack.depth - 1)">
-						<template #icon>
-							<ChevronLeft class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
-						</template>
-					</Button>
-					<Breadcrumbs class="min-w-0" :items="crumbs" />
-					<!-- the grain the level is being read at, beside the crumb that
-					     names it: part of where the reader is, not an action on it -->
-					<Dropdown v-if="ordered && grainOptions.length" :options="grainOptions">
-						<Button
-							variant="ghost"
-							class="flex-shrink-0"
-							:label="grain?.label || __('Grain')"
-						>
-							<template #suffix>
-								<ChevronDown class="h-4 w-4 text-ink-gray-5" stroke-width="1.5" />
-							</template>
-						</Button>
-					</Dropdown>
+					<p class="truncate text-p-base text-ink-gray-8">{{ props.title }}</p>
 					<!-- what a surface may do with the level it is reading. Empty on a
 					     reading surface, which has nothing to offer beyond the stack. -->
 					<div class="ml-auto flex flex-shrink-0 items-center gap-2 pl-2">
@@ -160,6 +141,42 @@ const bound = computed(() => {
 								<X class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 							</template>
 						</Button>
+					</div>
+				</div>
+
+				<!-- Where the reader is, and what the stack has pinned to get them
+				     there. Two readings of one path, and they are not interchangeable:
+				     a crumb is somewhere to go, a pin is something that is true. There
+				     is no back button — with one crumb per level, back is the crumb
+				     before the last, and a button in front of the title would push it
+				     out of line with the y-axis.
+				     The pins are where a chart's own filters would surface if charts
+				     grow a filter affordance; this row is the place for it. -->
+				<div
+					v-if="crumbs.length"
+					class="flex min-w-0 flex-shrink-0 items-center gap-2 overflow-hidden"
+				>
+					<Breadcrumbs class="min-w-0" :items="crumbs" />
+					<!-- the grain the level is read at, after the crumb that names it:
+					     part of where the reader is, not an action on the level -->
+					<Dropdown v-if="ordered && grainOptions.length" :options="grainOptions">
+						<Button
+							variant="ghost"
+							size="sm"
+							class="flex-shrink-0"
+							:label="grain?.label || __('Grain')"
+						>
+							<template #suffix>
+								<ChevronDown class="h-4 w-4 text-ink-gray-5" stroke-width="1.5" />
+							</template>
+						</Button>
+					</Dropdown>
+					<div v-if="stack.pinnedValues.length" class="flex items-center gap-1.5">
+						<Badge
+							v-for="(pin, index) in stack.pinnedValues"
+							:key="`${index}-${pin}`"
+							:label="pin"
+						/>
 					</div>
 				</div>
 

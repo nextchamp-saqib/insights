@@ -286,16 +286,11 @@ const west: DrillEntry = {
 }
 
 describe('the crumbs', () => {
-	it('reads as the path the reader took', () => {
+	it('reads as one crumb per level, and nothing else', () => {
 		const stack = makeDrillStack()
 		stack.push(overdue)
 		stack.push(west)
-		expect(stack.crumbs.map((crumb) => crumb.label)).toEqual([
-			'Overdue',
-			'by Region',
-			'West',
-			'Records',
-		])
+		expect(stack.crumbs.map((crumb) => crumb.label)).toEqual(['by Region', 'Records'])
 	})
 
 	it('sends the levels and nothing else', () => {
@@ -304,24 +299,50 @@ describe('the crumbs', () => {
 		expect(stack.levels).toEqual([overdue.level])
 	})
 
-	it('leaves out a crumb for a segment that pins nothing, as a number card does', () => {
+	it('gives every crumb a depth of its own', () => {
+		// they used to come in pairs, where a level's value and its action both
+		// popped to the same place — so half the trail led where its neighbour did
+		const stack = makeDrillStack()
+		stack.push(overdue)
+		stack.push(west)
+		expect(stack.crumbs.map((crumb) => crumb.depth)).toEqual([1, 2])
+	})
+
+	it('carries a crumb for a level whose segment pins nothing, as a number card does', () => {
 		const stack = makeDrillStack()
 		stack.push({ ...overdue, segmentLabel: '' })
 		expect(stack.crumbs).toEqual([{ label: 'by Region', depth: 1 }])
 	})
+})
 
-	it('points both of a level’s crumbs at the level they read', () => {
+describe('the pins', () => {
+	it('reads as the values the reader passed through', () => {
 		const stack = makeDrillStack()
 		stack.push(overdue)
 		stack.push(west)
-		expect(stack.crumbs.map((crumb) => crumb.depth)).toEqual([1, 1, 2, 2])
+		expect(stack.pinnedValues).toEqual(['Overdue', 'West'])
+	})
+
+	it('skips a level that pins nothing', () => {
+		const stack = makeDrillStack()
+		stack.push({ ...overdue, segmentLabel: '' })
+		stack.push(west)
+		expect(stack.pinnedValues).toEqual(['West'])
+	})
+
+	it('drops away with the levels a pop removes', () => {
+		const stack = makeDrillStack()
+		stack.push(overdue)
+		stack.push(west)
+		stack.popTo(1)
+		expect(stack.pinnedValues).toEqual(['Overdue'])
 	})
 
 	it('collects every column the path has fixed, so the menu stops offering them', () => {
 		const stack = makeDrillStack()
 		stack.push(overdue)
 		stack.push(west)
-		expect(stack.pinned).toEqual(['status', 'region'])
+		expect(stack.pinnedColumns).toEqual(['status', 'region'])
 	})
 })
 
@@ -333,7 +354,7 @@ describe('retracing', () => {
 		stack.popTo(1)
 		expect(stack.depth).toBe(1)
 		expect(stack.current).toBe(overdue)
-		expect(stack.crumbs.map((crumb) => crumb.label)).toEqual(['Overdue', 'by Region'])
+		expect(stack.crumbs.map((crumb) => crumb.label)).toEqual(['by Region'])
 	})
 
 	it('pops back out of the dialog altogether', () => {
@@ -406,12 +427,7 @@ describe('reading a level at another grain', () => {
 		stack.push(byDate)
 		stack.regrain('quarter')
 		expect(stack.depth).toBe(2)
-		expect(stack.crumbs.map((crumb) => crumb.label)).toEqual([
-			'Overdue',
-			'by Region',
-			'Overdue',
-			'by Due Date',
-		])
+		expect(stack.crumbs.map((crumb) => crumb.label)).toEqual(['by Region', 'by Due Date'])
 		stack.pop()
 		expect(stack.levels).toEqual([overdue.level])
 	})

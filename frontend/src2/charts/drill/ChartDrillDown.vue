@@ -76,7 +76,7 @@ const grains = computed(() => {
 const candidates = computed<DrillDimension[]>(() =>
 	breakdownCandidates(
 		props.subject.dimensions,
-		[...stack.pinned, ...(pending.value?.segment.pins || [])],
+		[...stack.pinnedColumns, ...(pending.value?.segment.pins || [])],
 		declaredDimensionColumns(props.subject.chart),
 	),
 )

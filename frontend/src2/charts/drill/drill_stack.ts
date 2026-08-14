@@ -397,9 +397,12 @@ export type DrillEntry = {
 }
 
 /**
- * One crumb of the stack. `depth` is the stack this crumb stands for, so
- * clicking it pops to exactly that many levels. Both of a level's crumbs carry
- * the same depth: "Overdue › by Region" is one level read as two words.
+ * One crumb of the stack: one level, and the depth clicking it pops to.
+ *
+ * Only what a level *does* is a crumb. The value it was reached through is a
+ * pin, and the two used to sit in one trail — where "Overdue" and "by Region"
+ * both carried depth 1, so half the trail was a link to where the link beside
+ * it went. A pin is state. A crumb is a destination.
  */
 export type DrillCrumb = {
 	label: string
@@ -459,15 +462,16 @@ export function makeDrillStack() {
 	const levels = computed<DrillLevel[]>(() => entries.value.map((entry) => entry.level))
 	const signature = () => JSON.stringify(levels.value)
 
-	const crumbs = computed<DrillCrumb[]>(() => {
-		const list: DrillCrumb[] = []
-		entries.value.forEach((entry, index) => {
-			const depth = index + 1
-			if (entry.segmentLabel) list.push({ label: entry.segmentLabel, depth })
-			list.push({ label: entry.actionLabel, depth })
-		})
-		return list
-	})
+	const crumbs = computed<DrillCrumb[]>(() =>
+		entries.value.map((entry, index) => ({ label: entry.actionLabel, depth: index + 1 })),
+	)
+
+	// The values the reader passed through, in the order they were pinned. A
+	// level whose segment pins nothing contributes none, which is what a click on
+	// a number card does.
+	const pinnedValues = computed<string[]>(() =>
+		entries.value.map((entry) => entry.segmentLabel).filter(Boolean),
+	)
 
 	/**
 	 * Read the level the reader is standing on at another grain. It replaces the
@@ -498,7 +502,7 @@ export function makeDrillStack() {
 		 * not a way of splitting anything further down, so the menu stops offering
 		 * it as the reader descends.
 		 */
-		pinned: computed(() =>
+		pinnedColumns: computed(() =>
 			Array.from(
 				new Set(
 					entries.value.flatMap((entry) =>
@@ -507,6 +511,13 @@ export function makeDrillStack() {
 				),
 			),
 		),
+		/**
+		 * The same pins, printed — what a reader sees rather than what the menu
+		 * subtracts. They are read, never clicked: the levels under a pin were
+		 * reached through it, so dropping one is not dropping a filter, it is
+		 * re-rooting the stack. That move is the crumb for that level.
+		 */
+		pinnedValues,
 		/** the crumbs, in reading order. The last one is where the reader is. */
 		crumbs,
 
