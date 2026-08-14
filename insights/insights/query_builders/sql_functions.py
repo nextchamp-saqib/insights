@@ -228,30 +228,39 @@ class Functions:
 
 
 def handle_timespan(column, timespan):
+    dates = add_start_and_end_time(list(resolve_timespan(timespan)))
+    return column.between(*dates)
+
+
+def resolve_timespan(timespan) -> tuple[datetime.date, datetime.date]:
+    """The window a `within` value covers, as (start, end).
+
+    A filter tests one window and a windowed number card groups by several, so
+    both read a span the same way.
+    """
+    return get_window(*read_timespan(timespan))
+
+
+def read_timespan(timespan) -> tuple[str, datetime.date | None]:
+    """The span a `within` filter names, and the date to resolve it against.
+
+    A filter written before windows names the span alone, as a string or as the
+    words of one, and resolves against today. A window also pins the anchor, and
+    a comparison window moves it, so both arrive beside the span.
+    """
     if isinstance(timespan, list):
-        timespan = " ".join(timespan)
-    include_current = "(include current)" in timespan.lower()
-
-    timespan = timespan.lower()
-    timespan = timespan.replace("(include current)", "").strip()
-    timespan = timespan[:-1] if timespan.endswith("s") else timespan  # "last 7 day"
-
-    units = [
-        "day",
-        "week",
-        "month",
-        "quarter",
-        "year",
-        "fiscal year",
-    ]
-    if not any(timespan.endswith(unit) for unit in units):
-        raise Exception(f"Invalid timespan unit - {timespan}")
-
-    dates = get_date_range(timespan, include_current=include_current)
-    if not dates:
+        return " ".join(timespan), None
+    if isinstance(timespan, str):
+        return timespan, None
+    if not isinstance(timespan, dict) or not timespan.get("span"):
         raise Exception(f"Invalid timespan {timespan}")
-    dates_str = add_start_and_end_time(dates)
-    return column.between(*dates_str)
+
+    anchor = getdate(timespan.get("anchor") or nowdate())
+    shift = timespan.get("shift") or {}
+    if shift.get("unit"):
+        anchor = shift_anchor(anchor, shift["unit"], shift.get("count") or 0)
+
+    return timespan["span"], anchor
 
 
 def get_descendants(node, tree, include_self=False):
@@ -262,6 +271,16 @@ def get_descendants(node, tree, include_self=False):
         if not include_self
         else (select(Tree.c.name).where(Tree.c.lft >= lft_rgt.c.lft).where(Tree.c.rgt <= lft_rgt.c.rgt))
     )
+
+
+DATE_UNITS = (
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "year",
+    "fiscal year",
+)
 
 
 WEEKDAYS = [
@@ -289,8 +308,8 @@ def get_last_day_of_week(date):
     return get_first_day_of_week(date) + datetime.timedelta(days=6)
 
 
-def get_current_date_range(unit):
-    today = nowdate()
+def get_current_date_range(unit, anchor=None):
+    today = anchor or nowdate()
     if unit == "day":
         today_date = getdate(today)
         return [today_date, today_date]
@@ -330,9 +349,9 @@ def get_fiscal_year_ending(date):
     return getdate(f"{dt.year + 1}-{fy_end.month}-{fy_end.day}")  # eg. 2019-03-31
 
 
-def get_directional_date_range(direction, unit, number_of_unit):
+def get_directional_date_range(direction, unit, number_of_unit, anchor=None):
     dates = []
-    today = nowdate()
+    today = anchor or nowdate()
     if unit == "day":
         dates = [
             add_to_date(today, days=direction * number_of_unit),
@@ -374,7 +393,7 @@ def get_directional_date_range(direction, unit, number_of_unit):
     return dates
 
 
-def get_date_range(timespan, include_current=False):
+def get_date_range(timespan, include_current=False, anchor=None):
     # timespan = "last 7 days" or "next 3 months"
     time_direction = timespan.lower().split(" ")[0]  # "last" or "next" or "current"
     # "day", "week", "month", "quarter", "year", "fiscal year"
@@ -384,21 +403,105 @@ def get_date_range(timespan, include_current=False):
         unit = timespan.lower().split(" ")[-1]
 
     if time_direction == "current":
-        return get_current_date_range(unit)
+        return get_current_date_range(unit, anchor)
 
     number_of_unit = int(timespan.split(" ")[1])  # 7, 3, etc
 
     if time_direction == "last" or time_direction == "next":
         time_direction = -1 if time_direction == "last" else 1
 
-        dates = get_directional_date_range(time_direction, unit, number_of_unit)
+        dates = get_directional_date_range(time_direction, unit, number_of_unit, anchor)
 
         if include_current:
-            current_dates = get_current_date_range(unit)
+            current_dates = get_current_date_range(unit, anchor)
             dates[0] = min(dates[0], current_dates[0])
             dates[1] = max(dates[1], current_dates[1])
 
         return dates
+
+
+def get_window(span: str, anchor: datetime.date | None = None) -> tuple[datetime.date, datetime.date]:
+    """The window a span names, as (start, end).
+
+    Accepts every span `get_date_range` accepts, plus "<unit> to date", which
+    ends at the anchor instead of at the end of the period. `anchor` defaults to
+    today.
+    """
+    anchor = getdate(anchor or nowdate())
+
+    span = span.lower()
+    include_current = "(include current)" in span
+    span = span.replace("(include current)", "").strip()
+
+    to_date = span.endswith("to date")
+    if to_date:
+        span = span[: -len("to date")].strip()
+    else:
+        span = span[:-1] if span.endswith("s") else span  # "last 7 day"
+
+    unit = "fiscal year" if "fiscal year" in span else span.rsplit(" ", 1)[-1]
+    if unit not in DATE_UNITS:
+        raise Exception(f"Invalid timespan unit - {span}")
+
+    if to_date:
+        start = get_current_date_range(unit, anchor)[0]
+        return (getdate(start), anchor)
+
+    dates = get_date_range(span, include_current=include_current, anchor=anchor)
+    if not dates:
+        raise Exception(f"Invalid timespan {span}")
+    return (getdate(dates[0]), getdate(dates[1]))
+
+
+def shift_anchor(anchor: datetime.date, unit: str, count: int) -> datetime.date:
+    """The anchor moved `count` units.
+
+    "The same window a year ago" is `get_window(span, shift_anchor(anchor,
+    "year", -1))`. The window is recomputed from the moved anchor, never shifted
+    at its endpoints. That is what keeps a to-date window to-date, and it lands a
+    leap day or a month end on the nearest real date with no case for either.
+    """
+    anchor = getdate(anchor)
+    unit = unit.lower()
+
+    if unit == "day":
+        return getdate(add_to_date(anchor, days=count))
+    if unit == "week":
+        return getdate(add_to_date(anchor, days=7 * count))
+    if unit == "month":
+        return getdate(add_to_date(anchor, months=count))
+    if unit == "quarter":
+        return getdate(add_to_date(anchor, months=3 * count))
+    # a fiscal year is twelve months long wherever it starts, so it moves by the year
+    if unit == "year" or unit == "fiscal year":
+        return getdate(add_to_date(anchor, years=count))
+
+    raise Exception(f"Invalid shift unit - {unit}")
+
+
+def split_window(
+    start: datetime.date, end: datetime.date, unit: str
+) -> list[tuple[datetime.date, datetime.date]]:
+    """The window cut into consecutive sub-windows of one `unit` each.
+
+    Sub-windows sit on period boundaries, so the first and the last one are
+    returned short where the window cuts them. Padding a short one would report
+    days the window never covered.
+    """
+    start = getdate(start)
+    end = getdate(end)
+    unit = unit.lower()
+    if unit not in DATE_UNITS:
+        raise Exception(f"Invalid split unit - {unit}")
+
+    windows = []
+    cursor = start
+    while cursor <= end:
+        period_end = getdate(get_current_date_range(unit, cursor)[1])
+        windows.append((cursor, min(period_end, end)))
+        cursor = getdate(add_to_date(period_end, days=1))
+
+    return windows
 
 
 def add_start_and_end_time(dates):
