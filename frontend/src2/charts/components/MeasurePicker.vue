@@ -2,8 +2,9 @@
 import { TextInput } from 'frappe-ui'
 import { __ } from '../../translation'
 import { Check, ChevronLeft, Edit, Plus, Settings, XIcon } from 'lucide-vue-next'
-import { computed, ref, watchEffect } from 'vue'
+import { computed, h, ref, watchEffect } from 'vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
+import { dialogs } from '../../helpers/confirm_dialog'
 import { FIELDTYPES } from '../../helpers/constants'
 import {
 	AggregationType,
@@ -16,7 +17,7 @@ import {
 } from '../../types/query.types'
 import NewMeasureSelectorDialog from './NewMeasureSelectorDialog.vue'
 
-const emit = defineEmits({ remove: () => true })
+const emit = defineEmits({ remove: () => true, 'dialog-open': () => true })
 const props = defineProps<{
 	label?: string
 	columnOptions: ColumnOption[]
@@ -131,15 +132,48 @@ watchEffect(() => {
 	}
 })
 
-const showMeasureDialog = ref(false)
-function updateMeasure(measureExpression: ExpressionMeasure) {
-	measure.value = {
-		expression: measureExpression.expression,
-		measure_name: measureExpression.measure_name,
-		data_type: measureExpression.data_type,
-		format: measure.value.format,
+let dialogCount = 0
+
+/**
+ * The expression dialog is mounted at the app root, not under this picker: a
+ * picker can sit inside a popover — this one nests in the number card's
+ * settings — and a popover unmounts its content when it closes, taking a dialog
+ * rendered there with it. Every popover over the dialog closes first, this
+ * picker's own and, through `dialog-open`, the one it is nested in.
+ */
+function openMeasureDialog(closePopover: () => void) {
+	closePopover()
+	emit('dialog-open')
+
+	const dialog = h(NewMeasureSelectorDialog, {
+		key: `measure-expression-${++dialogCount}`,
+		modelValue: true,
+		columnOptions: props.columnOptions,
+		measure: expressionMeasure.value,
+		'onUpdate:modelValue': (open: boolean) => !open && closeMeasureDialog(),
+		onSelect: (measureExpression: ExpressionMeasure) => {
+			updateMeasure(measureExpression)
+			closeMeasureDialog()
+		},
+	})
+	function closeMeasureDialog() {
+		dialogs.value = dialogs.value.filter((mounted) => mounted !== dialog)
 	}
-	showMeasureDialog.value = false
+	dialogs.value.push(dialog)
+}
+
+/**
+ * Written onto the measure the picker was given, not emitted in its place: by
+ * the time the dialog answers, the picker can be unmounted with the popover it
+ * sat in, and an emit from an unmounted picker reaches nobody.
+ */
+function updateMeasure(measureExpression: ExpressionMeasure) {
+	const written = measure.value as Partial<ColumnMeasure> & Partial<ExpressionMeasure>
+	delete written.column_name
+	delete written.aggregation
+	written.expression = measureExpression.expression
+	written.measure_name = measureExpression.measure_name
+	written.data_type = measureExpression.data_type
 }
 
 const aggregationOptions: { label: string; value: AggregationType }[] = [
@@ -320,7 +354,7 @@ function handleRemove() {
 								class="w-full"
 								variant="ghost"
 								:label="expressionMeasure ? 'Edit Expression' : 'Custom Expression'"
-								@click=";(showMeasureDialog = true), togglePopover()"
+								@click="openMeasureDialog(togglePopover)"
 							>
 								<template #prefix>
 									<component
@@ -343,7 +377,7 @@ function handleRemove() {
 					</template>
 				</Button>
 			</template>
-			<template #default>
+			<template #default="{ close: closeSettings }">
 				<div
 					class="flex flex-col gap-2 p-2"
 					:style="{ width: props.configWidth || '14rem' }"
@@ -367,7 +401,7 @@ function handleRemove() {
 						/>
 					</InlineFormControlLabel>
 
-					<slot name="config-fields" />
+					<slot name="config-fields" :close="closeSettings" />
 
 					<div class="flex gap-1">
 						<Button
@@ -389,13 +423,4 @@ function handleRemove() {
 			</template>
 		</Button>
 	</div>
-
-	<NewMeasureSelectorDialog
-		v-if="showMeasureDialog"
-		:model-value="Boolean(showMeasureDialog)"
-		@update:model-value="!$event && (showMeasureDialog = false)"
-		:column-options="props.columnOptions"
-		:measure="measure as ExpressionMeasure"
-		@select="updateMeasure"
-	/>
 </template>

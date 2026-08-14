@@ -134,7 +134,7 @@ lowerChartLevelSettings()
 								@update:model-value="Object.assign(item, $event || {})"
 								@remove="config.number_columns.splice(index, 1)"
 							>
-								<template #config-fields>
+								<template #config-fields="{ close: closeSettings }">
 									<InlineFormControlLabel label="Units">
 										<div class="grid grid-cols-3 gap-1">
 											<FormControl
@@ -202,6 +202,7 @@ lowerChartLevelSettings()
 											@update:comparison="
 												setNumberOption(index, 'comparison', $event)
 											"
+											@dialog-open="closeSettings"
 										/>
 									</div>
 								</template>
