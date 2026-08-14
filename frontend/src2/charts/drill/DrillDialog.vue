@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Breadcrumbs, Button, Dialog, Dropdown, LoadingIndicator } from 'frappe-ui'
-import { AlertTriangle, ChevronDown, ChevronLeft } from 'lucide-vue-next'
+import { Breadcrumbs, Button, Dialog, Dropdown } from 'frappe-ui'
+import { ChartCard, ChartContainer } from 'frappe-ui/charts'
+import { AlertTriangle, ChevronDown, ChevronLeft, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { __ } from '../../translation'
 import DrillBreakdown from './DrillBreakdown.vue'
@@ -8,7 +9,7 @@ import DrillRecords from './DrillRecords.vue'
 import type { DrillLevelData, DrillStack } from './drill_stack'
 import type { ChartSegmentClick } from './segment_click'
 
-// One dialog for the whole drill, with a back-stack inside it.
+// One card for the whole drill, with a back-stack inside it.
 //
 // Every crumb pops to the level it reads. Nothing is fetched twice: the stack
 // holds each level's answer for as long as the dialog is open, so back and crumb
@@ -16,6 +17,16 @@ import type { ChartSegmentClick } from './segment_click'
 //
 // Nothing here is a destination. There is no route, nothing is persisted, and
 // closing loses the stack — this is an inspection.
+//
+// It is a `bare` Dialog: what makes this a modal is the overlay, Esc,
+// click-outside and the focus trap, and `bare` keeps all of them. What it drops
+// is the header block and its padding — a 24px band between a title and the
+// body, where a chart card puts six. What the drill wants above the plot is not
+// a dialog title anyway. Crumbs, a grain and the way out are a toolbar.
+//
+// So the whole surface is one card: a toolbar, a plot, and a line under it. The
+// only chrome drawn here is that toolbar. The states around the plot and the
+// label naming its measure come from the chart, the way they do on a dashboard.
 const props = defineProps<{
 	stack: DrillStack
 	title: string
@@ -37,6 +48,15 @@ const emit = defineEmits<{
 }>()
 
 const open = defineModel<boolean>({ default: false })
+
+/** Whether there is a level to draw. Anything else is one of the three states. */
+const ready = computed(() => !props.loading && !props.failed && Boolean(props.answer))
+
+// A drill that will not load says so in one line. The container's own wording is
+// about a chart failing to render, which is not what happened here.
+const failure = computed(() =>
+	!props.loading && (props.failed || !props.answer) ? __('This drill is not available') : null,
+)
 
 const action = computed(() => props.stack.current?.level.action)
 const breakdown = computed(() => {
@@ -95,65 +115,80 @@ const bound = computed(() => {
 </script>
 
 <template>
-	<Dialog v-model:open="open" size="5xl" @after-leave="emit('closed')">
-		<template #title>
-			<div class="flex min-w-0 flex-1 items-center gap-2">
-				<Button
-					variant="ghost"
-					:disabled="!stack.depth"
-					@click="emit('popTo', stack.depth - 1)"
-				>
-					<template #icon>
-						<ChevronLeft class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
-					</template>
-				</Button>
-				<Breadcrumbs class="min-w-0" :items="crumbs" />
-				<!-- the grain the level is being read at, beside the crumb that names
-				     it: it is part of where the reader is, not an action on the level -->
-				<Dropdown v-if="ordered && grainOptions.length" :options="grainOptions">
-					<Button
-						variant="ghost"
-						class="flex-shrink-0"
-						:label="grain?.label || __('Grain')"
-					>
-						<template #suffix>
-							<ChevronDown class="h-4 w-4 text-ink-gray-5" stroke-width="1.5" />
+	<Dialog v-model:open="open" size="5xl" bare @after-leave="emit('closed')">
+		<template #default="{ close }">
+			<!-- `px-4 py-3` is a chart card's own padding, and the one measurement
+			     the records grid's bleed is written against.
+
+			     The height does not follow what is drawn: a box that resized as the
+			     reader descended would move the plot out from under the pointer. It
+			     is tall enough for a ranking at the server's bound, and still short
+			     enough for a laptop. -->
+			<div class="flex h-[clamp(24rem,60vh,40rem)] w-full flex-col gap-2 px-4 py-3">
+				<!-- Where the reader is, what they are reading it at, and the ways
+				     out. A card's header row, not a dialog's title. -->
+				<div class="flex min-w-0 flex-shrink-0 items-center gap-2">
+					<!-- Back one level, or out of the card when that level was the
+					     first. It only opens on a level, so there is always one. -->
+					<Button variant="ghost" @click="emit('popTo', stack.depth - 1)">
+						<template #icon>
+							<ChevronLeft class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 						</template>
 					</Button>
-				</Dropdown>
-				<!-- what a surface may do with the level it is reading. Empty on a
-				     reading surface, which has nothing to offer beyond the stack. -->
-				<div class="ml-auto flex flex-shrink-0 items-center gap-2 pl-2">
-					<slot name="actions" />
+					<Breadcrumbs class="min-w-0" :items="crumbs" />
+					<!-- the grain the level is being read at, beside the crumb that
+					     names it: part of where the reader is, not an action on it -->
+					<Dropdown v-if="ordered && grainOptions.length" :options="grainOptions">
+						<Button
+							variant="ghost"
+							class="flex-shrink-0"
+							:label="grain?.label || __('Grain')"
+						>
+							<template #suffix>
+								<ChevronDown class="h-4 w-4 text-ink-gray-5" stroke-width="1.5" />
+							</template>
+						</Button>
+					</Dropdown>
+					<!-- what a surface may do with the level it is reading. Empty on a
+					     reading surface, which has nothing to offer beyond the stack. -->
+					<div class="ml-auto flex flex-shrink-0 items-center gap-2 pl-2">
+						<slot name="actions" />
+						<!-- `bare` draws no close button of its own, which is the point:
+						     the way out belongs in this row with the other actions. -->
+						<Button variant="ghost" :label="__('Close')" @click="close">
+							<template #icon>
+								<X class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
+							</template>
+						</Button>
+					</div>
 				</div>
+
+				<div class="min-h-0 flex-1">
+					<template v-if="ready">
+						<DrillBreakdown
+							v-if="breakdown"
+							:answer="props.answer!"
+							:dimension="breakdown.breakdown"
+							@segment-click="emit('segmentClick', $event)"
+						/>
+						<DrillRecords v-else :answer="props.answer!" />
+					</template>
+
+					<!-- Every state but the answer, from the same component a card
+					     draws them with. The placeholder holds the shape of the plot
+					     rather than turning a spinner in an empty box. -->
+					<ChartCard v-else class="h-full" :card="false">
+						<ChartContainer :loading="props.loading" :error="failure" :empty="true">
+							<template #error>
+								<AlertTriangle class="h-6 w-6 text-ink-gray-4" stroke-width="1" />
+								<p class="text-p-base text-ink-gray-5">{{ failure }}</p>
+							</template>
+						</ChartContainer>
+					</ChartCard>
+				</div>
+
+				<p v-if="ready" class="flex-shrink-0 text-p-sm text-ink-gray-5">{{ bound }}</p>
 			</div>
 		</template>
-
-		<div class="flex h-[32rem] w-full flex-col gap-2">
-			<div v-if="props.loading" class="flex h-full w-full items-center justify-center">
-				<LoadingIndicator class="h-5 w-5 text-ink-gray-5" />
-			</div>
-
-			<div
-				v-else-if="props.failed || !props.answer"
-				class="flex h-full w-full flex-col items-center justify-center gap-2"
-			>
-				<AlertTriangle class="h-6 w-6 text-ink-gray-4" stroke-width="1" />
-				<p class="text-p-base text-ink-gray-5">{{ __('This drill is not available') }}</p>
-			</div>
-
-			<template v-else>
-				<div class="min-h-0 flex-1 overflow-hidden rounded border border-outline-gray-2">
-					<DrillBreakdown
-						v-if="breakdown"
-						:answer="props.answer"
-						:dimension="breakdown.breakdown"
-						@segment-click="emit('segmentClick', $event)"
-					/>
-					<DrillRecords v-else :answer="props.answer" />
-				</div>
-				<p class="flex-shrink-0 px-1 text-p-sm text-ink-gray-5">{{ bound }}</p>
-			</template>
-		</div>
 	</Dialog>
 </template>

@@ -53,15 +53,24 @@ function openRecord(formattedRow: QueryResultRow) {
 </script>
 
 <template>
-	<QueryDataTable :query="table">
-		<template v-if="link" #row-action="{ row }">
-			<Tooltip :text="__('Open record')" :hover-delay="0.5">
-				<Button variant="ghost" @click="openRecord(row)">
-					<template #icon>
-						<ExternalLink class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
-					</template>
-				</Button>
-			</Tooltip>
-		</template>
-	</QueryDataTable>
+	<!-- The grid runs to the card's own edges, the way a Table Chart's does, so
+	     its first and last columns end on the card edge instead of floating 16px
+	     inside it. `-mx-4` is the card's horizontal padding, which is the only
+	     measurement this bleed depends on. The last column drops its own right
+	     border once it is flush: the card's edge is already that line.
+	     A box of its own, not classes on the table: DataTable renders a fragment,
+	     so an inherited class would reach none of its parts. -->
+	<div class="relative -mx-4 h-full w-[calc(100%_+_2rem)] [&_tr>*:last-child]:border-r-0">
+		<QueryDataTable :query="table">
+			<template v-if="link" #row-action="{ row }">
+				<Tooltip :text="__('Open record')" :hover-delay="0.5">
+					<Button variant="ghost" @click="openRecord(row)">
+						<template #icon>
+							<ExternalLink class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
+						</template>
+					</Button>
+				</Tooltip>
+			</template>
+		</QueryDataTable>
+	</div>
 </template>

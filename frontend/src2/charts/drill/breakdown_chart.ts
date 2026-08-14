@@ -33,7 +33,7 @@ import type {
 	MeasureDataType,
 	QueryResultColumn,
 } from '../../types/query.types'
-import type { DrillChart, DrillLevelData } from './drill_stack'
+import { columnLabel, type DrillChart, type DrillLevelData } from './drill_stack'
 
 /** What a breakdown level draws itself from: the answer, whole. */
 export type BreakdownAnswer = Pick<
@@ -139,6 +139,14 @@ function configFor(plot: BreakdownPlot, dimension: Dimension, values: Measure[])
 		y_axis: {
 			series: values.map((measure) => ({ measure })),
 			show_data_labels: plot.labels,
+			// What the bars measure. The crumb says which Dimension the level cut
+			// by and never what it counted, and the axis title is where a chart
+			// already answers that — drawn over the plot edge, not as a heading.
+			// Several measures have no one name, so they go unnamed here and the
+			// legend names each of them.
+			...(values.length === 1
+				? { show_axis_label: true, axis_label: columnLabel(values[0].measure_name) }
+				: {}),
 		},
 	}
 	// `ChartConfig` names Bar and Line separately, and each of them narrows the

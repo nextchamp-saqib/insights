@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ChartCard } from 'frappe-ui/charts'
 import { computed } from 'vue'
 import { EMPTY_RESULT } from '../../query/helpers'
 import type { QueryResult } from '../../types/query.types'
@@ -51,7 +52,10 @@ const events = computed(() =>
 </script>
 
 <template>
-	<div class="h-full w-full" @click.capture="rememberPoint">
+	<!-- `card: false` keeps the box a chart needs — it clips the plot — and drops
+	     the surface a card wears. A dialog is already the frame here, and a second
+	     border inside it draws a card that is not there. -->
+	<ChartCard class="h-full" :card="false" @click.capture="rememberPoint">
 		<component v-if="filler" :is="filler.component" v-bind="filler.props" v-on="events" />
-	</div>
+	</ChartCard>
 </template>
