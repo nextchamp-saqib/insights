@@ -118,14 +118,18 @@ export type NumberTarget = {
  */
 export type NumberComparison = {
 	/**
-	 * `previous` is the row before the last one, `constant` a fixed number, and
-	 * `measure` a measure of the card's own query read off the same last row.
+	 * `previous` is the row before the last one, `constant` a fixed number,
+	 * `measure` a measure of the card's own query read off the same last row, and
+	 * `window` the chart's own window shifted back. A shifted window is derived as
+	 * the row before the last one, so it reads the same way `previous` does.
 	 */
-	source: 'previous' | 'constant' | 'measure'
+	source: 'previous' | 'constant' | 'measure' | 'window'
 	/** The number, when `source` is `constant`. */
 	value?: number
 	/** The measure holding it, when `source` is `measure`. */
 	measure?: Measure
+	/** The same span, anchored `count` `unit`s away. `source: 'window'` only. */
+	shift?: { unit: string; count: number }
 	/**
 	 * How the gap is printed: `change` as a percent of the comparison number,
 	 * `delta` as a signed number in the value's own units. Defaults to `change`.
@@ -142,6 +146,17 @@ export type NumberChartConfig = {
 	sparkline: boolean
 	sparkline_color?: string
 	date_column?: Dimension
+	/**
+	 * The period the card reads. Needs `date_column`: the window is a group-by on
+	 * it, one row per window, so the card reads the newest window and compares it
+	 * with the one a `window` comparison shifts to.
+	 */
+	window?: {
+		/** A span the engine understands, e.g. `month to date`. */
+		span: string
+		/** Fixed anchor for a card that must not move with today. Defaults to today. */
+		anchor?: string
+	}
 	/**
 	 * What every value falls back to. The form no longer writes these — it sets
 	 * them per value — but a chart saved before it did still reads them.

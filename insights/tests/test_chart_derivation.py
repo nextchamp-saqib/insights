@@ -50,6 +50,29 @@ def comparable(operations):
     return operations
 
 
+def _windowed_config(span="month to date", shift=None):
+    """A number card reading one measure over a window, and what compares it."""
+    comparison = {"source": "window", "shift": shift} if shift else {}
+    return {
+        "sparkline": False,
+        "number_columns": [
+            {
+                "aggregation": "sum",
+                "column_name": "base_net_amount",
+                "data_type": "Decimal",
+                "measure_name": "Revenue MTD",
+            }
+        ],
+        "date_column": {
+            "column_name": "posting_date",
+            "data_type": "Date",
+            "dimension_name": "posting_date",
+        },
+        "window": {"span": span},
+        "number_column_options": [{"comparison": comparison} if comparison else {}],
+    }
+
+
 class TestChartDerivation(unittest.TestCase):
     def test_every_chart_type_derives_the_operations_it_should(self):
         for case in chart_derivation_fixtures():
@@ -130,6 +153,152 @@ class TestChartDerivation(unittest.TestCase):
             (op["column"]["column_name"], op["direction"]) for op in operations if op["type"] == "order_by"
         ]
         self.assertEqual(sorts, [("posting_date", "desc"), ("territory", "asc")])
+
+    def test_a_windowed_card_filters_one_window_when_nothing_compares_it(self):
+        """One window is one filter and one row. The comparison is what adds a second."""
+        operations = derive_operations("Number", "sales-invoice-lines", _windowed_config())
+        filter_groups = [op for op in operations if op["type"] == "filter_group"]
+        self.assertEqual(len(filter_groups), 1)
+        self.assertEqual(
+            filter_groups[0]["filters"],
+            [
+                {
+                    "column": {"type": "column", "column_name": "posting_date"},
+                    "operator": "within",
+                    "value": {"span": "month to date"},
+                }
+            ],
+        )
+
+    def test_a_windowed_card_leaves_its_window_for_the_engine_to_resolve(self):
+        """Derivation states the span, never the dates it covers.
+
+        `get_window` reads the clock and the fiscal calendar, so a window
+        resolved here would make one config derive different operations
+        tomorrow.
+        """
+        config = _windowed_config(shift={"unit": "year", "count": -1})
+        first = derive_operations("Number", "sales-invoice-lines", config)
+        self.assertEqual(first, derive_operations("Number", "sales-invoice-lines", config))
+
+        spans = [f["value"]["span"] for f in first[1]["filters"]]
+        self.assertEqual(spans, ["month to date", "month to date"])
+        self.assertEqual(
+            [f["value"].get("shift") for f in first[1]["filters"]],
+            [None, {"unit": "year", "count": -1}],
+        )
+
+    def test_a_windowed_card_sorts_its_windows_oldest_first(self):
+        """The card reads the last row and compares it with the one before it, so
+        the sort is what makes the newest window the reading."""
+        config = _windowed_config(shift={"unit": "year", "count": -1})
+        operations = derive_operations("Number", "sales-invoice-lines", config)
+        sorts = [
+            (op["column"]["column_name"], op["direction"]) for op in operations if op["type"] == "order_by"
+        ]
+        self.assertEqual(sorts, [("posting_date", "asc")])
+
+    def test_a_window_groups_the_card_by_the_window_itself(self):
+        """A span of several periods is still one row, because the group-by is the
+        window and not the unit the span names.
+
+        A grain belongs to the card the author configured without a window. It
+        says nothing about a window, so the dimension drops it rather than let a
+        viewer format a window as a year.
+        """
+        config = _windowed_config("last 3 months", shift={"unit": "year", "count": -1})
+        config["date_column"]["granularity"] = "year"
+        operations = derive_operations("Number", "sales-invoice-lines", config)
+        summarize = next(op for op in operations if op["type"] == "summarize")
+        self.assertEqual(
+            summarize["dimensions"],
+            [
+                {
+                    "column_name": "posting_date",
+                    "data_type": "Date",
+                    "dimension_name": "posting_date",
+                    "windows": [
+                        {"span": "last 3 months"},
+                        {"span": "last 3 months", "shift": {"unit": "year", "count": -1}},
+                    ],
+                }
+            ],
+        )
+
+    def test_a_card_groups_by_the_windows_it_filters_to(self):
+        """The filter and the group-by name the same windows, so every row the
+        filter lets through belongs to one of them."""
+        config = _windowed_config(shift={"unit": "year", "count": -1})
+        operations = derive_operations("Number", "sales-invoice-lines", config)
+        filter_group = next(op for op in operations if op["type"] == "filter_group")
+        summarize = next(op for op in operations if op["type"] == "summarize")
+        self.assertEqual(
+            [f["value"] for f in filter_group["filters"]],
+            summarize["dimensions"][0]["windows"],
+        )
+
+    def test_two_values_comparing_against_the_same_window_ask_for_one_window(self):
+        shift = {"unit": "year", "count": -1}
+        config = _windowed_config(shift=shift)
+        config["number_columns"].append(
+            {
+                "aggregation": "sum",
+                "column_name": "line_cogs",
+                "data_type": "Decimal",
+                "measure_name": "COGS MTD",
+            }
+        )
+        config["number_column_options"].append({"comparison": {"source": "window", "shift": shift}})
+
+        operations = derive_operations("Number", "sales-invoice-lines", config)
+        self.assertEqual(len(operations[1]["filters"]), 2)
+
+    def test_a_card_with_no_window_derives_what_it_derived_before(self):
+        """A window is the only thing that writes a card's filter and its sort."""
+        config = _windowed_config()
+        config.pop("window")
+        config["number_column_options"] = [{"comparison": {"source": "previous"}}]
+
+        operations = derive_operations("Number", "sales-invoice-lines", config)
+        self.assertEqual(
+            operations,
+            [
+                {
+                    "type": "source",
+                    "table": {"type": "query", "workbook": "", "query_name": "sales-invoice-lines"},
+                },
+                {
+                    "type": "summarize",
+                    "measures": config["number_columns"],
+                    "dimensions": [config["date_column"]],
+                },
+            ],
+        )
+
+    def test_a_window_a_card_cannot_group_by_is_left_ungrouped(self):
+        """A window needs a date column to be a group-by, and there is nothing to
+        group a card that names none."""
+        config = _windowed_config()
+        config.pop("date_column")
+        operations = derive_operations("Number", "sales-invoice-lines", config)
+        self.assertEqual([op["type"] for op in operations], ["source", "summarize"])
+
+    def test_a_window_with_no_date_column_is_reported(self):
+        """Derivation reads a window only beside a date column, so a card missing
+        one falls back to reading all time under the window's own title."""
+        config = _windowed_config()
+        config.pop("date_column")
+        self.assertTrue(config_errors("Number", "sales-invoice-lines", config))
+        self.assertEqual(config_errors("Number", "sales-invoice-lines", _windowed_config()), [])
+
+    def test_a_window_of_the_wrong_kind_is_reported_not_read(self):
+        for slot, value in [
+            ("window", "month to date"),
+            ("number_column_options", [{"comparison": {"shift": "1 year"}}]),
+        ]:
+            with self.subTest(slot=slot):
+                config = {**_windowed_config(), slot: value}
+                self.assertTrue(config_errors("Number", "sales-invoice-lines", config))
 
     def test_a_config_whose_slots_hold_the_wrong_thing_is_reported_not_raised(self):
         """A slot names a column or a measure. One holding a bare string names nothing.

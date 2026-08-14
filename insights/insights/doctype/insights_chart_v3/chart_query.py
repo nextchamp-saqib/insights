@@ -112,6 +112,7 @@ def config_errors(chart_type: str, query: str, config: dict | None) -> list[str]
     if chart_type == "Number":
         if not _named_measures(config.get("number_columns")):
             errors.append(_("Number column is required"))
+        errors += _window_errors(config)
 
     if chart_type == "Donut":
         if not (config.get("label_column") or {}).get("column_name"):
@@ -166,6 +167,23 @@ def config_errors(chart_type: str, query: str, config: dict | None) -> list[str]
     return errors
 
 
+def _window_errors(config: dict) -> list[str]:
+    """Why a windowed card cannot be derived, empty when it can.
+
+    Derivation falls back to its unwindowed shape for a window it cannot read.
+    That draws a number over all time under the window's own title, which is a
+    wrong reading nothing else reports.
+    """
+    span = (config.get("window") or {}).get("span")
+    if not span:
+        return []
+
+    if not (config.get("date_column") or {}).get("column_name"):
+        return [_("Date column is required to read a window")]
+
+    return []
+
+
 # the shape, per chart type
 
 
@@ -214,12 +232,90 @@ def _add_axis_operation(operations: list[dict], config: dict):
 
 def _add_number_operation(operations: list[dict], config: dict):
     date_column = config.get("date_column") or {}
+    window = config.get("window") or {}
+
+    if window.get("span") and date_column.get("column_name"):
+        _add_window_operations(operations, config, window, date_column)
+        return
+
     operations.append(
         _summarize(
             measures=_number_measures(config),
             dimensions=[date_column] if date_column.get("column_name") else [],
         )
     )
+
+
+def _add_window_operations(operations: list[dict], config: dict, window: dict, date_column: dict):
+    """One row per window, oldest first.
+
+    The card reads the last row, and the row before it is what the reading is
+    compared with. Sorting the windows is what makes that true, so nobody has to
+    write a measure per window or know which row a card reads.
+
+    The group-by is the window itself, not the unit its span names. A span of
+    several periods grouped by its unit comes back as one row per period, and
+    the card reads the newest period as if it were the whole window.
+
+    The windows stay unresolved. Both the filter and the dimension carry the
+    span, and the engine turns it into dates while it runs, where the clock and
+    the fiscal calendar already are — a span resolved here would derive
+    different operations tomorrow.
+    """
+    windows = [_timespan(window, None)]
+    windows += [_timespan(window, shift) for shift in _comparison_shifts(config)]
+
+    filters = [_within(date_column, timespan) for timespan in windows]
+    operations.append({"type": "filter_group", "logical_operator": "Or", "filters": filters})
+
+    dimension = {**date_column, "windows": windows}
+    # the grain a window groups by is the window, so a grain the config carries
+    # for the unwindowed card says nothing here and would be formatted as if it did
+    dimension.pop("granularity", None)
+    operations.append(_summarize(measures=_number_measures(config), dimensions=[dimension]))
+
+    _add_order_by(operations, _result_column(date_column), "asc")
+
+
+def _comparison_shifts(config: dict) -> list[dict]:
+    """The windows the comparisons name, beside the configured one.
+
+    Two values comparing against the same window ask for one window, so the same
+    shift twice is one filter and one row.
+    """
+    shifts = []
+    for options in config.get("number_column_options") or []:
+        comparison = (options or {}).get("comparison") or {}
+        if comparison.get("source") != "window":
+            continue
+        shift = comparison.get("shift") or {}
+        if not shift.get("unit") or not shift.get("count"):
+            continue
+        shift = {"unit": shift["unit"], "count": shift["count"]}
+        if shift not in shifts:
+            shifts.append(shift)
+
+    return shifts
+
+
+def _timespan(window: dict, shift: dict | None) -> dict:
+    """One window, as the engine reads it: a span, what it is anchored to, and
+    how far the anchor moves."""
+    timespan = {"span": window["span"]}
+    if window.get("anchor"):
+        timespan["anchor"] = window["anchor"]
+    if shift:
+        timespan["shift"] = shift
+
+    return timespan
+
+
+def _within(date_column: dict, timespan: dict) -> dict:
+    return {
+        "column": {"type": "column", "column_name": date_column["column_name"]},
+        "operator": "within",
+        "value": timespan,
+    }
 
 
 def _number_measures(config: dict) -> list[dict]:
@@ -478,7 +574,8 @@ SLOT_SHAPES = {
     "quadrant_column": {},
     "filters": {"filters": [{}]},
     "number_columns": [{}],
-    "number_column_options": [{"target": {"measure": {}}, "comparison": {"measure": {}}}],
+    "number_column_options": [{"target": {"measure": {}}, "comparison": {"measure": {}, "shift": {}}}],
+    "window": {},
     "measures": [{}],
     "rows": [{}],
     "columns": [{}],

@@ -501,6 +501,94 @@ def chart_derivation_fixtures():
             ],
         },
         {
+            # a window is a group-by: one row per window, oldest first, so the
+            # card reads the newest window and compares it with the shifted one
+            "title": "Revenue MTD vs same days last FY",
+            "chart_type": "Number",
+            "query": "sales-invoice-lines",
+            "config": {
+                "sparkline": False,
+                "number_columns": [
+                    {
+                        "aggregation": "sum",
+                        "column_name": "base_net_amount",
+                        "data_type": "Decimal",
+                        "measure_name": "Revenue MTD",
+                    }
+                ],
+                "date_column": {
+                    "column_name": "posting_date",
+                    "data_type": "Date",
+                    "dimension_name": "posting_date",
+                },
+                "window": {"span": "month to date", "anchor": "2026-08-10"},
+                "number_column_options": [
+                    {
+                        "comparison": {
+                            "source": "window",
+                            "shift": {"unit": "fiscal year", "count": -1},
+                            "show": "change",
+                            "label": "vs same days last FY",
+                        }
+                    }
+                ],
+            },
+            "operations": [
+                _source_operation("sales-invoice-lines"),
+                {
+                    "type": "filter_group",
+                    "logical_operator": "Or",
+                    "filters": [
+                        {
+                            "column": {"type": "column", "column_name": "posting_date"},
+                            "operator": "within",
+                            "value": {"span": "month to date", "anchor": "2026-08-10"},
+                        },
+                        {
+                            "column": {"type": "column", "column_name": "posting_date"},
+                            "operator": "within",
+                            "value": {
+                                "span": "month to date",
+                                "anchor": "2026-08-10",
+                                "shift": {"unit": "fiscal year", "count": -1},
+                            },
+                        },
+                    ],
+                },
+                {
+                    "type": "summarize",
+                    "measures": [
+                        {
+                            "aggregation": "sum",
+                            "column_name": "base_net_amount",
+                            "data_type": "Decimal",
+                            "measure_name": "Revenue MTD",
+                        }
+                    ],
+                    "dimensions": [
+                        {
+                            "column_name": "posting_date",
+                            "data_type": "Date",
+                            "dimension_name": "posting_date",
+                            "windows": [
+                                {"span": "month to date", "anchor": "2026-08-10"},
+                                {
+                                    "span": "month to date",
+                                    "anchor": "2026-08-10",
+                                    "shift": {"unit": "fiscal year", "count": -1},
+                                },
+                            ],
+                        }
+                    ],
+                },
+                {
+                    "type": "order_by",
+                    "column": {"type": "column", "column_name": "posting_date"},
+                    "direction": "asc",
+                },
+            ],
+        },
+        {
             # a date dimension carries its granularity into the summarize
             "title": "Spend Trend",
             "chart_type": "Line",
