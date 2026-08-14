@@ -79,96 +79,78 @@ function measureOf(column: string) {
 
 <template>
 	<div class="flex flex-col gap-2">
-		<div class="flex flex-col gap-2 rounded-4 bg-surface-gray-1 p-2">
-			<span class="text-xs text-ink-gray-5">{{ __('Target') }}</span>
+		<InlineFormControlLabel label="Target">
+			<FormControl
+				type="select"
+				:options="targetSourceOptions"
+				:modelValue="targetSource"
+				@update:modelValue="setTargetSource($event)"
+			/>
+		</InlineFormControlLabel>
 
-			<div>
+		<div v-if="targetSource === 'constant'" class="pl-[30%]">
+			<FormControl
+				type="number"
+				autocomplete="off"
+				:modelValue="target?.value"
+				@update:modelValue="target = { value: $event === '' ? undefined : Number($event) }"
+			/>
+		</div>
+
+		<div v-if="targetSource === 'measure'" class="pl-[30%]">
+			<FormControl
+				type="select"
+				:options="numberColumns"
+				:modelValue="(target?.measure as any)?.column_name"
+				@update:modelValue="target = { measure: measureOf($event) }"
+			/>
+		</div>
+
+		<InlineFormControlLabel label="Compare with">
+			<FormControl
+				type="select"
+				:options="comparisonSourceOptions"
+				:modelValue="comparison?.source || 'none'"
+				@update:modelValue="setComparisonSource($event)"
+			/>
+		</InlineFormControlLabel>
+
+		<div v-if="comparison?.source === 'constant'" class="pl-[30%]">
+			<FormControl
+				type="number"
+				autocomplete="off"
+				:modelValue="comparison.value"
+				@update:modelValue="comparison.value = $event === '' ? undefined : Number($event)"
+			/>
+		</div>
+
+		<div v-if="comparison?.source === 'measure'" class="pl-[30%]">
+			<FormControl
+				type="select"
+				:options="numberColumns"
+				:modelValue="(comparison.measure as any)?.column_name"
+				@update:modelValue="comparison.measure = measureOf($event)"
+			/>
+		</div>
+
+		<template v-if="comparison">
+			<div class="pl-[30%]">
 				<FormControl
 					type="select"
-					:options="targetSourceOptions"
-					:modelValue="targetSource"
-					@update:modelValue="setTargetSource($event)"
+					:options="showOptions"
+					:modelValue="comparison.show || 'change'"
+					@update:modelValue="comparison.show = $event"
 				/>
 			</div>
 
-			<InlineFormControlLabel v-if="targetSource === 'constant'" label="Number">
+			<div class="pl-[30%]">
 				<FormControl
-					type="number"
 					autocomplete="off"
-					:modelValue="target?.value"
-					@update:modelValue="
-						target = { value: $event === '' ? undefined : Number($event) }
-					"
-				/>
-			</InlineFormControlLabel>
-
-			<InlineFormControlLabel v-if="targetSource === 'measure'" label="Column">
-				<div>
-					<FormControl
-						type="select"
-						:options="numberColumns"
-						:modelValue="(target?.measure as any)?.column_name"
-						@update:modelValue="target = { measure: measureOf($event) }"
-					/>
-				</div>
-			</InlineFormControlLabel>
-		</div>
-
-		<div class="flex flex-col gap-2 rounded-4 bg-surface-gray-1 p-2">
-			<span class="text-xs text-ink-gray-5">{{ __('Compare with') }}</span>
-
-			<div>
-				<FormControl
-					type="select"
-					:options="comparisonSourceOptions"
-					:modelValue="comparison?.source || 'none'"
-					@update:modelValue="setComparisonSource($event)"
+					placeholder="vs last month"
+					:modelValue="comparison.label"
+					@update:modelValue="comparison.label = $event || undefined"
 				/>
 			</div>
-
-			<InlineFormControlLabel v-if="comparison?.source === 'constant'" label="Number">
-				<FormControl
-					type="number"
-					autocomplete="off"
-					:modelValue="comparison.value"
-					@update:modelValue="
-						comparison.value = $event === '' ? undefined : Number($event)
-					"
-				/>
-			</InlineFormControlLabel>
-
-			<InlineFormControlLabel v-if="comparison?.source === 'measure'" label="Column">
-				<div>
-					<FormControl
-						type="select"
-						:options="numberColumns"
-						:modelValue="(comparison.measure as any)?.column_name"
-						@update:modelValue="comparison.measure = measureOf($event)"
-					/>
-				</div>
-			</InlineFormControlLabel>
-
-			<template v-if="comparison">
-				<InlineFormControlLabel label="Show">
-					<div>
-						<FormControl
-							type="select"
-							:options="showOptions"
-							:modelValue="comparison.show || 'change'"
-							@update:modelValue="comparison.show = $event"
-						/>
-					</div>
-				</InlineFormControlLabel>
-
-				<InlineFormControlLabel label="Label">
-					<FormControl
-						autocomplete="off"
-						placeholder="vs last month"
-						:modelValue="comparison.label"
-						@update:modelValue="comparison.label = $event || undefined"
-					/>
-				</InlineFormControlLabel>
-			</template>
-		</div>
+		</template>
 	</div>
 </template>

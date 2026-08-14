@@ -135,33 +135,34 @@ lowerChartLevelSettings()
 								@remove="config.number_columns.splice(index, 1)"
 							>
 								<template #config-fields>
-									<InlineFormControlLabel label="Prefix">
-										<FormControl
-											autocomplete="off"
-											:modelValue="getNumberOption(index, 'prefix')"
-											@update:modelValue="
-												setNumberOption(index, 'prefix', $event)
-											"
-										/>
-									</InlineFormControlLabel>
-									<InlineFormControlLabel label="Suffix">
-										<FormControl
-											autocomplete="off"
-											:modelValue="getNumberOption(index, 'suffix')"
-											@update:modelValue="
-												setNumberOption(index, 'suffix', $event)
-											"
-										/>
-									</InlineFormControlLabel>
-									<InlineFormControlLabel label="Decimal">
-										<FormControl
-											autocomplete="off"
-											:modelValue="getNumberOption(index, 'decimal')"
-											@update:modelValue="
-												setNumberOption(index, 'decimal', $event)
-											"
-											type="number"
-										/>
+									<InlineFormControlLabel label="Units">
+										<div class="grid grid-cols-3 gap-1">
+											<FormControl
+												autocomplete="off"
+												placeholder="$"
+												:modelValue="getNumberOption(index, 'prefix')"
+												@update:modelValue="
+													setNumberOption(index, 'prefix', $event)
+												"
+											/>
+											<FormControl
+												autocomplete="off"
+												placeholder="unit"
+												:modelValue="getNumberOption(index, 'suffix')"
+												@update:modelValue="
+													setNumberOption(index, 'suffix', $event)
+												"
+											/>
+											<FormControl
+												autocomplete="off"
+												placeholder="0.0"
+												type="number"
+												:modelValue="getNumberOption(index, 'decimal')"
+												@update:modelValue="
+													setNumberOption(index, 'decimal', $event)
+												"
+											/>
+										</div>
 									</InlineFormControlLabel>
 									<InlineFormControlLabel label="Color">
 										<ColorInput
