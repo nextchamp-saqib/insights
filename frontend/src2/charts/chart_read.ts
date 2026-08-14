@@ -23,6 +23,7 @@ import type { InsightsChartv3, WorkbookDashboardItem } from '../types/workbook.t
 import { fetchDrillData } from './drill/drill_api'
 import type { DrillDimension, DrillLevel, DrillLevelData, DrillSubject } from './drill/drill_stack'
 import { normalizeChartConfig } from './helpers'
+import { labelWindowRows } from './window'
 
 /**
  * What a card on the builder's dashboard grid needs to have the grid's filters
@@ -152,7 +153,14 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 			result.value = {
 				...rows,
 				executedSQL: response.sql || '',
-				formattedRows: formatResultRows(rows, response.granularity || {}),
+				// The window column comes back with no granularity, because the rows
+				// are grouped by window and not by a grain. The config is what says
+				// how long a window is, so it is what names them.
+				formattedRows: labelWindowRows(
+					formatResultRows(rows, response.granularity || {}),
+					doc.value.chart_type,
+					doc.value.config,
+				),
 				columnOptions: rows.columns.map((column) => ({
 					label: column.name,
 					value: column.name,

@@ -161,6 +161,23 @@ describe('the comparison', () => {
 		expect(cardsOf(previous)[0].deltaCaption).toBe('vs previous month')
 	})
 
+	it('words a shifted window off the shift, so the card needs no caption typed', () => {
+		// Derivation returns the shifted window as the row before the last one, so
+		// the figure reads the way `previous` does. What it is called comes from
+		// the shift, because the dimension is a window and carries no grain.
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Revenue',
+					readings: [200, 300],
+					comparison: { source: 'window', shift: { unit: 'year', count: -1 } },
+				},
+			],
+		})[0]
+		expect(card.delta).toBe(50)
+		expect(card.deltaCaption).toBe('vs same period last year')
+	})
+
 	it('measures against a fixed number, and calls it the target when unworded', () => {
 		const card = cardsOf({
 			values: [

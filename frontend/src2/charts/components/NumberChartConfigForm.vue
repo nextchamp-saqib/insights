@@ -12,6 +12,7 @@ import CollapsibleSection from './CollapsibleSection.vue'
 import DimensionPicker from './DimensionPicker.vue'
 import MeasurePicker from './MeasurePicker.vue'
 import NumberValueContext from './NumberValueContext.vue'
+import NumberWindowPicker from './NumberWindowPicker.vue'
 
 const props = defineProps<{
 	dimensions: DimensionOption[]
@@ -192,6 +193,7 @@ lowerChartLevelSettings()
 									<div class="mt-1 border-t pt-2">
 										<NumberValueContext
 											:column-options="props.columnOptions"
+											:window="config.window"
 											:target="getNumberOption(index, 'target') as any"
 											:comparison="
 												getNumberOption(index, 'comparison') as any
@@ -223,6 +225,11 @@ lowerChartLevelSettings()
 				:options="date_dimensions"
 				:model-value="config.date_column as Dimension"
 				@update:model-value="config.date_column = $event || {}"
+			/>
+
+			<NumberWindowPicker
+				v-model="config.window"
+				:has-date-column="Boolean(config.date_column?.column_name)"
 			/>
 
 			<Toggle

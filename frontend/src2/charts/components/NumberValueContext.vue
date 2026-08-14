@@ -2,8 +2,9 @@
 import { computed } from 'vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
 import { __ } from '../../translation'
-import type { NumberComparison, NumberTarget } from '../../types/chart.types'
+import type { NumberChartConfig, NumberComparison, NumberTarget } from '../../types/chart.types'
 import type { ColumnOption, Measure } from '../../types/query.types'
+import { LAST_YEAR, previousWindowShift, sameShift, type WindowShift } from '../window'
 import MeasurePicker from './MeasurePicker.vue'
 
 // What a reading is read against: the target it aims at, and the one number it
@@ -11,7 +12,11 @@ import MeasurePicker from './MeasurePicker.vue'
 // target on the value line, the comparison in the delta row — and a reader who
 // wants a second comparison wants a second card.
 
-defineProps<{ columnOptions: ColumnOption[] }>()
+const props = defineProps<{
+	columnOptions: ColumnOption[]
+	/** The period the chart reads, when it reads one. Both window choices shift it. */
+	window?: NumberChartConfig['window']
+}>()
 const emit = defineEmits({ 'dialog-open': () => true })
 const target = defineModel<NumberTarget | undefined>('target')
 const comparison = defineModel<NumberComparison | undefined>('comparison')
@@ -22,12 +27,24 @@ const targetSourceOptions = [
 	{ label: __('Measure'), value: 'measure' },
 ]
 
-const comparisonSourceOptions = [
+// A window is one of two readings back: the same span a year ago, or the span
+// before this one. Both are the chart's own window shifted, so a card with no
+// window offers neither.
+const SAME_WINDOW_LAST_YEAR = 'window:last year'
+const PREVIOUS_WINDOW = 'window:previous'
+
+const comparisonSourceOptions = computed(() => [
 	{ label: __('None'), value: 'none' },
+	...(props.window?.span
+		? [
+				{ label: __('Same window last year'), value: SAME_WINDOW_LAST_YEAR },
+				{ label: __('Previous window'), value: PREVIOUS_WINDOW },
+		  ]
+		: []),
 	{ label: __('Previous'), value: 'previous' },
 	{ label: __('Number'), value: 'constant' },
 	{ label: __('Measure'), value: 'measure' },
-]
+])
 
 const showOptions = [
 	{ label: __('% change'), value: 'change' },
@@ -46,16 +63,36 @@ function setTargetSource(source: string) {
 	else target.value = {}
 }
 
+/** The choice a stored comparison was written by. */
+const comparisonSource = computed(() => {
+	const current = comparison.value
+	if (!current) return 'none'
+	if (current.source !== 'window') return current.source
+	// A whole-year window shifts a year back either way, so the two choices write
+	// the same comparison. Reading it as the named one keeps the wording steady.
+	return sameShift(current.shift, LAST_YEAR) ? SAME_WINDOW_LAST_YEAR : PREVIOUS_WINDOW
+})
+
 function setComparisonSource(source: string) {
-	comparison.value =
-		source === 'none'
-			? undefined
-			: {
-					source: source as NumberComparison['source'],
-					show: comparison.value?.show || 'change',
-					...(source === 'measure' ? { measure: blankMeasure() } : {}),
-					...(comparison.value?.label ? { label: comparison.value.label } : {}),
-			  }
+	if (source === 'none') {
+		comparison.value = undefined
+		return
+	}
+
+	const shifts = source === SAME_WINDOW_LAST_YEAR || source === PREVIOUS_WINDOW
+	const shift = shifts ? windowShift(source) : undefined
+	comparison.value = {
+		source: shifts ? 'window' : (source as NumberComparison['source']),
+		...(shift ? { shift } : {}),
+		show: comparison.value?.show || 'change',
+		...(source === 'measure' ? { measure: blankMeasure() } : {}),
+		...(comparison.value?.label ? { label: comparison.value.label } : {}),
+	}
+}
+
+function windowShift(source: string): WindowShift | undefined {
+	if (source === SAME_WINDOW_LAST_YEAR) return { ...LAST_YEAR }
+	return previousWindowShift(props.window?.span)
 }
 
 // The picker reads and writes the stored measure itself, so the aggregation it
@@ -114,7 +151,7 @@ function blankMeasure(): Measure {
 			<FormControl
 				type="select"
 				:options="comparisonSourceOptions"
-				:modelValue="comparison?.source || 'none'"
+				:modelValue="comparisonSource"
 				@update:modelValue="setComparisonSource($event)"
 			/>
 		</InlineFormControlLabel>

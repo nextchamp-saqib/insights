@@ -9,6 +9,7 @@ import type {
 	NumberTarget,
 } from '../../types/chart.types'
 import type { Dimension, Measure, QueryResultRow } from '../../types/query.types'
+import { windowShiftLabel } from '../window'
 import NumberCards from './NumberCards.vue'
 import type { ChartAdapterInput, ChartFiller } from './types'
 
@@ -248,6 +249,7 @@ function percentChange(current: number | null, against: number | null): number |
 /** What the figure is measured against, when the author did not word it. */
 function defaultLabel(comparison: NumberComparison, dimension?: Dimension): string | undefined {
 	if (comparison.source === 'previous') return previousLabel(dimension)
+	if (comparison.source === 'window') return windowShiftLabel(comparison.shift)
 	return __('vs target')
 }
 
