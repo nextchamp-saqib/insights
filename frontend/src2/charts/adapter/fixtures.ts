@@ -15,7 +15,7 @@ import type {
 import type {
 	AxisChartType,
 	ChartConfig,
-	NumberReference,
+	NumberComparison,
 	ReferenceLine,
 	Series,
 } from '../../types/chart.types'
@@ -512,10 +512,16 @@ export type NumberValueSpec = {
 	color?: string
 	/** A metric where a fall is the good news, e.g. churn. */
 	negativeIsBetter?: boolean
-	/** What the value is measured against. Absent falls back to `comparison`. */
-	references?: NumberReference[]
-	/** A target read off the same row, given as one reading per period. */
+	/** A fixed number the reading aims at. */
+	targetValue?: number
+	/** Aims the reading at the `<name>_target` column `target` fills. */
+	targetColumn?: boolean
+	/** The one number the reading is compared with. Absent falls back to `comparison`. */
+	comparison?: NumberComparison
+	/** The target column's data, one number per period. */
 	target?: (number | null)[]
+	/** The reference list a release before `target`/`comparison` wrote. */
+	references?: Record<string, any>[]
 }
 
 export type NumberChartSpec = {
@@ -550,6 +556,9 @@ export function numberChart(spec: NumberChartSpec): ChartAdapterInput {
 			...(value.shorten !== undefined ? { shorten_numbers: value.shorten } : {}),
 			...(value.color ? { color: value.color } : {}),
 			...(value.negativeIsBetter ? { negative_is_better: true } : {}),
+			...(value.targetValue !== undefined ? { target: { value: value.targetValue } } : {}),
+			...(value.targetColumn ? { target: { measure: toMeasure(`${value.name}_target`) } } : {}),
+			...(value.comparison ? { comparison: value.comparison } : {}),
 			...(value.references ? { references: value.references } : {}),
 		})),
 		comparison: Boolean(spec.comparison),

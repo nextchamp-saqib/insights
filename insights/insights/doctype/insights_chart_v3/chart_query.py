@@ -223,22 +223,22 @@ def _add_number_operation(operations: list[dict], config: dict):
 
 
 def _number_measures(config: dict) -> list[dict]:
-    """The measures a Number Chart summarizes: its readings, and their targets.
+    """The measures a Number Chart summarizes: its readings, their targets, and
+    what they are compared with.
 
-    A target read off a measure is a column of the card's own result, so the
-    summarize has to carry it even though no card is drawn behind it.
+    A target or a comparison read off a measure is a column of the card's own
+    result, so the summarize has to carry it even though no card is drawn
+    behind it.
     """
     measures = _named_measures(config.get("number_columns"))
     named = {m["measure_name"] for m in measures}
 
     for options in config.get("number_column_options") or []:
-        for reference in (options or {}).get("references") or []:
-            if (reference or {}).get("source") != "measure":
-                continue
-            target = reference.get("measure") or {}
-            if target.get("measure_name") and target["measure_name"] not in named:
-                named.add(target["measure_name"])
-                measures.append(target)
+        for slot in ("target", "comparison"):
+            measure = ((options or {}).get(slot) or {}).get("measure") or {}
+            if measure.get("measure_name") and measure["measure_name"] not in named:
+                named.add(measure["measure_name"])
+                measures.append(measure)
 
     return measures
 
@@ -478,7 +478,7 @@ SLOT_SHAPES = {
     "quadrant_column": {},
     "filters": {"filters": [{}]},
     "number_columns": [{}],
-    "number_column_options": [{"references": [{"measure": {}}]}],
+    "number_column_options": [{"target": {"measure": {}}, "comparison": {"measure": {}}}],
     "measures": [{}],
     "rows": [{}],
     "columns": [{}],

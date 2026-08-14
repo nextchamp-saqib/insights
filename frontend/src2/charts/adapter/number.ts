@@ -1,12 +1,12 @@
 import type { NumberCardProps, NumberCardSparkline } from 'frappe-ui/charts'
-import { getShortNumber, toNumber } from '../../helpers'
+import { toNumber } from '../../helpers'
 import { granularityOptions } from '../../helpers/constants'
 import { __ } from '../../translation'
 import type {
 	NumberChartConfig,
 	NumberColumnOptions,
-	NumberReference,
-	NumberReferenceShow,
+	NumberComparison,
+	NumberTarget,
 } from '../../types/chart.types'
 import type { Dimension, Measure, QueryResultRow } from '../../types/query.types'
 import NumberCards from './NumberCards.vue'
@@ -15,46 +15,12 @@ import type { ChartAdapterInput, ChartFiller } from './types'
 // A Number Chart carries several Measures and v2's card is one reading, so the
 // filler is a grid Insights lays out with one card behind each value. Two more
 // things v2 will not do for a caller land here as arithmetic: the gap against
-// each reference, and the scaling a Measure formatted as a percent asks for.
-
-/** One reference, measured against the reading. */
-export type NumberCardMeasurement = {
-	/**
-	 * The gap. A `change` and an `attainment` are percentages, a `delta` is in the
-	 * value's own units. Null when there is nothing to measure against.
-	 */
-	figure: number | null
-	/** The unit the figure is printed in: `%`, or the value's own suffix. */
-	suffix?: string
-	/** Printed before the figure, for a `delta` in the value's own units. */
-	prefix?: string
-	/** What the figure is measured against, e.g. `vs last month`. */
-	label?: string
-	/**
-	 * A movement is good news or bad and prints green or red. A level — how much
-	 * of a target the reading reached — is neither, and prints unsigned in gray.
-	 */
-	movement: boolean
-}
-
-/** A reference worded for the card, since only the first one v2 prints itself. */
-export type NumberCardReference = {
-	/** The figure as printed: `12.4%`, `₹1.2L`. Empty when there is none. */
-	text: string
-	/** What it is measured against, e.g. `of target`. */
-	label?: string
-	tone: 'positive' | 'negative' | 'neutral'
-}
+// the comparison, and the scaling a Measure formatted as a percent asks for.
 
 /** One reading of the grid: a card, and the result column it was read off. */
 export type NumberCardEntry = NumberCardProps & {
 	/** Name of the result column behind the reading. Its identity in the grid. */
 	column: string
-	/**
-	 * Every reference after the first. The first is the card's own delta row, so
-	 * these are the ones Insights prints beside it.
-	 */
-	references?: NumberCardReference[]
 }
 
 export type NumberCardClickEvent = { column: string }
@@ -66,7 +32,7 @@ export function adaptNumberChart(input: ChartAdapterInput): ChartFiller | undefi
 
 	const rows = input.result.rows
 	// Every reading is the newest one, so the newest row is the row behind the
-	// whole grid — a `previous` reference reads the one before it.
+	// whole grid — a `previous` comparison reads the one before it.
 	const current = rows[rows.length - 1]
 	if (!current) return
 
@@ -125,25 +91,32 @@ function readingOf(
 	if (precision !== undefined) card.precision = precision
 	if (compact) card.compact = true
 
-	const measurements = referencesOf(config, options)
-		.map((reference) => measured(reference, config, rows, readings, scale, unit, prefix))
-		.filter((measurement): measurement is NumberCardMeasurement => measurement !== undefined)
+	const { target, comparison } = measuredAgainst(config, options)
 
-	// v2's card holds one delta row and draws an arrow beside whatever is in it,
-	// so the row takes the first movement. Reaching 75 percent of a target is a
-	// level, not a rise, and an up arrow beside it would read a miss as good
-	// news — so every level, and every movement after the first, prints beside
-	// the row instead, where Insights draws it without an arrow.
-	const leading = measurements.findIndex((measurement) => measurement.movement)
-	const primary = leading === -1 ? undefined : measurements[leading]
-	const rest = measurements.filter((_, index) => index !== leading)
-	if (primary) {
-		card.delta = primary.figure
-		if (primary.suffix) card.deltaSuffix = primary.suffix
-		if (primary.label) card.deltaCaption = primary.label
-		if (negativeIsBetter) card.negativeIsBetter = true
+	// The raw number: it prints on the value line, in the value's own units, so
+	// v2 formats it with the props the value is already formatted by.
+	const aim = scale(targetNumber(target, rows) ?? null)
+	if (aim !== null) card.target = aim
+
+	if (comparison) {
+		const against = comparisonNumber(comparison, rows, readings)
+		if (against !== undefined) {
+			const show = comparison.show ?? 'change'
+			if (show === 'delta') {
+				// A gap in the value's own units carries the value's own units, so
+				// the percent Measure's scaling applies to it too.
+				card.delta = latest === null || against === null ? null : scale(latest - against)
+				if (prefix) card.deltaPrefix = prefix
+				if (unit) card.deltaSuffix = unit
+			} else {
+				card.delta = percentChange(latest, against)
+				card.deltaSuffix = '%'
+			}
+			const label = comparison.label || defaultLabel(comparison, config.date_column)
+			if (label) card.deltaCaption = label
+			if (negativeIsBetter) card.negativeIsBetter = true
+		}
 	}
-	if (rest.length) card.references = rest.map((it) => worded(it, negativeIsBetter))
 
 	if (config.sparkline && config.date_column?.column_name) {
 		const sparkline: NumberCardSparkline = { data: readings }
@@ -154,100 +127,100 @@ function readingOf(
 	return card
 }
 
+/** The shape one release wrote: a list of references, each with its own way of printing. */
+type LegacyReference = {
+	source: 'previous' | 'constant' | 'measure'
+	value?: number
+	measure?: Measure
+	show?: 'change' | 'attainment' | 'delta'
+	label?: string
+}
+
 /**
- * What the value is measured against.
+ * What the value is measured against, read from whichever shape wrote it.
  *
- * A value that names its own references answers for itself, including when it
- * names none — an author who removed the last one meant to. Only a value that
- * has never been asked falls back to the `comparison` flag an older release
- * wrote, which said the same thing as one `previous` reference.
+ * Three releases have written this: the current one names a `target` and a
+ * `comparison` per value; the one before it wrote a `references` list, of which
+ * a movement is the comparison and an attainment the target; and the one before
+ * that wrote a single chart-level `comparison` flag, which said the same thing
+ * as one `previous` comparison. A value that names its own answers for itself,
+ * including when it names none — an author who removed the last one meant to.
  */
-function referencesOf(
+export function measuredAgainst(
 	config: NumberChartConfig,
 	options: NumberColumnOptions,
-): NumberReference[] {
-	if (options.references) return options.references
-	return config.comparison ? [{ source: 'previous' }] : []
+): { target?: NumberTarget; comparison?: NumberComparison } {
+	if (options.target || options.comparison) {
+		return { target: options.target, comparison: options.comparison }
+	}
+
+	const references = (options as { references?: LegacyReference[] }).references
+	if (references) return fromReferences(references)
+
+	return config.comparison ? { comparison: { source: 'previous' } } : {}
 }
 
-/** How a reference prints when it does not say. A target is a level; a period is a move. */
-function showOf(reference: NumberReference): NumberReferenceShow {
-	return reference.show ?? (reference.source === 'previous' ? 'change' : 'attainment')
+function fromReferences(references: LegacyReference[]): {
+	target?: NumberTarget
+	comparison?: NumberComparison
+} {
+	const moves = (reference: LegacyReference) =>
+		reference.show === 'change' || reference.show === 'delta' || reference.source === 'previous'
+
+	const leading = references.findIndex(moves)
+	const aim = references.findIndex(
+		(reference, index) => index !== leading && reference.show === 'attainment',
+	)
+
+	const context: { target?: NumberTarget; comparison?: NumberComparison } = {}
+	if (leading !== -1) {
+		const reference = references[leading]
+		context.comparison = {
+			source: reference.source,
+			...(reference.value !== undefined ? { value: reference.value } : {}),
+			...(reference.measure ? { measure: reference.measure } : {}),
+			show: reference.show === 'delta' ? 'delta' : 'change',
+			...(reference.label ? { label: reference.label } : {}),
+		}
+	}
+	if (aim !== -1) {
+		const reference = references[aim]
+		context.target = reference.measure
+			? { measure: reference.measure }
+			: { value: reference.value }
+	}
+	return context
 }
 
-function measured(
-	reference: NumberReference,
-	config: NumberChartConfig,
+/** The number the reading is aimed at, or `undefined` when nothing names one. */
+function targetNumber(
+	target: NumberTarget | undefined,
 	rows: QueryResultRow[],
-	readings: (number | null)[],
-	scale: (reading: number | null) => number | null,
-	unit: string | undefined,
-	prefix: string | undefined,
-): NumberCardMeasurement | undefined {
-	const against = referenceValue(reference, rows, readings)
-	if (against === undefined) return
-
-	const show = showOf(reference)
-	const current = readings[readings.length - 1] ?? null
-	const label = reference.label || defaultLabel(reference, show, config.date_column)
-
-	if (show === 'delta') {
-		// A gap in the value's own units carries the value's own units, so the
-		// percent Measure's scaling applies to it too.
-		const figure = current === null || against === null ? null : scale(current - against)
-		return { figure, suffix: unit, prefix, label, movement: true }
-	}
-
-	const figure =
-		show === 'attainment' ? attainment(current, against) : percentChange(current, against)
-	return { figure, suffix: '%', label, movement: show !== 'attainment' }
+): number | null | undefined {
+	if (!target) return undefined
+	if (typeof target.value === 'number') return target.value
+	const column = target.measure?.measure_name
+	if (!column) return undefined
+	// Read off the same row the reading came from: a target is the target for the
+	// period on the card, not for the whole series.
+	return toNumber(rows[rows.length - 1]?.[column])
 }
 
 /**
- * A measurement as the card prints it. v2 does this for the delta row it owns;
- * this is the same wording for the references beside it, so the two read alike:
- * unsigned, shortened, and colored only when the figure is a movement.
+ * The number the reading is held against, or `undefined` when the comparison
+ * names nothing to hold it against and there is no delta row to print.
  */
-function worded(
-	measurement: NumberCardMeasurement,
-	negativeIsBetter?: boolean,
-): NumberCardReference {
-	const { figure, movement } = measurement
-	const reference: NumberCardReference = { text: '', tone: 'neutral' }
-	if (measurement.label) reference.label = measurement.label
-	if (figure === null || isNaN(figure)) return reference
-
-	// The arrow beside v2's own delta carries the sign, and these carry no arrow,
-	// so a movement keeps the sign it would otherwise lose.
-	const sign = movement && figure !== 0 ? (figure > 0 ? '+' : '−') : ''
-	reference.text = `${sign}${measurement.prefix || ''}${getShortNumber(Math.abs(figure), 1)}${
-		measurement.suffix || ''
-	}`
-
-	if (movement && figure !== 0) {
-		const better = negativeIsBetter ? figure < 0 : figure > 0
-		reference.tone = better ? 'positive' : 'negative'
-	}
-	return reference
-}
-
-/**
- * The number the reading is held against, or `undefined` when the reference
- * names nothing to hold it against and there is nothing to print.
- */
-function referenceValue(
-	reference: NumberReference,
+function comparisonNumber(
+	comparison: NumberComparison,
 	rows: QueryResultRow[],
 	readings: (number | null)[],
 ): number | null | undefined {
-	if (reference.source === 'constant') {
-		return typeof reference.value === 'number' ? reference.value : undefined
+	if (comparison.source === 'constant') {
+		return typeof comparison.value === 'number' ? comparison.value : undefined
 	}
-	if (reference.source === 'measure') {
-		const column = reference.measure?.measure_name
+	if (comparison.source === 'measure') {
+		const column = comparison.measure?.measure_name
 		if (!column) return undefined
-		// Read off the same row the reading came from: a target is the target for
-		// the period on the card, not for the whole series.
 		return toNumber(rows[rows.length - 1]?.[column])
 	}
 	// The reading before last. A card with one reading still says what it would
@@ -256,32 +229,22 @@ function referenceValue(
 }
 
 /**
- * The change from the reference to the reading, as a share of it. Signed the way
+ * The change from the comparison to the reading, as a share of it. Signed the way
  * the data moved: v2 flips the colors for a metric where down is better, so
  * flipping the number here too would flip it back.
  *
- * Nothing to compare with — a missing reference, or one of zero — leaves the
- * figure empty. A change from nothing has no percentage.
+ * Nothing to compare with — a missing number, or one of zero — leaves the figure
+ * empty. A change from nothing has no percentage.
  */
 function percentChange(current: number | null, against: number | null): number | null {
 	if (current === null || against === null || against === 0) return null
 	return ((current - against) / Math.abs(against)) * 100
 }
 
-/** How much of the reference the reading reached. A target of zero is no target. */
-function attainment(current: number | null, against: number | null): number | null {
-	if (current === null || against === null || against === 0) return null
-	return (current / against) * 100
-}
-
 /** What the figure is measured against, when the author did not word it. */
-function defaultLabel(
-	reference: NumberReference,
-	show: NumberReferenceShow,
-	dimension?: Dimension,
-): string | undefined {
-	if (reference.source === 'previous') return previousLabel(dimension)
-	return show === 'attainment' ? __('of target') : __('vs target')
+function defaultLabel(comparison: NumberComparison, dimension?: Dimension): string | undefined {
+	if (comparison.source === 'previous') return previousLabel(dimension)
+	return __('vs target')
 }
 
 /** The period the date column groups by, which is what `previous` steps back one of. */

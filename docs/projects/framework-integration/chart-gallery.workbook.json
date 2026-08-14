@@ -977,18 +977,13 @@
 							"prefix": "$",
 							"shorten_numbers": true,
 							"decimal": 1,
-							"references": [
-								{
-									"source": "previous",
-									"label": "vs last month"
-								},
-								{
-									"source": "constant",
-									"value": 750000,
-									"show": "attainment",
-									"label": "of monthly target"
-								}
-							]
+							"target": {
+								"value": 750000
+							},
+							"comparison": {
+								"source": "previous",
+								"label": "vs last month"
+							}
 						}
 					],
 					"sparkline": true,
@@ -1030,21 +1025,16 @@
 							"prefix": "$",
 							"shorten_numbers": true,
 							"decimal": 1,
-							"references": [
-								{
-									"source": "measure",
-									"measure": {
-										"measure_name": "Profit plan",
-										"expression": {
-											"type": "expression",
-											"expression": "sale_price.sum() * 0.55"
-										},
-										"data_type": "Decimal"
+							"target": {
+								"measure": {
+									"measure_name": "Profit plan",
+									"expression": {
+										"type": "expression",
+										"expression": "sale_price.sum() * 0.55"
 									},
-									"show": "attainment",
-									"label": "of plan"
+									"data_type": "Decimal"
 								}
-							]
+							}
 						}
 					],
 					"sparkline": false,
@@ -1086,14 +1076,12 @@
 							"shorten_numbers": true,
 							"decimal": 1,
 							"negative_is_better": true,
-							"references": [
-								{
-									"source": "constant",
-									"value": 320000,
-									"show": "delta",
-									"label": "vs budget"
-								}
-							]
+							"comparison": {
+								"source": "constant",
+								"value": 320000,
+								"show": "delta",
+								"label": "vs budget"
+							}
 						}
 					],
 					"sparkline": false,

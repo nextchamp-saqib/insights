@@ -100,13 +100,23 @@ export type MixedChartConfig = AxisChartConfig & {
 }
 
 /**
- * A number a reading is measured against. A target and a previous period are
- * the same thing to a card — a reference, a label, and a way to print the gap —
- * so a value carries a list of these rather than a flag per kind of context.
- *
- * `source` says where the number comes from and picks the field that holds it.
+ * What the reading is aimed at. The card prints it on the value line, as
+ * `$621.8K / $750K`: a target is part of the reading, not commentary on it, so
+ * it carries no label and no percent — the fraction is the whole statement.
  */
-export type NumberReference = {
+export type NumberTarget = {
+	/** A fixed number. */
+	value?: number
+	/** A measure of the card's own query, read off the row the reading came from. */
+	measure?: Measure
+}
+
+/**
+ * The one number the reading is compared with, printed in the delta row with an
+ * arrow and a color. One, not a list: a second comparison is a second card, and
+ * that is the dashboard's job.
+ */
+export type NumberComparison = {
 	/**
 	 * `previous` is the row before the last one, `constant` a fixed number, and
 	 * `measure` a measure of the card's own query read off the same last row.
@@ -117,15 +127,14 @@ export type NumberReference = {
 	/** The measure holding it, when `source` is `measure`. */
 	measure?: Measure
 	/**
-	 * How the gap is printed: `change` as a percent of the reference, `attainment`
-	 * as a percent of it reached, `delta` as a signed number in the value's units.
-	 * Defaults to `change` for `previous` and `attainment` for a target.
+	 * How the gap is printed: `change` as a percent of the comparison number,
+	 * `delta` as a signed number in the value's own units. Defaults to `change`.
 	 */
-	show?: NumberReferenceShow
+	show?: NumberComparisonShow
 	/** What to call it, e.g. `vs last month`. Defaults from the source. */
 	label?: string
 }
-export type NumberReferenceShow = 'change' | 'attainment' | 'delta'
+export type NumberComparisonShow = 'change' | 'delta'
 
 export type NumberChartConfig = {
 	number_columns: Measure[]
@@ -142,7 +151,7 @@ export type NumberChartConfig = {
 	prefix?: string
 	suffix?: string
 	negative_is_better?: boolean
-	/** Set by a release before references. Reads as one `previous`/`change` reference. */
+	/** Set by a release before the per-value shape. Reads as one `previous` comparison. */
 	comparison?: boolean
 }
 export type NumberColumnOptions = {
@@ -151,13 +160,15 @@ export type NumberColumnOptions = {
 	prefix?: string
 	suffix?: string
 	color?: string
-	/** A fall is the good news, e.g. churn or cost. Flips every reference's colors. */
+	/** A fall is the good news, e.g. churn or cost. Flips the comparison's colors. */
 	negative_is_better?: boolean
+	/** What the reading is aimed at. A target belongs to the metric, not to the chart. */
+	target?: NumberTarget
 	/**
-	 * The context printed under the reading. An absent list falls back to the
-	 * chart's `comparison` flag; an empty one means the author removed it.
+	 * The one number the reading is compared with. Absent falls back to the
+	 * chart's `comparison` flag; a value that names none compares nothing.
 	 */
-	references?: NumberReference[]
+	comparison?: NumberComparison
 }
 
 export type DonutChartConfig = {

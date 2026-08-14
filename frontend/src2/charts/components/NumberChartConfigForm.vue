@@ -5,12 +5,13 @@ import ColorInput from '../../components/ColorInput.vue'
 import DraggableList from '../../components/DraggableList.vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
 import { FIELDTYPES } from '../../helpers/constants'
-import { NumberChartConfig, NumberColumnOptions, NumberReference } from '../../types/chart.types'
+import { measuredAgainst } from '../adapter/number'
+import { NumberChartConfig, NumberColumnOptions } from '../../types/chart.types'
 import { ColumnOption, Dimension, DimensionOption, MeasureOption } from '../../types/query.types'
 import CollapsibleSection from './CollapsibleSection.vue'
 import DimensionPicker from './DimensionPicker.vue'
 import MeasurePicker from './MeasurePicker.vue'
-import NumberReferences from './NumberReferences.vue'
+import NumberValueContext from './NumberValueContext.vue'
 
 const props = defineProps<{
 	dimensions: DimensionOption[]
@@ -63,17 +64,15 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 	config.value.number_column_options[index][option] = value
 }
 
-function referencesOf(index: number): NumberReference[] {
-	return config.value.number_column_options[index]?.references || []
-}
-
 /**
- * The chart-level settings an older release wrote, lowered onto each value.
+ * The settings an older release wrote, moved onto each value.
  *
- * Every one of them is a per-value setting now, and the adapter still reads the
- * old slots so a chart nobody opens keeps drawing. But a form that hid a prefix
- * it was still printing would trap the author, so opening the chart is what
- * moves it: one shape from here on, and what the form shows is what draws.
+ * Every one of them is a per-value setting now — the chart-level formatting
+ * slots, the `comparison` flag, and the `references` list a value carried
+ * before it named one target and one comparison. The adapter still reads all of
+ * them so a chart nobody opens keeps drawing. But a form that hid a prefix it
+ * was still printing would trap the author, so opening the chart is what moves
+ * it: one shape from here on, and what the form shows is what draws.
  */
 function lowerChartLevelSettings() {
 	const chart = config.value
@@ -84,20 +83,27 @@ function lowerChartLevelSettings() {
 	if (chart.shorten_numbers) inherited.shorten_numbers = chart.shorten_numbers
 	if (chart.negative_is_better) inherited.negative_is_better = chart.negative_is_better
 
-	// Nothing to lower, so nothing is written. A form that rewrote the config on
+	const references = chart.number_column_options?.some(
+		(options) => (options as { references?: unknown })?.references,
+	)
+
+	// Nothing to move, so nothing is written. A form that rewrote the config on
 	// open would mark every chart it was opened on dirty.
-	if (!Object.keys(inherited).length && !chart.comparison) return
+	if (!Object.keys(inherited).length && !chart.comparison && !references) return
 
 	chart.number_columns?.forEach((_, index) => {
 		const options = chart.number_column_options[index] || {}
+		// What the value is measured against, read the same way the adapter reads
+		// it, so the form shows what the card is already drawing.
+		const { target, comparison } = measuredAgainst(chart, options)
+		delete (options as { references?: unknown }).references
 		// A value that set something of its own already overrode the chart, so
 		// lowering the chart's onto it would undo the override.
 		chart.number_column_options[index] = {
 			...inherited,
 			...options,
-			...(options.references
-				? {}
-				: { references: chart.comparison ? [{ source: 'previous' }] : [] }),
+			...(target ? { target } : {}),
+			...(comparison ? { comparison } : {}),
 		}
 	})
 
@@ -183,11 +189,17 @@ lowerChartLevelSettings()
 									/>
 
 									<div class="mt-1 border-t pt-2">
-										<NumberReferences
+										<NumberValueContext
 											:column-options="props.columnOptions"
-											:model-value="referencesOf(index)"
-											@update:model-value="
-												setNumberOption(index, 'references', $event)
+											:target="getNumberOption(index, 'target') as any"
+											:comparison="
+												getNumberOption(index, 'comparison') as any
+											"
+											@update:target="
+												setNumberOption(index, 'target', $event)
+											"
+											@update:comparison="
+												setNumberOption(index, 'comparison', $event)
 											"
 										/>
 									</div>
