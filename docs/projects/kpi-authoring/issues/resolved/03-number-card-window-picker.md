@@ -1,7 +1,7 @@
 # Number card window picker
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02, 06
 
 ## Question
@@ -38,6 +38,19 @@ rather than offering a window that cannot derive.
   with no label of its own prints "vs target" under the delta. Earlier tickets
   were told to leave `number.ts` alone. This ticket owns that one branch.
 - A card saved before this ticket opens with no window set and renders as it did.
+- A window label reads as a period, not as a raw date. A windowed card's
+  dimension carries no granularity, so `column_granularity` reports none and a
+  viewer prints `2026-08-01` where it means `Aug 2026`. Format the label from the
+  span the card is configured with. Do not put a granularity back on the
+  dimension — it would say the rows are grouped by month, and they are grouped by
+  window.
+
+## Out of scope
+
+The sparkline. A windowed card returns two rows, so a real series needs a second
+execution. Both questions that were open here are now answered — the card gets
+its own execution, and it draws the window split one grain finer. Ticket 08 owns
+it. Leave the existing sparkline behaviour exactly as it is.
 
 ## Notes
 

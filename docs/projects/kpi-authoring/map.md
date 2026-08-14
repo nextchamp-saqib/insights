@@ -79,6 +79,13 @@ Decided while charting, before tickets existed.
   together. Deliberately not defended further: there is no other caller, and
   `apply_windows` states the coupling in its own docstring.
 
+- **The window sits on the chart, the comparison stays per value.** Ticket 03
+  asked for both on the chart. A chart-level comparison control would be a second
+  writer of `NumberColumnOptions.comparison`, which every earlier release already
+  writes per value, so the picker puts its two window choices in the existing
+  per-value select instead. Moving the comparison to the chart is a config change
+  and deserves its own ticket, not a second writer bolted beside the first.
+
 ## Rejected alternatives
 
 - **A reading is its own execution.** Modelling each card element as an
@@ -109,16 +116,28 @@ Decided while charting, before tickets existed.
   costs a `GROUP BY` scan. The row count before and after the join is exact,
   already fetched, and reports what did happen rather than what might.
 
+- **Flow or balance lives on the measure.** A flow accumulates over a window, a
+  balance is the level at the window's end. Stated once on the measure, the
+  window, the comparison and the sparkline all apply it and none needs a branch.
+  The card does not reconstruct a balance from movements — an author whose source
+  is a movement table makes it cumulative in their own query, the same way they
+  own the target join. See ticket 07.
+- **The sparkline gets its own execution.** Two questions — what is this number,
+  and how did it move — are two queries. Serving both from one execution by
+  grouping finer and summing in the adapter was rejected: it breaks for every
+  non-additive measure, and a card that is right for sums and silently wrong for
+  averages is worse than a second query. Two executions per chart, only when the
+  sparkline is on, both cached. See ticket 08.
+
+- **A sparkline is the card's own window, split one grain finer.** A
+  month-to-date card draws this month by day. The rejected reading was the last
+  twelve months, which is a different window and a line chart's question. The
+  sub-windows come from `split_window`, which ticket 01 already landed, so the
+  sparkline needs no new date vocabulary.
+
 ## Not yet specified
 
-- **The sparkline of a windowed card.** Window plus comparison is two rows, so a
-  twelve-point sparkline needs a second execution. Two open parts: whether the
-  card gets that second execution at all, and whether a MTD sparkline means this
-  month by day (the window split one grain finer) or twelve months. Settle
-  before the sparkline is wired to windows.
-- **Balance metrics.** A flow sums over a window, a balance is read as of the
-  window's end. Stating this once on the measure removes the per-card branch.
-  Not needed for ticket 02, needed before windows are called finished.
+Nothing. Every question this effort opened is answered. New ones go here.
 
 ## Out of scope
 
