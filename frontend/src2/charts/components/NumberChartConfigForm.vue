@@ -5,11 +5,12 @@ import ColorInput from '../../components/ColorInput.vue'
 import DraggableList from '../../components/DraggableList.vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
 import { FIELDTYPES } from '../../helpers/constants'
-import { NumberChartConfig, NumberColumnOptions } from '../../types/chart.types'
+import { NumberChartConfig, NumberColumnOptions, NumberReference } from '../../types/chart.types'
 import { ColumnOption, Dimension, DimensionOption, MeasureOption } from '../../types/query.types'
 import CollapsibleSection from './CollapsibleSection.vue'
 import DimensionPicker from './DimensionPicker.vue'
 import MeasurePicker from './MeasurePicker.vue'
+import NumberReferences from './NumberReferences.vue'
 
 const props = defineProps<{
 	dimensions: DimensionOption[]
@@ -21,7 +22,6 @@ const config = defineModel<NumberChartConfig>({
 	default: () => ({
 		number_columns: [],
 		number_column_options: [],
-		comparison: false,
 		sparkline: false,
 	}),
 })
@@ -62,6 +62,54 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 	}
 	config.value.number_column_options[index][option] = value
 }
+
+function referencesOf(index: number): NumberReference[] {
+	return config.value.number_column_options[index]?.references || []
+}
+
+/**
+ * The chart-level settings an older release wrote, lowered onto each value.
+ *
+ * Every one of them is a per-value setting now, and the adapter still reads the
+ * old slots so a chart nobody opens keeps drawing. But a form that hid a prefix
+ * it was still printing would trap the author, so opening the chart is what
+ * moves it: one shape from here on, and what the form shows is what draws.
+ */
+function lowerChartLevelSettings() {
+	const chart = config.value
+	const inherited: NumberColumnOptions = {}
+	if (chart.prefix) inherited.prefix = chart.prefix
+	if (chart.suffix) inherited.suffix = chart.suffix
+	if (chart.decimal !== undefined) inherited.decimal = chart.decimal
+	if (chart.shorten_numbers) inherited.shorten_numbers = chart.shorten_numbers
+	if (chart.negative_is_better) inherited.negative_is_better = chart.negative_is_better
+
+	// Nothing to lower, so nothing is written. A form that rewrote the config on
+	// open would mark every chart it was opened on dirty.
+	if (!Object.keys(inherited).length && !chart.comparison) return
+
+	chart.number_columns?.forEach((_, index) => {
+		const options = chart.number_column_options[index] || {}
+		// A value that set something of its own already overrode the chart, so
+		// lowering the chart's onto it would undo the override.
+		chart.number_column_options[index] = {
+			...inherited,
+			...options,
+			...(options.references
+				? {}
+				: { references: chart.comparison ? [{ source: 'previous' }] : [] }),
+		}
+	})
+
+	delete chart.prefix
+	delete chart.suffix
+	delete chart.decimal
+	delete chart.shorten_numbers
+	delete chart.negative_is_better
+	delete chart.comparison
+}
+
+lowerChartLevelSettings()
 </script>
 
 <template>
@@ -76,6 +124,7 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 								:model-value="item"
 								:column-options="props.columnOptions"
 								:enable-format="true"
+								config-width="19rem"
 								@update:model-value="Object.assign(item, $event || {})"
 								@remove="config.number_columns.splice(index, 1)"
 							>
@@ -110,7 +159,7 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 									</InlineFormControlLabel>
 									<InlineFormControlLabel label="Color">
 										<ColorInput
-											:model-value="getNumberOption(index, 'color')"
+											:model-value="getNumberOption(index, 'color') as string"
 											@update:model-value="
 												setNumberOption(index, 'color', $event)
 											"
@@ -125,6 +174,23 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 											setNumberOption(index, 'shorten_numbers', $event)
 										"
 									/>
+									<Toggle
+										label="Negative is better"
+										:modelValue="getNumberOption(index, 'negative_is_better')"
+										@update:modelValue="
+											setNumberOption(index, 'negative_is_better', $event)
+										"
+									/>
+
+									<div class="mt-1 border-t pt-2">
+										<NumberReferences
+											:column-options="props.columnOptions"
+											:model-value="referencesOf(index)"
+											@update:model-value="
+												setNumberOption(index, 'references', $event)
+											"
+										/>
+									</div>
 								</template>
 							</MeasurePicker>
 						</template>
@@ -143,30 +209,6 @@ function setNumberOption(index: number, option: keyof NumberColumnOptions, value
 				:options="date_dimensions"
 				:model-value="config.date_column as Dimension"
 				@update:model-value="config.date_column = $event || {}"
-			/>
-
-			<InlineFormControlLabel label="Prefix">
-				<FormControl v-model="config.prefix" autocomplete="off" />
-			</InlineFormControlLabel>
-			<InlineFormControlLabel label="Suffix">
-				<FormControl v-model="config.suffix" autocomplete="off" />
-			</InlineFormControlLabel>
-			<InlineFormControlLabel label="Decimal">
-				<FormControl v-model="config.decimal" type="number" autocomplete="off" />
-			</InlineFormControlLabel>
-
-			<Toggle label="Show short numbers" v-model="config.shorten_numbers" />
-
-			<Toggle
-				v-if="config.date_column?.column_name"
-				label="Show comparison"
-				v-model="config.comparison"
-			/>
-
-			<Toggle
-				v-if="config.comparison"
-				label="Negative is better"
-				v-model="config.negative_is_better"
 			/>
 
 			<Toggle

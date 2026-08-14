@@ -15,6 +15,7 @@ import type {
 import type {
 	AxisChartType,
 	ChartConfig,
+	NumberReference,
 	ReferenceLine,
 	Series,
 } from '../../types/chart.types'
@@ -509,6 +510,12 @@ export type NumberValueSpec = {
 	decimal?: number
 	shorten?: boolean
 	color?: string
+	/** A metric where a fall is the good news, e.g. churn. */
+	negativeIsBetter?: boolean
+	/** What the value is measured against. Absent falls back to `comparison`. */
+	references?: NumberReference[]
+	/** A target read off the same row, given as one reading per period. */
+	target?: (number | null)[]
 }
 
 export type NumberChartSpec = {
@@ -542,6 +549,8 @@ export function numberChart(spec: NumberChartSpec): ChartAdapterInput {
 			...(value.decimal !== undefined ? { decimal: value.decimal } : {}),
 			...(value.shorten !== undefined ? { shorten_numbers: value.shorten } : {}),
 			...(value.color ? { color: value.color } : {}),
+			...(value.negativeIsBetter ? { negative_is_better: true } : {}),
+			...(value.references ? { references: value.references } : {}),
 		})),
 		comparison: Boolean(spec.comparison),
 		sparkline: Boolean(spec.sparkline),
@@ -558,7 +567,10 @@ export function numberChart(spec: NumberChartSpec): ChartAdapterInput {
 	const rows = Array.from({ length: periods }, (_, index) => ({
 		...(period ? { [period.dimension_name]: `2026-${String(index + 1).padStart(2, '0')}-01` } : {}),
 		...Object.fromEntries(
-			spec.values.map((value) => [value.name, value.readings[index] ?? null]),
+			spec.values.flatMap((value) => [
+				[value.name, value.readings[index] ?? null],
+				...(value.target ? [[`${value.name}_target`, value.target[index] ?? null]] : []),
+			]),
 		),
 	}))
 
@@ -570,6 +582,9 @@ export function numberChart(spec: NumberChartSpec): ChartAdapterInput {
 			[
 				...(period ? [columnOfDimension(period)] : []),
 				...number_columns.map(columnOfMeasure),
+				...spec.values
+					.filter((value) => value.target)
+					.map((value) => columnOfMeasure(toMeasure(`${value.name}_target`))),
 			],
 			rows,
 		),

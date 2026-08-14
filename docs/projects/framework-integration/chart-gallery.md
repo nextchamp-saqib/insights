@@ -27,8 +27,11 @@ returns rows.
 | Order lifecycle (measures mode) | Funnel | Measures mode. Four stages on one row, three of them expression measures |
 | Items by order status (grouped mode) | Funnel | Grouped mode. One row per stage |
 | Headline numbers | Number | Three values with per-column prefix and shortening |
-| Revenue vs previous month | Number | `comparison` against a date column |
+| Revenue vs previous month | Number | The `comparison` flag a release before references wrote |
 | Items sold with sparkline | Number | `sparkline` over a date column |
+| Revenue against target and last month | Number | Two references on one card: a `constant` target as attainment, and a labelled `previous` comparison, over a sparkline |
+| Profit against its plan | Number | A `measure` reference, so derivation carries a column no card is drawn behind |
+| Cost against budget | Number | A `delta` in the value's own units, on a metric where `negative_is_better` |
 | Revenue by category and department | Table | A pivot, row totals, column totals, and conditional formatting |
 | Revenue by country | Map | The world map with region mappings |
 | Category revenue vs profit | Bubble | Two measures, a size column, and quadrant reference lines |
@@ -122,6 +125,10 @@ does. These are the parts that surprised us.
   names the joined form.
 - **Pivot cells are null where a pair has no rows.** `Jumpsuits & Rompers` has
   no men's revenue, so that cell is null and not zero.
+- **A number card's target measure is summarized but never drawn.**
+  `_number_measures` adds every `source: "measure"` reference to the summarize,
+  so the target is a column of the card's own result. It draws no card of its
+  own — only `number_columns` does that.
 - **The count measure is special-cased.** `column_name: "count"` with
   `aggregation: "count"` counts rows. It does not name a column called `count`.
 - **A dimension renames its output column.** `dimension_name` becomes the result

@@ -216,10 +216,31 @@ def _add_number_operation(operations: list[dict], config: dict):
     date_column = config.get("date_column") or {}
     operations.append(
         _summarize(
-            measures=_named_measures(config.get("number_columns")),
+            measures=_number_measures(config),
             dimensions=[date_column] if date_column.get("column_name") else [],
         )
     )
+
+
+def _number_measures(config: dict) -> list[dict]:
+    """The measures a Number Chart summarizes: its readings, and their targets.
+
+    A target read off a measure is a column of the card's own result, so the
+    summarize has to carry it even though no card is drawn behind it.
+    """
+    measures = _named_measures(config.get("number_columns"))
+    named = {m["measure_name"] for m in measures}
+
+    for options in config.get("number_column_options") or []:
+        for reference in (options or {}).get("references") or []:
+            if (reference or {}).get("source") != "measure":
+                continue
+            target = reference.get("measure") or {}
+            if target.get("measure_name") and target["measure_name"] not in named:
+                named.add(target["measure_name"])
+                measures.append(target)
+
+    return measures
 
 
 def _add_donut_operation(operations: list[dict], config: dict):
@@ -457,6 +478,7 @@ SLOT_SHAPES = {
     "quadrant_column": {},
     "filters": {"filters": [{}]},
     "number_columns": [{}],
+    "number_column_options": [{"references": [{"measure": {}}]}],
     "measures": [{}],
     "rows": [{}],
     "columns": [{}],

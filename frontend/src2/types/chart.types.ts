@@ -99,18 +99,51 @@ export type MixedChartConfig = AxisChartConfig & {
 	y_axis: YAxisLine | YAxisBar
 }
 
+/**
+ * A number a reading is measured against. A target and a previous period are
+ * the same thing to a card — a reference, a label, and a way to print the gap —
+ * so a value carries a list of these rather than a flag per kind of context.
+ *
+ * `source` says where the number comes from and picks the field that holds it.
+ */
+export type NumberReference = {
+	/**
+	 * `previous` is the row before the last one, `constant` a fixed number, and
+	 * `measure` a measure of the card's own query read off the same last row.
+	 */
+	source: 'previous' | 'constant' | 'measure'
+	/** The number, when `source` is `constant`. */
+	value?: number
+	/** The measure holding it, when `source` is `measure`. */
+	measure?: Measure
+	/**
+	 * How the gap is printed: `change` as a percent of the reference, `attainment`
+	 * as a percent of it reached, `delta` as a signed number in the value's units.
+	 * Defaults to `change` for `previous` and `attainment` for a target.
+	 */
+	show?: NumberReferenceShow
+	/** What to call it, e.g. `vs last month`. Defaults from the source. */
+	label?: string
+}
+export type NumberReferenceShow = 'change' | 'attainment' | 'delta'
+
 export type NumberChartConfig = {
 	number_columns: Measure[]
 	number_column_options: NumberColumnOptions[]
-	comparison: boolean
 	sparkline: boolean
 	sparkline_color?: string
 	date_column?: Dimension
+	/**
+	 * What every value falls back to. The form no longer writes these — it sets
+	 * them per value — but a chart saved before it did still reads them.
+	 */
 	shorten_numbers?: boolean
 	decimal?: number
 	prefix?: string
 	suffix?: string
 	negative_is_better?: boolean
+	/** Set by a release before references. Reads as one `previous`/`change` reference. */
+	comparison?: boolean
 }
 export type NumberColumnOptions = {
 	shorten_numbers?: boolean
@@ -118,6 +151,13 @@ export type NumberColumnOptions = {
 	prefix?: string
 	suffix?: string
 	color?: string
+	/** A fall is the good news, e.g. churn or cost. Flips every reference's colors. */
+	negative_is_better?: boolean
+	/**
+	 * The context printed under the reading. An absent list falls back to the
+	 * chart's `comparison` flag; an empty one means the author removed it.
+	 */
+	references?: NumberReference[]
 }
 
 export type DonutChartConfig = {

@@ -11,6 +11,14 @@ function adapt(spec: NumberChartSpec) {
 
 const cardsOf = (spec: NumberChartSpec) => adapt(spec).props.cards
 
+/** A result column read as a measure, the way a target column is named. */
+const measureNamed = (name: string) => ({
+	column_name: name,
+	data_type: 'Decimal' as const,
+	aggregation: 'sum' as const,
+	measure_name: name,
+})
+
 describe('a Number Chart with several values', () => {
 	it('lays the readings out itself, one card behind each of them', () => {
 		// v2's card is one reading and a Number Chart is several, so the grid is
@@ -91,6 +99,173 @@ describe('how a reading is printed', () => {
 		const card = cardsOf({ values: [{ name: 'Margin', readings: [0.42], percent: true }] })[0]
 		expect(card.value).toBe(42)
 		expect(card.suffix).toBe('%')
+	})
+})
+
+describe('a target', () => {
+	it('states how much of a fixed target the reading reached', () => {
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Revenue',
+					readings: [300],
+					references: [{ source: 'constant', value: 400 }],
+				},
+			],
+		})[0]
+		// A level is not a movement, so it stays out of the row v2 draws an arrow
+		// in and prints beside it instead.
+		expect(card.delta).toBeUndefined()
+		expect(card.references).toEqual([{ text: '75%', label: 'of target', tone: 'neutral' }])
+	})
+
+	it('reads a target off the same row the reading came from', () => {
+		// A target is the target for the period on the card, not for the series.
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Revenue',
+					readings: [100, 300],
+					target: [500, 400],
+					references: [{ source: 'measure', measure: measureNamed('Revenue_target') }],
+				},
+			],
+		})[0]
+		expect(card.references).toEqual([{ text: '75%', label: 'of target', tone: 'neutral' }])
+	})
+
+	it("states the gap in the value's own units when asked for a difference", () => {
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Revenue',
+					readings: [300],
+					prefix: '$',
+					references: [{ source: 'constant', value: 400, show: 'delta' }],
+				},
+			],
+		})[0]
+		expect(card.delta).toBe(-100)
+		expect(card.deltaSuffix).toBeUndefined()
+		expect(card.deltaCaption).toBe('vs target')
+	})
+
+	it('names no target when the reference names no number to hold it against', () => {
+		const card = cardsOf({
+			values: [{ name: 'Revenue', readings: [300], references: [{ source: 'constant' }] }],
+		})[0]
+		expect(card.delta).toBeUndefined()
+		expect(card.references).toBeUndefined()
+	})
+
+	it('leaves attainment uncolored: a level is not a move up or down', () => {
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Cost',
+					readings: [300],
+					negativeIsBetter: true,
+					references: [{ source: 'constant', value: 400 }],
+				},
+			],
+		})[0]
+		// `negativeIsBetter` flips the colors of a movement. Reaching 75 percent of
+		// a target is neither a rise nor a fall, so there is nothing to flip.
+		expect(card.references).toEqual([{ text: '75%', label: 'of target', tone: 'neutral' }])
+	})
+})
+
+describe('a card carrying both a target and a comparison', () => {
+	const both: NumberChartSpec = {
+		values: [
+			{
+				name: 'Revenue',
+				readings: [200, 300],
+				references: [
+					{ source: 'previous' },
+					{ source: 'constant', value: 400, label: 'of MTD target' },
+				],
+			},
+		],
+		period: { name: 'created_at', type: 'Datetime', granularity: 'month' },
+	}
+
+	it('leads with the first reference, which is the one v2 draws an arrow beside', () => {
+		const card = cardsOf(both)[0]
+		expect(card.delta).toBe(50)
+		expect(card.deltaCaption).toBe('vs previous month')
+	})
+
+	it('words every reference after it for Insights to print beside the delta', () => {
+		expect(cardsOf(both)[0].references).toEqual([
+			{ text: '75%', label: 'of MTD target', tone: 'neutral' },
+		])
+	})
+
+	it('leads with the first movement however the author ordered the list', () => {
+		const card = cardsOf({
+			...both,
+			values: [
+				{
+					...both.values[0],
+					references: [
+						{ source: 'constant', value: 400 },
+						{ source: 'previous', label: 'vs last month' },
+					],
+				},
+			],
+		})[0]
+		expect(card.delta).toBe(50)
+		expect(card.deltaCaption).toBe('vs last month')
+		expect(card.references).toEqual([{ text: '75%', label: 'of target', tone: 'neutral' }])
+	})
+
+	it('signs and colors a movement it could not lead with', () => {
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Revenue',
+					readings: [200, 300],
+					references: [
+						{ source: 'previous', label: 'vs last month' },
+						{ source: 'constant', value: 250, show: 'change', label: 'vs plan' },
+					],
+				},
+			],
+			period: { name: 'created_at', type: 'Datetime', granularity: 'month' },
+		})[0]
+		expect(card.references).toEqual([{ text: '+20%', label: 'vs plan', tone: 'positive' }])
+	})
+})
+
+describe('a chart saved before references', () => {
+	it('reads the old comparison flag as one previous-period reference', () => {
+		const card = cardsOf({
+			values: [{ name: 'Revenue', readings: [200, 300] }],
+			period: { name: 'created_at', type: 'Datetime', granularity: 'month' },
+			comparison: true,
+		})[0]
+		expect(card.delta).toBe(50)
+		expect(card.deltaCaption).toBe('vs previous month')
+	})
+
+	it('takes the value at its word when it names its own, including none', () => {
+		const card = cardsOf({
+			values: [{ name: 'Revenue', readings: [200, 300], references: [] }],
+			period: { name: 'created_at', type: 'Datetime', granularity: 'month' },
+			comparison: true,
+		})[0]
+		expect(card.delta).toBeUndefined()
+	})
+
+	it('still falls back to what the chart set for negative-is-better', () => {
+		const card = cardsOf({
+			values: [{ name: 'Churn', readings: [300, 200] }],
+			period: { name: 'created_at', type: 'Datetime', granularity: 'month' },
+			comparison: true,
+			negativeIsBetter: true,
+		})[0]
+		expect(card.negativeIsBetter).toBe(true)
 	})
 })
 

@@ -22,9 +22,19 @@ const emit = defineEmits<{
 	cardClick: [event: NumberCardClickEvent]
 }>()
 
-// `column` is the reading's identity, not a card prop, so it is kept out of
-// what the card is handed.
-const readings = computed(() => props.cards.map(({ column, ...card }) => ({ column, card })))
+// `column` is the reading's identity and `references` is Insights' to draw, so
+// neither is a card prop and neither is handed to the card.
+const readings = computed(() =>
+	props.cards.map(({ column, references, ...card }) => ({ column, references, card })),
+)
+
+// The `-7` inks are the ones v2 prints its own delta in, so a reference beside
+// it reads as the same kind of figure.
+const TONE_CLASSES = {
+	positive: 'text-ink-green-7',
+	negative: 'text-ink-red-7',
+	neutral: 'text-ink-gray-6',
+}
 </script>
 
 <template>
@@ -38,7 +48,27 @@ const readings = computed(() => props.cards.map(({ column, ...card }) => ({ colu
 				class="min-w-0 cursor-pointer"
 				@dblclick="emit('cardClick', { column: reading.column })"
 			>
-				<NumberCard v-bind="reading.card" class="h-full" />
+				<NumberCard v-bind="reading.card" class="h-full">
+					<!-- v2's delta row holds one figure, and a KPI carries up to
+					     three: what it moved by, and what it is against. The rest
+					     print in the caption, which is this row's to fill. -->
+					<template v-if="reading.references?.length" #caption="{ caption }">
+						<span v-if="caption" class="truncate text-ink-gray-5">{{ caption }}</span>
+						<template v-for="(reference, index) in reading.references" :key="index">
+							<span class="shrink-0 text-ink-gray-4" aria-hidden="true">·</span>
+							<span
+								v-if="reference.text"
+								class="shrink-0 text-sm-medium tabular-nums"
+								:class="TONE_CLASSES[reference.tone]"
+							>
+								{{ reference.text }}
+							</span>
+							<span v-if="reference.label" class="truncate text-ink-gray-5">
+								{{ reference.label }}
+							</span>
+						</template>
+					</template>
+				</NumberCard>
 			</div>
 		</div>
 	</div>

@@ -947,6 +947,163 @@
 					"palette": "sequential",
 					"show_values": false
 				}
+			},
+			"c_number_target": {
+				"name": "c_number_target",
+				"title": "Revenue against target and last month",
+				"workbook": "gallery",
+				"folder": "f_single",
+				"sort_order": 11,
+				"query": "q_sales",
+				"chart_type": "Number",
+				"config": {
+					"order_by": [],
+					"filters": {
+						"logical_operator": "And",
+						"filters": []
+					},
+					"limit": 100,
+					"number_columns": [
+						{
+							"measure_name": "Revenue",
+							"column_name": "sale_price",
+							"aggregation": "sum",
+							"data_type": "Decimal",
+							"format": "currency"
+						}
+					],
+					"number_column_options": [
+						{
+							"prefix": "$",
+							"shorten_numbers": true,
+							"decimal": 1,
+							"references": [
+								{
+									"source": "previous",
+									"label": "vs last month"
+								},
+								{
+									"source": "constant",
+									"value": 750000,
+									"show": "attainment",
+									"label": "of monthly target"
+								}
+							]
+						}
+					],
+					"sparkline": true,
+					"sparkline_color": "#2490EF",
+					"date_column": {
+						"dimension_name": "created_at",
+						"column_name": "created_at",
+						"data_type": "Datetime",
+						"granularity": "month"
+					}
+				}
+			},
+			"c_number_target_column": {
+				"name": "c_number_target_column",
+				"title": "Profit against its plan",
+				"workbook": "gallery",
+				"folder": "f_single",
+				"sort_order": 12,
+				"query": "q_sales",
+				"chart_type": "Number",
+				"config": {
+					"order_by": [],
+					"filters": {
+						"logical_operator": "And",
+						"filters": []
+					},
+					"limit": 100,
+					"number_columns": [
+						{
+							"measure_name": "Profit",
+							"column_name": "profit",
+							"aggregation": "sum",
+							"data_type": "Decimal",
+							"format": "currency"
+						}
+					],
+					"number_column_options": [
+						{
+							"prefix": "$",
+							"shorten_numbers": true,
+							"decimal": 1,
+							"references": [
+								{
+									"source": "measure",
+									"measure": {
+										"measure_name": "Profit plan",
+										"expression": {
+											"type": "expression",
+											"expression": "sale_price.sum() * 0.55"
+										},
+										"data_type": "Decimal"
+									},
+									"show": "attainment",
+									"label": "of plan"
+								}
+							]
+						}
+					],
+					"sparkline": false,
+					"date_column": {
+						"dimension_name": "created_at",
+						"column_name": "created_at",
+						"data_type": "Datetime",
+						"granularity": "month"
+					}
+				}
+			},
+			"c_number_under_budget": {
+				"name": "c_number_under_budget",
+				"title": "Cost against budget",
+				"workbook": "gallery",
+				"folder": "f_single",
+				"sort_order": 13,
+				"query": "q_sales",
+				"chart_type": "Number",
+				"config": {
+					"order_by": [],
+					"filters": {
+						"logical_operator": "And",
+						"filters": []
+					},
+					"limit": 100,
+					"number_columns": [
+						{
+							"measure_name": "Cost",
+							"column_name": "cost",
+							"aggregation": "sum",
+							"data_type": "Decimal",
+							"format": "currency"
+						}
+					],
+					"number_column_options": [
+						{
+							"prefix": "$",
+							"shorten_numbers": true,
+							"decimal": 1,
+							"negative_is_better": true,
+							"references": [
+								{
+									"source": "constant",
+									"value": 320000,
+									"show": "delta",
+									"label": "vs budget"
+								}
+							]
+						}
+					],
+					"sparkline": false,
+					"date_column": {
+						"dimension_name": "created_at",
+						"column_name": "created_at",
+						"data_type": "Datetime",
+						"granularity": "month"
+					}
+				}
 			}
 		},
 		"dashboards": {
@@ -1110,12 +1267,45 @@
 						}
 					},
 					{
+						"type": "chart",
+						"chart": "c_number_target",
+						"layout": {
+							"i": "c_number_target",
+							"x": 0,
+							"y": 41,
+							"w": 7,
+							"h": 4
+						}
+					},
+					{
+						"type": "chart",
+						"chart": "c_number_target_column",
+						"layout": {
+							"i": "c_number_target_column",
+							"x": 7,
+							"y": 41,
+							"w": 7,
+							"h": 4
+						}
+					},
+					{
+						"type": "chart",
+						"chart": "c_number_under_budget",
+						"layout": {
+							"i": "c_number_under_budget",
+							"x": 14,
+							"y": 41,
+							"w": 6,
+							"h": 4
+						}
+					},
+					{
 						"type": "text",
 						"text": "## Table and Map",
 						"layout": {
 							"i": "t_owned",
 							"x": 0,
-							"y": 41,
+							"y": 45,
 							"w": 20,
 							"h": 1
 						}
@@ -1126,7 +1316,7 @@
 						"layout": {
 							"i": "c_table_pivot",
 							"x": 0,
-							"y": 42,
+							"y": 46,
 							"w": 10,
 							"h": 10
 						}
@@ -1137,7 +1327,7 @@
 						"layout": {
 							"i": "c_map_country",
 							"x": 10,
-							"y": 42,
+							"y": 46,
 							"w": 10,
 							"h": 10
 						}
@@ -1148,7 +1338,7 @@
 						"layout": {
 							"i": "t_rel",
 							"x": 0,
-							"y": 52,
+							"y": 56,
 							"w": 20,
 							"h": 1
 						}
@@ -1159,7 +1349,7 @@
 						"layout": {
 							"i": "c_bubble_categories",
 							"x": 0,
-							"y": 53,
+							"y": 57,
 							"w": 10,
 							"h": 9
 						}
@@ -1170,7 +1360,7 @@
 						"layout": {
 							"i": "c_sankey_traffic",
 							"x": 10,
-							"y": 53,
+							"y": 57,
 							"w": 10,
 							"h": 9
 						}
@@ -1181,7 +1371,7 @@
 						"layout": {
 							"i": "c_heatmap_month_category",
 							"x": 0,
-							"y": 62,
+							"y": 66,
 							"w": 20,
 							"h": 10
 						}

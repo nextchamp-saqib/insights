@@ -21,6 +21,8 @@ const props = defineProps<{
 	label?: string
 	columnOptions: ColumnOption[]
 	enableFormat?: boolean
+	/** Width of the settings popover, for a `config-fields` slot that needs more. */
+	configWidth?: string
 }>()
 
 const formatOptions = [
@@ -342,7 +344,10 @@ function handleRemove() {
 				</Button>
 			</template>
 			<template #default>
-				<div class="flex w-[14rem] flex-col gap-2 p-2">
+				<div
+					class="flex flex-col gap-2 p-2"
+					:style="{ width: props.configWidth || '14rem' }"
+				>
 					<InlineFormControlLabel label="Label">
 						<TextInput
 							autocomplete="off"
