@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
 import { FIELDTYPES } from '../../helpers/constants'
 import { __ } from '../../translation'
 import type { NumberComparison, NumberTarget } from '../../types/chart.types'
-import type { ColumnOption } from '../../types/query.types'
+import type { ColumnOption, ExpressionMeasure, Measure } from '../../types/query.types'
+import NewMeasureSelectorDialog from './NewMeasureSelectorDialog.vue'
 
 // What a reading is read against: the target it aims at, and the one number it
 // is compared with. Two blocks because a card reads them in two places — the
@@ -39,6 +40,78 @@ const numberColumns = computed(() =>
 		.filter((column) => FIELDTYPES.NUMBER.includes(column.data_type))
 		.map((column) => ({ label: column.label, value: column.value })),
 )
+
+const EXPRESSION_OPTION = '__expression__'
+const expressionOption = { label: __('Custom expression…'), value: EXPRESSION_OPTION }
+
+function isExpressionMeasure(measure?: Measure): measure is ExpressionMeasure {
+	return !!measure && !('column_name' in measure)
+}
+
+// A measure of this config isn't only ever a column — it can be an expression
+// (e.g. `sale_price.sum() * 0.55`). A select that only lists columns lies about
+// that measure by showing it blank, so an expression measure gets its own
+// option, named after itself, appended to the list.
+function measureSelectOptions(measure?: Measure) {
+	const options = [...numberColumns.value]
+	if (isExpressionMeasure(measure)) {
+		options.push({ label: measure.measure_name, value: measure.measure_name })
+	}
+	options.push(expressionOption)
+	return options
+}
+
+function measureSelectValue(measure?: Measure) {
+	if (!measure) return undefined
+	return isExpressionMeasure(measure) ? measure.measure_name : measure.column_name
+}
+
+const targetMeasureOptions = computed(() => measureSelectOptions(target.value?.measure))
+const comparisonMeasureOptions = computed(() => measureSelectOptions(comparison.value?.measure))
+
+// Which picker the expression dialog is authoring for, so `@select` writes to
+// the right slot.
+const expressionDialogFor = ref<'target' | 'comparison' | null>(null)
+const showExpressionDialog = computed({
+	get: () => expressionDialogFor.value !== null,
+	set: (value) => {
+		if (!value) expressionDialogFor.value = null
+	},
+})
+const expressionDialogMeasure = computed<ExpressionMeasure | undefined>(() => {
+	const measure =
+		expressionDialogFor.value === 'target'
+			? target.value?.measure
+			: expressionDialogFor.value === 'comparison'
+			  ? comparison.value?.measure
+			  : undefined
+	return isExpressionMeasure(measure) ? measure : undefined
+})
+
+function selectExpression(measure: ExpressionMeasure) {
+	if (expressionDialogFor.value === 'target') {
+		target.value = { ...target.value, measure }
+	} else if (expressionDialogFor.value === 'comparison' && comparison.value) {
+		comparison.value.measure = measure
+	}
+	expressionDialogFor.value = null
+}
+
+function setTargetMeasure(value: string) {
+	if (value === EXPRESSION_OPTION) {
+		expressionDialogFor.value = 'target'
+		return
+	}
+	target.value = { measure: measureOf(value) }
+}
+
+function setComparisonMeasure(value: string) {
+	if (value === EXPRESSION_OPTION) {
+		expressionDialogFor.value = 'comparison'
+		return
+	}
+	if (comparison.value) comparison.value.measure = measureOf(value)
+}
 
 const targetSource = computed(() => {
 	if (!target.value) return 'none'
@@ -100,9 +173,9 @@ function measureOf(column: string) {
 		<div v-if="targetSource === 'measure'" class="pl-[30%]">
 			<FormControl
 				type="select"
-				:options="numberColumns"
-				:modelValue="(target?.measure as any)?.column_name"
-				@update:modelValue="target = { measure: measureOf($event) }"
+				:options="targetMeasureOptions"
+				:modelValue="measureSelectValue(target?.measure)"
+				@update:modelValue="setTargetMeasure($event)"
 			/>
 		</div>
 
@@ -127,9 +200,9 @@ function measureOf(column: string) {
 		<div v-if="comparison?.source === 'measure'" class="pl-[30%]">
 			<FormControl
 				type="select"
-				:options="numberColumns"
-				:modelValue="(comparison.measure as any)?.column_name"
-				@update:modelValue="comparison.measure = measureOf($event)"
+				:options="comparisonMeasureOptions"
+				:modelValue="measureSelectValue(comparison.measure)"
+				@update:modelValue="setComparisonMeasure($event)"
 			/>
 		</div>
 
@@ -153,4 +226,13 @@ function measureOf(column: string) {
 			</div>
 		</template>
 	</div>
+
+	<NewMeasureSelectorDialog
+		v-if="showExpressionDialog"
+		:model-value="showExpressionDialog"
+		@update:model-value="showExpressionDialog = $event"
+		:column-options="props.columnOptions"
+		:measure="expressionDialogMeasure"
+		@select="selectExpression"
+	/>
 </template>
