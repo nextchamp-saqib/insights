@@ -17,7 +17,7 @@ import type { Layout } from '../types/workbook.types'
 export const SINGLE_COLUMN_MAX_WIDTH = 768
 
 /** Height of one grid row in px. */
-export const ROW_HEIGHT = 52
+export const ROW_HEIGHT = 54
 
 /** Columns a dashboard grid places against. */
 export const GRID_COLUMNS = 20
