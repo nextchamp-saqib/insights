@@ -52,6 +52,9 @@ type ChartDataResponse = {
 	columns?: QueryResult['columns']
 	rows?: QueryResult['rows']
 	granularity?: Record<string, string>
+	// a windowed number card's series, from the second execution that splits its
+	// window. Absent for every card that draws its sparkline from its own rows
+	sparkline?: { columns?: QueryResult['columns']; rows?: QueryResult['rows'] }
 	time_taken?: number
 	executed_at?: string
 	// the authoring feed alone answers these
@@ -89,6 +92,9 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 	// whichever of the two it is before anything derives from it
 	const doc = computed(() => unref(feed.doc))
 	const result = ref<QueryResult>({ ...EMPTY_RESULT })
+	// the series a windowed card's sparkline is drawn from, when the server ran
+	// one for it
+	const sparklineResult = ref<QueryResult>()
 	// what the server ran, on the feed that is allowed to say
 	const operations = ref<Operation[]>([])
 	// where the grid's filters landed, as the server routed them. A level lifted
@@ -172,6 +178,13 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 				timeTaken: response.time_taken || 0,
 				lastExecutedAt: new Date(response.executed_at || Date.now()),
 			}
+			sparklineResult.value = response.sparkline
+				? {
+						...EMPTY_RESULT,
+						columns: response.sparkline.columns || [],
+						rows: response.sparkline.rows || [],
+					}
+				: undefined
 			operations.value = response.operations || []
 			routedFilters.value = response.adhoc_filters
 			drillDimensions.value = response.drill?.dimensions || []
@@ -185,6 +198,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 			serverBusy.value = isServerBusyError(error)
 			failed.value = true
 			result.value = { ...EMPTY_RESULT }
+			sparklineResult.value = undefined
 		} finally {
 			if (!isStale()) executing.value = false
 		}
@@ -203,6 +217,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 	return reactive({
 		doc: feed.doc,
 		result,
+		sparklineResult,
 		// the whole result comes back in one response, so the table it feeds has
 		// one page and filters over the rows it holds
 		currentOperations: operations,

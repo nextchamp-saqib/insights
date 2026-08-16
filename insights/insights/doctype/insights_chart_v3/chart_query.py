@@ -13,6 +13,10 @@ The output is `source + config filters + the chart's own summarize/pivot +
 order-by`, in that order. Dashboard filter state is not part of it — that rides
 the `adhoc_filters` argument of execution and is applied to the query it names.
 
+A windowed number card also derives a second list, `sparkline_operations`. It
+answers how the number moved rather than what the number is, and the two
+questions cannot share one summarize.
+
 Nothing here reads the database or a document: it is a function of chart type,
 source query name and config, so the same three inputs always give the same
 operations.
@@ -51,6 +55,53 @@ def derive_operations(chart_type: str, query: str, config: dict | None) -> list[
     _add_filters(operations, config)
     _add_chart_operation(operations, chart_type, config)
     _add_order_by_from_config(operations, config)
+    return operations
+
+
+def sparkline_operations(chart_type: str, query: str, config: dict | None) -> list[dict]:
+    """The operations a windowed card's sparkline runs, empty when it needs none.
+
+    A windowed card returns one row per window, so the rows behind the number
+    draw a two-point line. The series is a second question — how the number
+    moved inside the window — and it is asked as a second query.
+
+    Nothing new derives it. Inside one window a finer grain *is* the split, so
+    this is the shape an axis chart already derives: the configured window's
+    filter, a summarize one grain finer, and an ascending sort. The comparison
+    window is left out, because it is not part of the picture the card draws.
+
+    Adding the card's own rows up into a series was the alternative. It is
+    silently wrong for every measure that does not add up — an average, a count
+    distinct, a percent — so the series is asked for rather than reconstructed.
+    """
+    if chart_type != "Number":
+        return []
+
+    config = _config_for_derivation(config, chart_type)
+    if not config.get("sparkline"):
+        return []
+
+    date_column = config.get("date_column") or {}
+    window = config.get("window") or {}
+    grain = SPARKLINE_GRAINS.get(_span_unit(window.get("span")))
+    measures = _named_measures(config.get("number_columns"))
+    if not grain or not date_column.get("column_name") or not measures:
+        return []
+
+    operations = [_source(query)]
+    _add_filters(operations, config)
+    operations.append(
+        {
+            "type": "filter_group",
+            "logical_operator": "And",
+            "filters": [_within(date_column, _timespan(window, None))],
+        }
+    )
+    # the readings alone: a target and a comparison are read off the card's own
+    # row, and no sparkline is drawn behind either
+    operations.append(_summarize(measures=measures, dimensions=[{**date_column, "granularity": grain}]))
+    _add_order_by(operations, _result_column(date_column), "asc")
+
     return operations
 
 
@@ -275,6 +326,36 @@ def _add_window_operations(operations: list[dict], config: dict, window: dict, d
     operations.append(_summarize(measures=_number_measures(config), dimensions=[dimension]))
 
     _add_order_by(operations, _result_column(date_column), "asc")
+
+
+# The grain a sparkline splits its window by: one step below the unit the span
+# names. A day-long window is left out — its finer grains are clock grains, and
+# a day of hours is a different picture from a period of periods.
+SPARKLINE_GRAINS = {
+    "week": "day",
+    "month": "day",
+    "quarter": "month",
+    "year": "month",
+    "fiscal year": "month",
+}
+
+
+def _span_unit(span: str | None) -> str:
+    """The unit a span names, read the way `get_window` reads it.
+
+    The unit is in the string and the dates are not, so reading it here leaves
+    derivation pure — the span still travels unresolved.
+    """
+    if not span:
+        return ""
+
+    span = span.lower().replace("(include current)", "").strip()
+    if span.endswith("to date"):
+        span = span[: -len("to date")].strip()
+    elif span.endswith("s"):
+        span = span[:-1]
+
+    return "fiscal year" if "fiscal year" in span else span.rsplit(" ", 1)[-1]
 
 
 def _comparison_shifts(config: dict) -> list[dict]:

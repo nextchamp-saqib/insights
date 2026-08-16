@@ -91,12 +91,16 @@ def get_chart_data(
         page_size=page_size or (config or {}).get("limit") or 100,
         adhoc_filters=adhoc_filters,
     )
+    # the builder draws the card a reader will see, so a windowed card's series is
+    # fetched here too, under the filters the rows were fetched under
+    sparkline = chart.get_sparkline_data(force=force, adhoc_filters=adhoc_filters)
 
     return {
         "errors": [],
         "columns": result["columns"],
         "rows": result["rows"],
         "granularity": column_granularity(operations),
+        **({"sparkline": sparkline} if sparkline else {}),
         # the same field the viewer response carries, so a card reads its drill
         # candidates off whichever feed drew it
         "drill": {"dimensions": drill_dimensions(chart, operations)},

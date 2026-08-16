@@ -1,6 +1,9 @@
 import frappe
 
-from insights.insights.doctype.insights_chart_v3.chart_query import derive_operations
+from insights.insights.doctype.insights_chart_v3.chart_query import (
+    derive_operations,
+    sparkline_operations,
+)
 from insights.insights.doctype.insights_data_source_v3.ibis_utils import IbisQueryBuilder
 from insights.tests.base import InsightsIntegrationTestCase
 
@@ -155,7 +158,9 @@ class TestIbisWindowedNumberCard(IbisQueryBuilderTestCase):
     """
 
     def windowed_result(self, config, sales):
-        derived = derive_operations("Number", "sales", config)
+        return self.result_of(derive_operations("Number", "sales", config), sales)
+
+    def result_of(self, derived, sales):
         return self.build_query(
             [
                 {"type": "code", "code": f"results = {sales}"},
@@ -233,3 +238,27 @@ class TestIbisWindowedNumberCard(IbisQueryBuilderTestCase):
             [str(window)[:10] for window in result["posting_date"]],
             ["2025-05-01", "2026-05-01"],
         )
+
+    def test_a_sparkline_reads_the_window_one_day_at_a_time(self):
+        """The card's own rows are one per window. The picture under the number
+        is the same window split by the grain below the span's unit."""
+        sales = [
+            {"posting_date": "2026-08-05", "amount": 30},
+            {"posting_date": "2026-08-05", "amount": 5},
+            {"posting_date": "2026-08-09", "amount": 70},
+            {"posting_date": "2026-08-20", "amount": 500},  # after the anchor
+            {"posting_date": "2026-07-05", "amount": 400},  # before the window
+            {"posting_date": "2025-08-05", "amount": 60},  # the comparison window
+        ]
+        comparison = {"source": "window", "shift": {"unit": "year", "count": -1}}
+        config = {**self.config(comparison), "sparkline": True}
+
+        result = self.result_of(sparkline_operations("Number", "sales", config), sales)
+
+        self.assertEqual(
+            [str(day)[:10] for day in result["posting_date"]],
+            ["2026-08-05", "2026-08-09"],
+        )
+        self.assertEqual(list(result["Revenue"]), [35, 70])
+        # the number itself is unmoved by the second query
+        self.assertEqual(list(self.windowed_result(config, sales)["Revenue"]), [60, 105])

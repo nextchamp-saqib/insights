@@ -391,6 +391,35 @@ describe('the sparkline', () => {
 			cardsOf({ values: [{ name: 'Items', readings: [7, 9] }], sparkline: true })[0].sparkline,
 		).toBeUndefined()
 	})
+
+	it('draws the second run when there is one, not the two rows of a window', () => {
+		// a windowed card's rows are one per window: the reading and what it is
+		// held against. The trend inside the window is a run of its own.
+		const card = cardsOf({
+			values: [{ name: 'Items', readings: [40, 60] }],
+			period: monthly,
+			sparkline: true,
+			sparklineSeries: { Items: [10, 20, 30] },
+		})[0]
+		expect(card.value).toBe(60)
+		expect(card.sparkline).toEqual({ data: [10, 20, 30] })
+	})
+
+	it('reads each value off its own column of the second run', () => {
+		const cards = cardsOf({
+			values: [
+				{ name: 'Items', readings: [60] },
+				{ name: 'Revenue', readings: [900] },
+			],
+			period: monthly,
+			sparkline: true,
+			sparklineSeries: { Items: [10, 20], Revenue: [300, 600] },
+		})
+		expect(cards.map((card: any) => card.sparkline.data)).toEqual([
+			[10, 20],
+			[300, 600],
+		])
+	})
 })
 
 describe('drilling into a reading', () => {

@@ -37,7 +37,8 @@ export function adaptNumberChart(input: ChartAdapterInput): ChartFiller | undefi
 	const current = rows[rows.length - 1]
 	if (!current) return
 
-	const cards = measures.map((measure, index) => readingOf(config, rows, measure, index))
+	const series = input.sparklineResult?.rows
+	const cards = measures.map((measure, index) => readingOf(config, rows, measure, index, series))
 
 	return {
 		component: NumberCards,
@@ -59,6 +60,7 @@ function readingOf(
 	rows: QueryResultRow[],
 	measure: Measure,
 	index: number,
+	series?: QueryResultRow[],
 ): NumberCardEntry {
 	const column = measure.measure_name
 	const readings = rows.map((row) => toNumber(row[column]))
@@ -124,7 +126,11 @@ function readingOf(
 	}
 
 	if (config.sparkline && config.date_column?.column_name) {
-		const sparkline: NumberCardSparkline = { data: readings }
+		// A windowed card is one row per window, so its own readings are the trend
+		// of two windows and not of the period. The server splits the window for it
+		// and sends the series beside the rows; every other card is its own series.
+		const data = series ? series.map((row) => toNumber(row[column])) : readings
+		const sparkline: NumberCardSparkline = { data }
 		if (config.sparkline_color) sparkline.color = config.sparkline_color
 		card.sparkline = sparkline
 	}

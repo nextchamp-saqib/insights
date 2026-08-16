@@ -16,7 +16,11 @@ being derived.
 import json
 import unittest
 
-from insights.insights.doctype.insights_chart_v3.chart_query import config_errors, derive_operations
+from insights.insights.doctype.insights_chart_v3.chart_query import (
+    config_errors,
+    derive_operations,
+    sparkline_operations,
+)
 from insights.tests.factories import chart_derivation_fixtures, derivation_case
 
 CHART_TYPES = {
@@ -71,6 +75,11 @@ def _windowed_config(span="month to date", shift=None):
         "window": {"span": span},
         "number_column_options": [{"comparison": comparison} if comparison else {}],
     }
+
+
+def _sparkline_config(span="month to date", shift=None):
+    """The same card, with the trend inside its window turned on."""
+    return {**_windowed_config(span, shift), "sparkline": True}
 
 
 class TestChartDerivation(unittest.TestCase):
@@ -327,3 +336,145 @@ class TestChartDerivation(unittest.TestCase):
                 self.assertTrue(config_errors("Bar", "some-query", {**drawable, slot: value}))
 
         self.assertTrue(config_errors("Bar", "some-query", "status"), "a config that is not an object")
+
+
+class TestSparklineDerivation(unittest.TestCase):
+    """What a windowed card's sparkline runs, beside the number itself.
+
+    One row per window draws a two-point line, so the trend inside the window is
+    a second question and a second query. Nothing new derives it: inside one
+    window, a finer grain is the split.
+    """
+
+    def test_a_sparkline_splits_the_cards_own_window_one_grain_finer(self):
+        operations = sparkline_operations("Number", "sales-invoice-lines", _sparkline_config())
+        config = _sparkline_config()
+
+        self.assertEqual(
+            operations,
+            [
+                {
+                    "type": "source",
+                    "table": {"type": "query", "workbook": "", "query_name": "sales-invoice-lines"},
+                },
+                {
+                    "type": "filter_group",
+                    "logical_operator": "And",
+                    "filters": [
+                        {
+                            "column": {"type": "column", "column_name": "posting_date"},
+                            "operator": "within",
+                            "value": {"span": "month to date"},
+                        }
+                    ],
+                },
+                {
+                    "type": "summarize",
+                    "measures": config["number_columns"],
+                    "dimensions": [{**config["date_column"], "granularity": "day"}],
+                },
+                {
+                    "type": "order_by",
+                    "column": {"type": "column", "column_name": "posting_date"},
+                    "direction": "asc",
+                },
+            ],
+        )
+
+    def test_a_sparkline_draws_the_configured_window_and_not_the_comparison(self):
+        """The comparison window answers what the number is held against. The
+        picture is the window the card is read over."""
+        config = _sparkline_config(shift={"unit": "year", "count": -1})
+        operations = sparkline_operations("Number", "sales-invoice-lines", config)
+
+        filter_group = next(op for op in operations if op["type"] == "filter_group")
+        self.assertEqual([f["value"] for f in filter_group["filters"]], [{"span": "month to date"}])
+
+    def test_a_sparkline_leaves_its_window_for_the_engine_to_resolve(self):
+        """The same purity the card's own derivation holds: a span here would
+        derive different operations tomorrow."""
+        config = _sparkline_config()
+        first = sparkline_operations("Number", "sales-invoice-lines", config)
+        self.assertEqual(first, sparkline_operations("Number", "sales-invoice-lines", config))
+
+    def test_a_sparkline_runs_under_the_cards_own_filters(self):
+        """Same source, same filters. A series over rows the card never counted
+        is a picture of a different number."""
+        config = _sparkline_config()
+        config["filters"] = {
+            "logical_operator": "And",
+            "filters": [
+                {
+                    "column": {"type": "column", "column_name": "status"},
+                    "operator": "=",
+                    "value": "Paid",
+                }
+            ],
+        }
+        operations = sparkline_operations("Number", "sales-invoice-lines", config)
+
+        self.assertEqual(
+            [op["type"] for op in operations],
+            ["source", "filter_group", "filter_group", "summarize", "order_by"],
+        )
+        self.assertEqual(operations[1]["filters"], config["filters"]["filters"])
+
+    def test_a_sparkline_measures_the_readings_and_nothing_else(self):
+        """A target and a comparison are read off the card's own row, and no
+        sparkline is drawn behind either."""
+        config = _sparkline_config()
+        target = {
+            "aggregation": "sum",
+            "column_name": "target_amount",
+            "data_type": "Decimal",
+            "measure_name": "Target",
+        }
+        config["number_column_options"] = [{"target": {"measure": target}}]
+
+        operations = sparkline_operations("Number", "sales-invoice-lines", config)
+        summarize = next(op for op in operations if op["type"] == "summarize")
+        self.assertEqual(summarize["measures"], config["number_columns"])
+
+    def test_the_grain_is_one_step_below_the_unit_the_span_names(self):
+        for span, grain in [
+            ("month to date", "day"),
+            ("current month", "day"),
+            ("last 3 months", "day"),
+            ("current week", "day"),
+            ("quarter to date", "month"),
+            ("year to date", "month"),
+            ("fiscal year to date", "month"),
+            ("last 2 fiscal years", "month"),
+        ]:
+            with self.subTest(span=span):
+                operations = sparkline_operations("Number", "sales-invoice-lines", _sparkline_config(span))
+                summarize = next(op for op in operations if op["type"] == "summarize")
+                self.assertEqual(summarize["dimensions"][0]["granularity"], grain)
+
+    def test_a_window_with_no_finer_period_draws_no_sparkline(self):
+        """A day splits into clock grains, which is a different picture from a
+        period of periods."""
+        self.assertEqual(
+            sparkline_operations("Number", "sales-invoice-lines", _sparkline_config("current day")), []
+        )
+
+    def test_nothing_runs_for_a_card_that_asks_for_no_second_query(self):
+        no_window = _sparkline_config()
+        no_window.pop("window")
+        no_date_column = _sparkline_config()
+        no_date_column.pop("date_column")
+
+        for name, config in [
+            ("the sparkline is off", _windowed_config()),
+            ("the card has no window", no_window),
+            ("the card has no date column", no_date_column),
+        ]:
+            with self.subTest(case=name):
+                self.assertEqual(sparkline_operations("Number", "sales-invoice-lines", config), [])
+
+    def test_no_chart_type_but_a_number_card_runs_a_sparkline(self):
+        for chart_type in sorted(CHART_TYPES - {"Number"}):
+            with self.subTest(chart_type=chart_type):
+                self.assertEqual(
+                    sparkline_operations(chart_type, "sales-invoice-lines", _sparkline_config()), []
+                )

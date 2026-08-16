@@ -5,12 +5,21 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from insights.insights.doctype.insights_chart_v3.chart_query import config_errors, derive_operations
+from insights.insights.doctype.insights_chart_v3.chart_query import (
+    config_errors,
+    derive_operations,
+    sparkline_operations,
+)
 from insights.insights.doctype.insights_data_source_v3.data_authority import data_authority_of
 from insights.insights.doctype.insights_query_v3.insights_query_v3 import import_query
 from insights.utils import deep_convert_dict_to_dict
 
 QUERY = "Insights Query v3"
+
+# A page of an ascending series ends at its oldest rows, so a series cut by the
+# card's own page size would stop short of the number it is drawn under. This is
+# the bound instead: more periods than any window a card is read over.
+SPARKLINE_MAX_POINTS = 1000
 
 
 class InsightsChartv3(Document):
@@ -85,16 +94,44 @@ class InsightsChartv3(Document):
         A request may name a chart but must not describe one: `run_doc_method` builds
         `self` out of the request payload, so the stored chart is re-read here and it
         alone decides the authority and the query that runs under it.
+
+        A windowed card's sparkline rides along under `sparkline`. It runs here and
+        not through a call of its own so that a client never has to know which cards
+        need a second fetch, and so that `adhoc_filters` cannot reach one execution
+        and miss the other.
         """
         chart = frappe.get_doc(self.doctype, self.name)
         query = chart.get_query()
         with data_authority_of(chart):
-            return query.execute(
+            result = query.execute(
                 force=force,
                 page=page,
                 page_size=page_size,
                 adhoc_filters=adhoc_filters,
             )
+            sparkline = chart.get_sparkline_data(force=force, adhoc_filters=adhoc_filters)
+
+        if sparkline:
+            result["sparkline"] = sparkline
+        return result
+
+    def get_sparkline_data(self, force: bool = False, adhoc_filters: dict | None = None):
+        """The series behind this card's sparkline, or nothing when it draws none.
+
+        Only a card that asks for both a sparkline and a window runs it. Execution
+        is limited rather than queued — a dashboard already pushes the pool — so a
+        second execution per card stays something an author turns on.
+        """
+        operations = sparkline_operations(self.chart_type, self.query, frappe.parse_json(self.config or "{}"))
+        if not operations:
+            return None
+
+        result = self.get_query(operations=operations).execute(
+            force=force,
+            page_size=SPARKLINE_MAX_POINTS,
+            adhoc_filters=adhoc_filters,
+        )
+        return {"columns": result["columns"], "rows": result["rows"]}
 
     def get_query(self, operations: list | None = None):
         """A query document for this chart's operations, made to run and thrown away.

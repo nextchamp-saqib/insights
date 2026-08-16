@@ -532,6 +532,11 @@ export type NumberChartSpec = {
 	comparison?: boolean
 	sparkline?: boolean
 	sparklineColor?: string
+	/**
+	 * The second run a windowed card's sparkline is drawn from: one reading per
+	 * period inside the window, keyed by value name.
+	 */
+	sparklineSeries?: Record<string, (number | null)[]>
 	/** A metric where a fall is the good news, e.g. churn. */
 	negativeIsBetter?: boolean
 	/** What the Chart sets for every value that sets nothing of its own. */
@@ -597,7 +602,31 @@ export function numberChart(spec: NumberChartSpec): ChartAdapterInput {
 			],
 			rows,
 		),
+		...(spec.sparklineSeries
+			? { sparklineResult: sparklineResultOf(spec.sparklineSeries, period) }
+			: {}),
 	}
+}
+
+/** The second run, as the server returns it: the readings, oldest first. */
+function sparklineResultOf(
+	series: Record<string, (number | null)[]>,
+	period?: Dimension,
+): QueryResult {
+	const names = Object.keys(series)
+	const periods = Math.max(...names.map((name) => series[name].length), 1)
+	const rows = Array.from({ length: periods }, (_, index) => ({
+		...(period ? { [period.dimension_name]: `2026-01-${String(index + 1).padStart(2, '0')}` } : {}),
+		...Object.fromEntries(names.map((name) => [name, series[name][index] ?? null])),
+	}))
+
+	return resultWith(
+		[
+			...(period ? [columnOfDimension(period)] : []),
+			...names.map((name) => columnOfMeasure(toMeasure(name))),
+		],
+		rows,
+	)
 }
 
 export type MapChartSpec = {

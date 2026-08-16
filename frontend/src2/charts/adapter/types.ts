@@ -11,6 +11,13 @@ export type ChartAdapterInput = {
 	config: ChartConfig
 	/** The rows and columns the server ran for it. A split's series live here. */
 	result: QueryResult
+	/**
+	 * A second run, for a windowed number card alone: the same measures over the
+	 * card's own window at a finer grain, oldest first. The card's own rows are
+	 * one per window, which is a two-point sparkline, so the trend is asked for
+	 * rather than read off them.
+	 */
+	sparklineResult?: QueryResult
 	/** Printed by the chrome. It belongs to the Chart, not to its config. */
 	title?: string
 	/**

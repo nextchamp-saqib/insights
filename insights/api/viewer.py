@@ -94,6 +94,9 @@ def get_chart_data(
         "columns": result["columns"],
         "rows": result["rows"],
         "granularity": column_granularity(doc.get_operations()),
+        # the series a windowed card's sparkline is drawn from. No other chart
+        # carries the key at all
+        **({"sparkline": result["sparkline"]} if result.get("sparkline") else {}),
         # the drill menu opens on a click, so what it can offer travels with the
         # card instead of costing a round trip at the moment latency is felt
         "drill": {"dimensions": drill_dimensions(doc) if can_drill() else []},
