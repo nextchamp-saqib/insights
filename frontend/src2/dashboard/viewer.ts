@@ -16,14 +16,17 @@ import type { FilterType } from '../helpers/constants'
 import { navigate } from '../helpers/navigation'
 import { isFilterApplied } from '../query/components/filter_utils'
 import type { FilterOperator, FilterValue } from '../types/query.types'
-import type { Layout } from '../types/workbook.types'
+import type {
+	BreakpointKey,
+	Layout,
+	WorkbookDashboardItemLayout,
+} from '../types/workbook.types'
 import { readFilters, writeFilters } from './filter_storage'
 import StaticGridLayout from './StaticGridLayout.vue'
 import ViewerItem from './ViewerItem.vue'
 
-export type ViewerDashboardItem = {
+export type ViewerDashboardItem = WorkbookDashboardItemLayout & {
 	type: 'chart' | 'text' | 'filter'
-	layout: Layout
 	chart?: string
 	text?: string
 	filter_name?: string
@@ -118,7 +121,9 @@ export type DashboardAuthoring = {
 	// what this capability adds to the page's one menu
 	menuOptions: DashboardMenuOption[]
 	rename: (title: string) => void
-	moveItems: (layouts: Layout[]) => void
+	/** The breakpoint being arranged. What the grid is drawn and dragged at. */
+	arranging: BreakpointKey
+	moveItems: (key: BreakpointKey, layouts: Layout[]) => void
 	// a chart dragged in from the workbook's sidebar
 	dragOver: (event: DragEvent) => void
 	drop: (event: DragEvent) => void

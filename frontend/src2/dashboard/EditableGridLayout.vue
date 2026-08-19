@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref } from 'vue'
-import type { Layout } from '../types/workbook.types'
+import type { BreakpointKey, Layout, WorkbookDashboardItemLayout } from '../types/workbook.types'
 import StaticGridLayout from './StaticGridLayout.vue'
-import { GRID_COLUMNS, ROW_HEIGHT, SINGLE_COLUMN_MAX_WIDTH, resolveLayouts } from './grid_placement'
+import {
+	BREAKPOINTS,
+	ROW_HEIGHT,
+	breakpointFor,
+	placementsFor,
+	resolveLayouts,
+} from './grid_placement'
 
 // The dashboard grid an author gets: the reader's grid, plus a pointer.
 //
@@ -17,20 +23,30 @@ import { GRID_COLUMNS, ROW_HEIGHT, SINGLE_COLUMN_MAX_WIDTH, resolveLayouts } fro
 // The layout is only written back when the pointer is released. A drag is one
 // edit, not one per frame, so undo and autosave see a move rather than a trail.
 const props = defineProps<{
-	modelValue?: Layout[]
+	items?: WorkbookDashboardItemLayout[]
+	/** Arrange this breakpoint rather than the one the grid measures. */
+	breakpoint?: BreakpointKey
 	disabled?: boolean
 	verticalCompact?: boolean
 }>()
 
-const emit = defineEmits<{ 'update:modelValue': [layouts: Layout[]] }>()
+// A move names the breakpoint it arranged. Every breakpoint is dragged on the
+// same grid, so the gesture cannot tell the parent where to store it.
+const emit = defineEmits<{ move: [key: BreakpointKey, layouts: Layout[]] }>()
 
 const container = ref<HTMLElement>()
 const { width } = useElementSize(container)
 
-// Collapsed to one column there is nowhere to drag a cell to, and the column is
-// the width of the screen, so every gesture would read as a move. The grid is
-// still shown, it just cannot be rearranged.
-const editable = computed(() => !props.disabled && width.value > SINGLE_COLUMN_MAX_WIDTH)
+// The one place a breakpoint is picked for this grid. The drawing half is told
+// which one, rather than measuring the same box a second time and risking a
+// gesture that arranges a breakpoint other than the one on screen.
+const active = computed(
+	() => BREAKPOINTS.find((item) => item.key === props.breakpoint) || breakpointFor(width.value),
+)
+
+const stored = computed(() => placementsFor(props.items || [], active.value.key))
+
+const editable = computed(() => !props.disabled)
 
 type Gesture = {
 	/** the cell under the pointer */
@@ -53,7 +69,7 @@ const gesture = ref<Gesture>()
 // what the grid looks like mid-gesture. Nothing else may write it.
 const settling = ref<Layout[]>()
 
-const layouts = computed(() => settling.value || props.modelValue || [])
+const layouts = computed(() => settling.value || stored.value)
 
 // A card carries its own controls, and a press on one of those is a press on the
 // control. Everything else on a card is somewhere to grab it by.
@@ -74,7 +90,7 @@ function start(kind: Gesture['kind'], i: string, event: PointerEvent) {
 	// Settled first, because a stored layout is not always the layout on screen —
 	// compaction can be turned on over a grid saved loosely. The drag has to start
 	// from the cells the author can see, or the card jumps on the first move.
-	const from = resolveLayouts(props.modelValue || [], {
+	const from = resolveLayouts(stored.value, {
 		verticalCompact: props.verticalCompact ?? true,
 	})
 	const grabbed = from.find((item) => item.i === i)
@@ -105,7 +121,7 @@ function track(event: PointerEvent) {
 	const current = gesture.value
 	if (!current) return
 
-	const columnWidth = width.value / GRID_COLUMNS
+	const columnWidth = width.value / active.value.columns
 	const dragged = current.from.find((item) => item.i === current.i)
 	if (!dragged || !columnWidth) return
 
@@ -118,12 +134,12 @@ function track(event: PointerEvent) {
 		current.kind === 'move'
 			? {
 					...dragged,
-					x: clamp(dragged.x + acrossColumns, 0, GRID_COLUMNS - dragged.w),
+					x: clamp(dragged.x + acrossColumns, 0, active.value.columns - dragged.w),
 					y: Math.max(dragged.y + downRows, 0),
 			  }
 			: {
 					...dragged,
-					w: clamp(dragged.w + acrossColumns, 1, GRID_COLUMNS - dragged.x),
+					w: clamp(dragged.w + acrossColumns, 1, active.value.columns - dragged.x),
 					h: Math.max(dragged.h + downRows, 1),
 			  }
 
@@ -158,7 +174,7 @@ function finish() {
 	stopListening()
 	const resolved = settling.value
 	gesture.value = undefined
-	if (resolved) emit('update:modelValue', resolved)
+	if (resolved) emit('move', active.value.key, resolved)
 	// dropped only after the parent has been told, so the grid is never drawn
 	// from the layout the gesture started at
 	settling.value = undefined
@@ -184,7 +200,12 @@ const lifted = computed(() => {
 
 <template>
 	<div ref="container" class="w-full">
-		<StaticGridLayout :modelValue="layouts" :verticalCompact="verticalCompact" :lifted="lifted">
+		<StaticGridLayout
+			:layouts="layouts"
+			:breakpoint="active.key"
+			:verticalCompact="verticalCompact"
+			:lifted="lifted"
+		>
 			<template #item="cell">
 				<!-- `touch-none` is what makes a finger drag a card rather than
 				     scroll the page. The browser decides between the two the moment

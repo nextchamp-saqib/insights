@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { downloadImage } from '../helpers'
 import { __ } from '../translation'
+import type { BreakpointKey, Layout } from '../types/workbook.types'
 import type {
 	DashboardMenuOption,
 	DashboardSource,
@@ -9,7 +10,7 @@ import type {
 	ViewerFilters,
 	ViewerFilterState,
 } from './viewer'
-import { layoutRank } from './grid_placement'
+import { BASE_BREAKPOINT, BREAKPOINTS, layoutRank } from './grid_placement'
 
 // A dashboard's content, on every surface that shows one: the filters a reader
 // moves, the grid of cards, and every state the page can be in before there is a
@@ -32,6 +33,17 @@ const props = defineProps<{
 
 const filters = ref<ViewerFilters>({})
 const refreshToken = ref(0)
+
+// An author arranging a narrower breakpoint is given a box that width, rather
+// than a wide grid told to pretend. The grid then measures the breakpoint it is
+// arranging, the cards lay their contents out at the width they will really
+// have, and a drag lands where the reader will see it.
+const arrangedBox = computed(() => {
+	const key = props.source.authoring?.arranging
+	const breakpoint = BREAKPOINTS.find((item) => item.key === key)
+	if (!breakpoint || breakpoint === BASE_BREAKPOINT) return undefined
+	return { maxWidth: `${breakpoint.maxWidth}px` }
+})
 
 // what the surface mounted us with is the starting point; where the feed says
 // the filters start wins over it — a reader's last choice on a read surface, the
@@ -160,21 +172,26 @@ function exportImage() {
 			<component
 				:is="source.grid"
 				v-else
-				class="h-fit w-full"
+				class="mx-auto h-fit w-full"
+				:style="arrangedBox"
+				:breakpoint="source.authoring?.arranging"
 				:class="source.authoring?.editing ? 'mb-[20rem] !select-none' : ''"
 				:disabled="!source.authoring?.editing"
 				:verticalCompact="source.verticalCompact"
-				:modelValue="source.items.map((item) => item.layout)"
-				@update:modelValue="(layouts) => layouts && source.authoring?.moveItems(layouts)"
+				:items="source.items"
+				@move="
+					(key: BreakpointKey, layouts: Layout[]) =>
+						layouts && source.authoring?.moveItems(key, layouts)
+				"
 			>
-				<template #item="{ index }">
+				<template #item="{ index, layout }">
 					<component
 						:is="source.cell"
 						:item="source.items[index]"
 						:index="index"
 						:dashboard="source.name"
 						:filters="cellFilters(source.items[index])"
-						:priority="layoutRank(source.items[index].layout)"
+						:priority="layoutRank(layout)"
 						:refresh-token="refreshToken"
 						@filter="setFilter(source.items[index], $event)"
 						@reset-filters="filters = {}"

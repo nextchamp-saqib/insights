@@ -10,8 +10,9 @@ import { useStorage, useWindowSize } from '@vueuse/core'
 import { computed, markRaw, provide, reactive, watchEffect } from 'vue'
 import { safeJSONParse } from '../helpers'
 import { __ } from '../translation'
-import type { Layout, WorkbookChart } from '../types/workbook.types'
+import type { BreakpointKey, Layout, WorkbookChart } from '../types/workbook.types'
 import useDashboard from './dashboard'
+import { BASE_BREAKPOINT, writePlacement } from './grid_placement'
 import DashboardItem from './DashboardItem.vue'
 import EditableGridLayout from './EditableGridLayout.vue'
 import { defaultFilters, type AuthoredDashboardSource, type ViewerDashboardItem } from './viewer'
@@ -66,6 +67,12 @@ export function useDashboardAuthoring(
 		authoring: reactive({
 			// the page only reads it — turning it on and off is the chrome's own
 			editing: computed(() => dashboard.editing),
+			// A width is only arranged while editing. Done leaves the author on the
+			// grid their own screen asks for, rather than in the box they last
+			// arranged, and nothing has to be put back.
+			arranging: computed(() =>
+				dashboard.editing ? dashboard.arranging : BASE_BREAKPOINT.key,
+			),
 			menuOptions: computed(() =>
 				dashboard.editing
 					? [
@@ -86,8 +93,11 @@ export function useDashboardAuthoring(
 					: [],
 			),
 			rename: (title: string) => (dashboard.doc.title = title),
-			moveItems: (layouts: Layout[]) => {
-				dashboard.doc.items.forEach((item, index) => (item.layout = layouts[index]))
+			moveItems: (key: BreakpointKey, layouts: Layout[]) => {
+				dashboard.doc.items.forEach((item, index) => {
+					const layout = layouts[index]
+					if (layout) writePlacement(item, key, layout)
+				})
 			},
 			dragOver: (event: DragEvent) => {
 				if (!event.dataTransfer) return

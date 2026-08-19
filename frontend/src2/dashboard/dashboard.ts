@@ -9,12 +9,13 @@ import useDocumentResource from '../helpers/resource'
 import session from '../session'
 import { FilterOperator, FilterValue } from '../types/query.types'
 import {
+	BreakpointKey,
 	InsightsDashboardv3,
 	WorkbookChart,
 	WorkbookDashboardFilter,
 	WorkbookDashboardItem,
 } from '../types/workbook.types'
-import { GRID_COLUMNS, layoutRank } from './grid_placement'
+import { BASE_BREAKPOINT, GRID_COLUMNS, layoutRank } from './grid_placement'
 import { defaultFilters, type ViewerDashboardItem, type ViewerFilters } from './viewer'
 
 /**
@@ -48,6 +49,11 @@ function makeDashboard(name: string) {
 
 	const editing = ref(false)
 	const editingItemIndex = ref<number>()
+
+	// Which breakpoint's layout the author is arranging. A dashboard is opened at
+	// its widest, because that is the layout every item has and the one the others
+	// are derived from.
+	const arranging = ref<BreakpointKey>(BASE_BREAKPOINT.key)
 
 	function isEditingItem(item: WorkbookDashboardItem) {
 		return editing.value && editingItemIndex.value === dashboard.doc.items.indexOf(item)
@@ -278,6 +284,7 @@ function makeDashboard(name: string) {
 		editing,
 		editingItemIndex,
 		isEditingItem,
+		arranging,
 
 		filterStates,
 

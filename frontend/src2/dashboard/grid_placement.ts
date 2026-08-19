@@ -7,14 +7,11 @@
 // It reads the stored layout alone — no element, no measurement, no pointer. A
 // test runs it without a DOM, and the pixels stay in the components.
 
-import type { Layout } from '../types/workbook.types'
-
-/**
- * Below this container width the grid collapses to one column. Read against the
- * grid's own box, not the viewport, so a dashboard in a narrow desk panel
- * collapses the same as one on a phone.
- */
-export const SINGLE_COLUMN_MAX_WIDTH = 768
+import type {
+	BreakpointKey,
+	Layout,
+	WorkbookDashboardItemLayout,
+} from '../types/workbook.types'
 
 /** Height of one grid row in px. */
 export const ROW_HEIGHT = 54
@@ -59,13 +56,13 @@ export function compactLayouts(layouts: Layout[]): Layout[] {
 	return placed
 }
 
-/** Stack every cell full width, in reading order. The one-column collapse. */
-export function stackLayouts(layouts: Layout[]): Layout[] {
+/** Stack every cell full width, in reading order. */
+export function stackLayouts(layouts: Layout[], columns = GRID_COLUMNS): Layout[] {
 	let y = 0
 	return [...layouts]
 		.sort((a, b) => a.y - b.y || a.x - b.x)
 		.map((item) => {
-			const placed = { ...item, x: 0, y, w: 1 }
+			const placed = { ...item, x: 0, y, w: columns }
 			y += item.h
 			return placed
 		})
@@ -122,7 +119,7 @@ export type GridPlacement = {
 }
 
 /**
- * Place every cell, given the grid's width.
+ * Place every cell of one breakpoint's layout.
  *
  * Keyed by identity rather than returned as a list, because the caller draws its
  * cells in the order its own items carry — the slot index has to keep meaning
@@ -130,17 +127,122 @@ export type GridPlacement = {
  */
 export function placeGrid(
 	layouts: Layout[],
-	options: { columns: number; width: number; verticalCompact?: boolean },
+	options: { columns: number; verticalCompact?: boolean },
 ): GridPlacement {
-	const single = options.width > 0 && options.width <= SINGLE_COLUMN_MAX_WIDTH
-	const placed = single
-		? stackLayouts(layouts)
-		: options.verticalCompact
-		  ? compactLayouts(layouts)
-		  : layouts
+	const placed = options.verticalCompact ? compactLayouts(layouts) : layouts
 
 	const cells: Record<string, Layout> = {}
 	for (const item of placed) cells[item.i] = item
 
-	return { columns: single ? 1 : options.columns, cells }
+	return { columns: options.columns, cells }
+}
+
+// ------------------------------------------------------------- breakpoints
+
+export type Breakpoint = {
+	key: BreakpointKey
+	/** The widest grid this layout is drawn on. The last row has no ceiling. */
+	maxWidth: number
+	/** Columns this layout places against. */
+	columns: number
+	/** What an author picking this layout to arrange is offered, untranslated. */
+	label: string
+	/** The same, by lucide name. */
+	icon: string
+	/** Build the layout nobody arranged, out of the next wider one. */
+	derive?: (layouts: Layout[], columns: number) => Layout[]
+}
+
+/**
+ * Every width a dashboard is laid out for, narrowest first.
+ *
+ * A new breakpoint is a row here, and a row is the whole of it: the grid picks
+ * the row its own box falls in, an author's drag is stored under that row's key,
+ * and an item with nothing stored under it is placed by `derive`. Nothing else
+ * in the app decides anything by width.
+ */
+export const BREAKPOINTS: Breakpoint[] = [
+	{
+		key: 'sm',
+		maxWidth: 600,
+		columns: GRID_COLUMNS,
+		label: 'Narrow',
+		icon: 'lucide-smartphone',
+		derive: stackLayouts,
+	},
+	{
+		key: 'lg',
+		maxWidth: Infinity,
+		columns: GRID_COLUMNS,
+		label: 'Wide',
+		icon: 'lucide-monitor',
+	},
+]
+
+/**
+ * The breakpoint every item stores a placement for, and the one the others are
+ * derived from. The widest: it is the layout an author arranges first, and the
+ * only one a dashboard written before there was more than one width holds.
+ */
+export const BASE_BREAKPOINT = BREAKPOINTS[BREAKPOINTS.length - 1]
+
+export function breakpointFor(width: number): Breakpoint {
+	// An unmeasured grid is not a narrow one. Collapsing on a width of zero
+	// would stack every card for a frame and lay their contents out twice.
+	if (width <= 0) return BASE_BREAKPOINT
+	return BREAKPOINTS.find((breakpoint) => width <= breakpoint.maxWidth) || BASE_BREAKPOINT
+}
+
+/**
+ * One breakpoint's layout, for every item, in the order the items came in.
+ *
+ * An item that stores a placement for this breakpoint gets it. An item that does
+ * not is placed by the breakpoint's `derive`, out of the layout it inherits from
+ * the next wider one — which is why a dashboard nobody has arranged for a narrow
+ * grid still reads on one, and why a card added on a wide grid turns up on the
+ * narrow one too.
+ */
+export function placementsFor(
+	items: WorkbookDashboardItemLayout[],
+	key: BreakpointKey,
+): Layout[] {
+	const index = BREAKPOINTS.findIndex((breakpoint) => breakpoint.key === key)
+	const breakpoint = BREAKPOINTS[index]
+	if (!breakpoint || breakpoint === BASE_BREAKPOINT) return items.map((item) => item.layout)
+
+	const inherited = placementsFor(items, BREAKPOINTS[index + 1].key)
+	const derived = breakpoint.derive
+		? breakpoint.derive(inherited, breakpoint.columns)
+		: inherited
+	const byId = new Map(derived.map((layout) => [layout.i, layout]))
+
+	const merged = items.map((item, position) => {
+		const stored = item.layouts?.[key]
+		if (!stored) return byId.get(item.layout.i) || inherited[position]
+		return { ...stored, i: item.layout.i }
+	})
+
+	// An item added after this breakpoint was arranged is placed among cells that
+	// know nothing about it. Settling drops whatever lands on something below it,
+	// and leaves every cell that clears the others where its author put it.
+	return resolveLayouts(merged, { verticalCompact: false })
+}
+
+/**
+ * Store where one item sits at one breakpoint. The only writer of either field.
+ *
+ * The widest breakpoint is stored on its own, in `layout`, so identity has one
+ * home: a narrower breakpoint stores a box and nothing else.
+ */
+export function writePlacement(
+	item: WorkbookDashboardItemLayout,
+	key: BreakpointKey,
+	layout: Layout,
+) {
+	if (key === BASE_BREAKPOINT.key) {
+		item.layout = layout
+		return
+	}
+	const { i, ...placement } = layout
+	item.layouts = { ...item.layouts, [key]: placement }
 }

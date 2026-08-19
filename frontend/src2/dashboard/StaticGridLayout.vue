@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useElementSize } from '@vueuse/core'
 import { computed, ref } from 'vue'
-import type { Layout } from '../types/workbook.types'
-import { GRID_COLUMNS, ROW_HEIGHT, placeGrid } from './grid_placement'
+import type { BreakpointKey, Layout, WorkbookDashboardItemLayout } from '../types/workbook.types'
+import { BREAKPOINTS, ROW_HEIGHT, breakpointFor, placeGrid, placementsFor } from './grid_placement'
 
 // The dashboard grid, drawn. It works out where every cell goes and puts it
 // there — no pointer, no measurement beyond its own width, and it never writes a
@@ -25,7 +25,20 @@ import { GRID_COLUMNS, ROW_HEIGHT, placeGrid } from './grid_placement'
 // and taking the prop lets the feed carry either grid without the page asking
 // which one it has.
 const props = defineProps<{
-	modelValue?: Layout[]
+	items?: WorkbookDashboardItemLayout[]
+	/**
+	 * Draw this breakpoint, whatever the grid measures. It is what an author
+	 * arranging one width inside a box of another is shown, and what lets one
+	 * page hold every breakpoint side by side. Left out, the grid picks the
+	 * breakpoint its own box falls in.
+	 */
+	breakpoint?: BreakpointKey
+	/**
+	 * Draw this layout instead of the one the items hold. It is how the author's
+	 * grid shows a drag in progress: mid-gesture the grid on screen is not the
+	 * grid the document stores, and only one of them may be drawn.
+	 */
+	layouts?: Layout[]
 	disabled?: boolean
 	verticalCompact?: boolean
 	/**
@@ -37,17 +50,20 @@ const props = defineProps<{
 	lifted?: { i: string; x: number; y: number }
 }>()
 
-const layouts = computed(() => props.modelValue || [])
-
 // Measured off the grid's own box rather than the window: an island sits in
 // whatever width the desk page gives it, which is not the viewport's.
 const container = ref<HTMLElement>()
 const { width } = useElementSize(container)
 
+const active = computed(
+	() => BREAKPOINTS.find((item) => item.key === props.breakpoint) || breakpointFor(width.value),
+)
+
+const layouts = computed(() => props.layouts || placementsFor(props.items || [], active.value.key))
+
 const placement = computed(() =>
 	placeGrid(layouts.value, {
-		columns: GRID_COLUMNS,
-		width: width.value,
+		columns: active.value.columns,
 		verticalCompact: props.verticalCompact ?? true,
 	}),
 )
@@ -125,6 +141,7 @@ const landingStyle = computed(() => {
 			<slot
 				name="item"
 				:index="index"
+				:layout="layout"
 				:i="layout.i"
 				:x="layout.x"
 				:y="layout.y"

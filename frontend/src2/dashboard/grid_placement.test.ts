@@ -1,10 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import type { Layout } from '../types/workbook.types'
-import { compactLayouts, placeGrid, resolveLayouts, stackLayouts } from './grid_placement'
+import type { Layout, WorkbookDashboardItemLayout } from '../types/workbook.types'
+import {
+	BASE_BREAKPOINT,
+	GRID_COLUMNS,
+	breakpointFor,
+	compactLayouts,
+	placeGrid,
+	placementsFor,
+	resolveLayouts,
+	stackLayouts,
+	writePlacement,
+} from './grid_placement'
 
 // A cell, named so a case reads as the grid it describes.
 function cell(i: string, x: number, y: number, w: number, h: number): Layout {
 	return { i, x, y, w, h }
+}
+
+// A dashboard item, reduced to the half of it a grid reads.
+function item(layout: Layout, layouts = {}): WorkbookDashboardItemLayout {
+	return { layout, layouts }
 }
 
 const WIDE = 1200
@@ -40,8 +55,8 @@ describe('compactLayouts', () => {
 
 describe('stackLayouts', () => {
 	it('gives every cell the full width, one under the other', () => {
-		const stacked = stackLayouts([cell('a', 0, 0, 6, 2), cell('b', 6, 0, 6, 3)])
-		expect(stacked).toEqual([cell('a', 0, 0, 1, 2), cell('b', 0, 2, 1, 3)])
+		const stacked = stackLayouts([cell('a', 0, 0, 6, 2), cell('b', 6, 0, 6, 3)], 12)
+		expect(stacked).toEqual([cell('a', 0, 0, 12, 2), cell('b', 0, 2, 12, 3)])
 	})
 
 	it('stacks in reading order, top row first and then left to right', () => {
@@ -133,49 +148,103 @@ describe('resolveLayouts', () => {
 
 describe('placeGrid', () => {
 	it('keys every cell by its identity, so the caller can draw in its own order', () => {
-		const placed = placeGrid([cell('a', 0, 0, 6, 2), cell('b', 6, 0, 6, 2)], {
-			columns: 12,
-			width: WIDE,
-		})
+		const placed = placeGrid([cell('a', 0, 0, 6, 2), cell('b', 6, 0, 6, 2)], { columns: 12 })
 		expect(Object.keys(placed.cells).sort()).toEqual(['a', 'b'])
 	})
 
-	it('collapses to one column on a narrow grid', () => {
-		const placed = placeGrid([cell('a', 0, 0, 6, 2), cell('b', 6, 0, 6, 2)], {
-			columns: 12,
-			width: NARROW,
-		})
-		expect(placed.columns).toBe(1)
-		expect(placed.cells.b).toEqual(cell('b', 0, 2, 1, 2))
-	})
-
-	it('keeps its columns on a wide grid', () => {
-		const placed = placeGrid([cell('a', 0, 0, 6, 2)], { columns: 12, width: WIDE })
+	it('places against the columns it is given', () => {
+		const placed = placeGrid([cell('a', 0, 0, 6, 2)], { columns: 12 })
 		expect(placed.columns).toBe(12)
 	})
 
 	it('closes the gaps when the dashboard asks for compaction', () => {
-		const placed = placeGrid([cell('a', 0, 7, 6, 2)], {
-			columns: 12,
-			width: WIDE,
-			verticalCompact: true,
-		})
+		const placed = placeGrid([cell('a', 0, 7, 6, 2)], { columns: 12, verticalCompact: true })
 		expect(placed.cells.a.y).toBe(0)
 	})
 
 	it('leaves the gaps where the dashboard does not', () => {
-		const placed = placeGrid([cell('a', 0, 7, 6, 2)], {
-			columns: 12,
-			width: WIDE,
-			verticalCompact: false,
-		})
+		const placed = placeGrid([cell('a', 0, 7, 6, 2)], { columns: 12, verticalCompact: false })
 		expect(placed.cells.a.y).toBe(7)
+	})
+})
+
+describe('breakpointFor', () => {
+	it('reads a narrow grid as the narrow breakpoint', () => {
+		expect(breakpointFor(NARROW).key).toBe('sm')
+	})
+
+	it('reads a wide grid as the widest breakpoint', () => {
+		expect(breakpointFor(WIDE)).toBe(BASE_BREAKPOINT)
 	})
 
 	// The grid reports zero before it has been measured. Collapsing then would
-	// draw one column for a frame and reflow, which reads as the page breaking.
-	it('draws its columns before the grid has been measured', () => {
-		const placed = placeGrid([cell('a', 0, 0, 6, 2)], { columns: 12, width: 0 })
-		expect(placed.columns).toBe(12)
+	// draw the narrow layout for a frame and reflow, which reads as a break.
+	it('reads an unmeasured grid as the widest breakpoint', () => {
+		expect(breakpointFor(0)).toBe(BASE_BREAKPOINT)
+	})
+})
+
+describe('placementsFor', () => {
+	it('gives the widest breakpoint the layout every item stores', () => {
+		const items = [item(cell('a', 0, 0, 6, 2)), item(cell('b', 6, 0, 6, 2))]
+		expect(placementsFor(items, BASE_BREAKPOINT.key)).toEqual([
+			cell('a', 0, 0, 6, 2),
+			cell('b', 6, 0, 6, 2),
+		])
+	})
+
+	it('derives a breakpoint nobody arranged from the one above it', () => {
+		const items = [item(cell('a', 0, 0, 6, 2)), item(cell('b', 6, 0, 6, 2))]
+		expect(placementsFor(items, 'sm')).toEqual([
+			cell('a', 0, 0, GRID_COLUMNS, 2),
+			cell('b', 0, 2, GRID_COLUMNS, 2),
+		])
+	})
+
+	it('gives an arranged item the placement it stores for that breakpoint', () => {
+		const items = [
+			item(cell('a', 0, 0, 6, 2), { sm: { x: 0, y: 0, w: 10, h: 4 } }),
+			item(cell('b', 6, 0, 6, 2), { sm: { x: 10, y: 0, w: 10, h: 4 } }),
+		]
+		expect(placementsFor(items, 'sm')).toEqual([cell('a', 0, 0, 10, 4), cell('b', 10, 0, 10, 4)])
+	})
+
+	// A card added after the narrow layout was arranged has nothing stored for
+	// it. It is placed below the arranged cells rather than on top of one.
+	it('drops an item nobody arranged clear of the ones somebody did', () => {
+		const items = [
+			item(cell('a', 0, 0, 6, 2), { sm: { x: 0, y: 0, w: 20, h: 4 } }),
+			item(cell('added', 6, 0, 6, 2)),
+		]
+		const placed = placementsFor(items, 'sm')
+		expect(placed[0]).toEqual(cell('a', 0, 0, 20, 4))
+		expect(placed[1].y).toBeGreaterThanOrEqual(4)
+	})
+
+	it('answers in the order the items came in, whatever the layout says', () => {
+		const items = [item(cell('below', 0, 4, 6, 2)), item(cell('above', 0, 0, 6, 2))]
+		expect(placementsFor(items, 'sm').map((layout) => layout.i)).toEqual(['below', 'above'])
+	})
+})
+
+describe('writePlacement', () => {
+	it('writes the widest breakpoint where every reader already looks', () => {
+		const target = item(cell('a', 0, 0, 6, 2))
+		writePlacement(target, BASE_BREAKPOINT.key, cell('a', 2, 3, 8, 4))
+		expect(target.layout).toEqual(cell('a', 2, 3, 8, 4))
+		expect(target.layouts).toEqual({})
+	})
+
+	it('writes a narrower breakpoint under its key, identity left behind', () => {
+		const target = item(cell('a', 0, 0, 6, 2))
+		writePlacement(target, 'sm', cell('a', 0, 6, 20, 3))
+		expect(target.layouts?.sm).toEqual({ x: 0, y: 6, w: 20, h: 3 })
+		expect(target.layout).toEqual(cell('a', 0, 0, 6, 2))
+	})
+
+	it('leaves the breakpoints it was not asked about alone', () => {
+		const target = item(cell('a', 0, 0, 6, 2), { sm: { x: 0, y: 0, w: 20, h: 2 } })
+		writePlacement(target, BASE_BREAKPOINT.key, cell('a', 4, 4, 6, 2))
+		expect(target.layouts?.sm).toEqual({ x: 0, y: 0, w: 20, h: 2 })
 	})
 })

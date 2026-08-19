@@ -1,12 +1,14 @@
 <script setup lang="ts">
+import { TabButtons } from 'frappe-ui'
 import { Edit3, Share2 } from 'lucide-vue-next'
-import { inject, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { __ } from '../translation'
 import type { WorkbookChart } from '../types/workbook.types'
 import type { Dashboard } from './dashboard'
 import DashboardChartSelectorDialog from './DashboardChartSelectorDialog.vue'
 import DashboardShareDialog from './DashboardShareDialog.vue'
 import { chartOptionsKey } from './authoring'
+import { BREAKPOINTS } from './grid_placement'
 
 // What the page offers to whoever may write it. The page draws this next to the
 // actions everyone gets, and draws nothing here for a reader who holds no
@@ -16,6 +18,18 @@ const charts = inject(chartOptionsKey, [] as WorkbookChart[])
 
 const showChartSelectorDialog = ref(false)
 const showShareDialog = ref(false)
+
+// One entry per breakpoint, widest first — the layout an author arranges first
+// reads first. A new width is a row in `BREAKPOINTS` and turns up here on its
+// own, so this switch cannot fall behind the layouts the grid can draw.
+const widths = computed(() =>
+	[...BREAKPOINTS].reverse().map((breakpoint) => ({
+		value: breakpoint.key,
+		icon: breakpoint.icon,
+		label: __(breakpoint.label),
+		tooltip: __('Arrange the {0} layout').replace('{0}', __(breakpoint.label).toLowerCase()),
+	})),
+)
 </script>
 
 <template>
@@ -41,6 +55,7 @@ const showShareDialog = ref(false)
 	</Button>
 
 	<template v-if="dashboard.editing">
+		<TabButtons v-model="dashboard.arranging" :options="widths" />
 		<Button variant="outline" icon-left="plus" @click="showChartSelectorDialog = true">
 			{{ __('Chart') }}
 		</Button>

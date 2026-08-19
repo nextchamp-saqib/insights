@@ -257,7 +257,14 @@ def can_edit(doc) -> bool:
 
 def present_item(item: dict) -> dict:
     """One dashboard item, reduced to what a viewer renders it from."""
-    presented = {"type": item.get("type"), "layout": item.get("layout")}
+    presented = {
+        "type": item.get("type"),
+        "layout": item.get("layout"),
+        # what an author arranged for a narrower grid. Absent for most items:
+        # a breakpoint nobody arranged is derived from the widest one, client
+        # side, where the width that decides it is known
+        "layouts": item.get("layouts") or {},
+    }
 
     if item.get("type") == "chart":
         presented["chart"] = item.get("chart")
