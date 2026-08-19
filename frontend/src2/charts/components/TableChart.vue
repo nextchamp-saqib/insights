@@ -54,6 +54,7 @@ function onDrilldown(column: QueryResultColumn, row: QueryResultRow) {
 				:column-widths="props.columnWidths"
 				:text-wrap="props.textWrap"
 				:column-formats="props.columnFormats"
+				:cell-link="props.cellLink"
 				:replace-nulls-with-zeros="true"
 			/>
 		</div>

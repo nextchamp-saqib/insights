@@ -72,6 +72,16 @@ def todo_operations(prefix=TODO_PREFIX):
     ]
 
 
+def has_role_operations():
+    """A query over a child table — a `tabHas Role` row belongs to a User."""
+    return [
+        {
+            "type": "source",
+            "table": {"type": "table", "data_source": "Site DB", "table_name": "tabHas Role"},
+        },
+    ]
+
+
 def dimension(column_name, data_type="String", **extra):
     return {
         "column_name": column_name,
@@ -97,6 +107,16 @@ def average(measure_name="Average Order"):
         "column_name": "idx",
         "aggregation": "avg",
         "data_type": "Decimal",
+    }
+
+
+def bar_config_over(column_name):
+    """The same bar chart, grouped by a column of the table under test."""
+    return {
+        "limit": 50,
+        "x_axis": {"dimension": dimension(column_name)},
+        "y_axis": {"series": []},
+        "order_by": [],
     }
 
 
@@ -804,9 +824,11 @@ class TestDrillAPI(InsightsIntegrationTestCase):
             drill_stack=[records_level(filters=[equals("status", "Open")])],
         )
 
-        self.assertEqual(result["record_link"], {"doctype": "ToDo", "column": "name"})
+        # the row's own document, and the Link fields beside it on the same row
+        self.assertEqual(result["record_links"]["name"], "ToDo")
+        self.assertEqual(result["record_links"]["allocated_to"], "User")
 
-    def test_a_renamed_name_column_carries_no_record_link(self):
+    def test_a_renamed_name_column_still_names_the_record(self):
         renamed = [
             *todo_operations(),
             {
@@ -824,11 +846,48 @@ class TestDrillAPI(InsightsIntegrationTestCase):
             drill_stack=[records_level(filters=[equals("status", "Open")])],
         )
 
-        # the convention missed, so the client is told nothing rather than told
-        # a record that might be the wrong one
-        self.assertNotIn("record_link", result)
+        # a rename says what the column is called, not what it holds, so the link
+        # follows it rather than giving up on it
+        self.assertEqual(result["record_links"]["todo_id"], "ToDo")
+        self.assertNotIn("name", result["record_links"])
 
-    def test_only_a_records_level_carries_a_record_link(self):
+    def test_a_dropped_name_column_carries_no_record_link(self):
+        dropped = [
+            *todo_operations(),
+            {"type": "select", "column_names": ["status", "priority"]},
+        ]
+        _, chart, dashboard = self.make_content(operations=dropped)
+
+        result = self.drill(
+            DESK_USER,
+            chart.name,
+            dashboard.name,
+            drill_stack=[records_level(filters=[equals("status", "Open")])],
+        )
+
+        # nothing on the row names a document, so the client is told nothing
+        # rather than told a record that might be the wrong one
+        self.assertNotIn("record_links", result)
+
+    def test_a_child_row_does_not_name_itself(self):
+        _, chart, dashboard = self.make_content(
+            operations=has_role_operations(),
+            config=bar_config_over("parenttype"),
+        )
+
+        result = self.drill(
+            DESK_USER,
+            chart.name,
+            dashboard.name,
+            drill_stack=[records_level(filters=[equals("parenttype", "User")])],
+        )
+
+        # a child row has no form of its own — the desk routes the parent, which
+        # the row cannot name. The Link fields beside it still name theirs
+        self.assertNotIn("name", result["record_links"])
+        self.assertEqual(result["record_links"]["role"], "Role")
+
+    def test_only_a_records_level_carries_record_links(self):
         _, chart, dashboard = self.make_content()
 
         result = self.drill(
@@ -838,7 +897,7 @@ class TestDrillAPI(InsightsIntegrationTestCase):
             drill_stack=[breakdown_level("priority", filters=[equals("status", "Open")])],
         )
 
-        self.assertNotIn("record_link", result)
+        self.assertNotIn("record_links", result)
 
     # dashboard filters
 

@@ -1,6 +1,7 @@
 import type { Component } from 'vue'
 import type { ChartConfig, ChartType } from '../../types/chart.types'
 import type { QueryResult, QueryResultRow } from '../../types/query.types'
+import type { RecordLinks } from '../record_link'
 
 // The contract every chart type is adapted against. `index.ts` states it in
 // prose; this file states it in types.
@@ -18,6 +19,12 @@ export type ChartAdapterInput = {
 	 * rather than read off them.
 	 */
 	sparklineResult?: QueryResult
+	/**
+	 * Which result columns name a desk document, when the rows are documents.
+	 * Only a filler that draws the values themselves — the grid — has anywhere
+	 * to put them.
+	 */
+	recordLinks?: RecordLinks
 	/** Printed by the chrome. It belongs to the Chart, not to its config. */
 	title?: string
 	/**

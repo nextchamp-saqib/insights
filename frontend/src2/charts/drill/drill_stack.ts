@@ -29,6 +29,7 @@ import type {
 	QueryResultRow,
 } from '../../types/query.types'
 import type { DrillDownTarget } from '../adapter'
+import type { RecordLinks } from '../record_link'
 
 // ---------------------------------------------------------------------------
 // The wire shapes. Everything the server is told, and nothing it is not.
@@ -441,8 +442,8 @@ export type DrillLevelData = {
 	additive?: boolean
 	/** how many rows there are behind the bounded few that came back */
 	total_row_count?: number
-	/** only on a records level, and only when the convention held */
-	record_link?: { doctype: string; column: string }
+	/** only on a records level, and only for the columns that name a document */
+	record_links?: RecordLinks
 	/**
 	 * The pipeline the server sliced for this level, and the connection it ran
 	 * on. The authoring door alone answers with them.

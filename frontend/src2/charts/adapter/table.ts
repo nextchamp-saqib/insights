@@ -1,6 +1,7 @@
 import { column, rawRowOf } from '../../query/helpers'
 import type { FormatGroupArgs } from '../../query/components/formatting_utils'
 import type { TableChartConfig } from '../../types/chart.types'
+import { recordUrl } from '../record_link'
 import type {
 	DataFormat,
 	OrderByArgs,
@@ -52,6 +53,9 @@ export type TableChartProps = {
 	textWrap?: Record<string, boolean>
 	/** A rate Measure holds a fraction, so the table is told to print it as one. */
 	columnFormats?: Record<string, DataFormat>
+	/** Where a cell opens its document, for the one column that names one. */
+	// eslint-disable-next-line no-unused-vars
+	cellLink?: (column: QueryResultColumn, row: QueryResultRow) => string | undefined
 }
 
 export function adaptTableChart(input: ChartAdapterInput): ChartFiller | undefined {
@@ -87,6 +91,20 @@ export function adaptTableChart(input: ChartAdapterInput): ChartFiller | undefin
 
 	const columnFormats = columnFormatsOf(config)
 	if (Object.keys(columnFormats).length) props.columnFormats = columnFormats
+
+	// A cell of a grid holds a document as often as it holds a value, and only
+	// the server can tell which. The link is drawn in the cell itself: a grid has
+	// no room for a column of controls, and no row to put one on when the row is
+	// a group.
+	const links = input.recordLinks
+	if (links && Object.keys(links).length) {
+		props.cellLink = (column, formattedRow) => {
+			const doctype = links[column.name]
+			if (!doctype) return
+			const row = rawRowOf(result, formattedRow)
+			return row ? recordUrl(doctype, row[column.name]) : undefined
+		}
+	}
 
 	return {
 		component: TableChart,

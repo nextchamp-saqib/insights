@@ -37,6 +37,7 @@ from insights.insights.doctype.insights_chart_v3.chart_query import (
     column_granularity,
     config_errors,
 )
+from insights.insights.doctype.insights_chart_v3.record_link import record_links
 from insights.insights.doctype.insights_dashboard_v3.insights_dashboard_v3 import route_filters
 from insights.permissions import check_app_permission
 
@@ -100,6 +101,9 @@ def get_chart_data(
         "columns": result["columns"],
         "rows": result["rows"],
         "granularity": column_granularity(operations),
+        # the same field the viewer response carries, so the builder's card draws
+        # the links a reader will see
+        **({"record_links": links} if (links := record_links(operations, result["columns"])) else {}),
         **({"sparkline": sparkline} if sparkline else {}),
         # the same field the viewer response carries, so a card reads its drill
         # candidates off whichever feed drew it

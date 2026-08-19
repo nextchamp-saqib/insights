@@ -148,6 +148,44 @@ describe('a run in flight', () => {
 	})
 })
 
+describe('the record a row names', () => {
+	// The server says which column names a document; the grid draws the link in
+	// that column's own cells, and nowhere else.
+	const withLink = (input: ChartAdapterInput) => ({
+		...input,
+		recordLinks: { category: 'Sales Order' },
+	})
+
+	it('links the named column to the document the raw row names', () => {
+		const input = tableChart({ rows: ['category'], values: ['revenue'] })
+		const props = adapt(withLink(input)).props
+
+		expect(props.cellLink(input.result.columns[0], input.result.formattedRows[0])).toBe(
+			`/app/sales-order/${encodeURIComponent(input.result.rows[0].category as string)}`,
+		)
+	})
+
+	it('leaves every other column a value', () => {
+		const input = tableChart({ rows: ['category'], values: ['revenue'] })
+		const props = adapt(withLink(input)).props
+
+		expect(
+			props.cellLink(input.result.columns[1], input.result.formattedRows[0]),
+		).toBeUndefined()
+	})
+
+	it('draws no link at all where the server named no column', () => {
+		expect(propsOf({ rows: ['category'], values: ['revenue'] }).cellLink).toBeUndefined()
+	})
+
+	it('names no record from a row the result does not carry', () => {
+		const input = tableChart({ rows: ['category'], values: ['revenue'] })
+		const props = adapt(withLink(input)).props
+
+		expect(props.cellLink(input.result.columns[0], { category: 'elsewhere' })).toBeUndefined()
+	})
+})
+
 describe('drilling into a cell', () => {
 	it('names the column and the row behind it', () => {
 		const input = tableChart({ rows: ['category'], values: ['revenue'] })

@@ -23,6 +23,7 @@ from frappe import _
 
 from insights.insights.doctype.insights_chart_v3.chart_drill import drill_data, drill_dimensions
 from insights.insights.doctype.insights_chart_v3.chart_query import column_granularity
+from insights.insights.doctype.insights_chart_v3.record_link import record_links
 from insights.insights.doctype.insights_dashboard_v3.insights_dashboard_v3 import route_filters
 from insights.insights.doctype.insights_data_source_v3.data_authority import data_authority_of
 from insights.permissions import check_app_permission
@@ -90,10 +91,16 @@ def get_chart_data(
         adhoc_filters=adhoc_filters,
     )
 
+    operations = doc.get_operations()
+    # a grid draws values, and a value cannot say it names a document. Every
+    # chart is asked, and a chart that groups its rows is answered with nothing
+    links = record_links(operations, result["columns"])
+
     return {
         "columns": result["columns"],
         "rows": result["rows"],
-        "granularity": column_granularity(doc.get_operations()),
+        "granularity": column_granularity(operations),
+        **({"record_links": links} if links else {}),
         # the series a windowed card's sparkline is drawn from. No other chart
         # carries the key at all
         **({"sparkline": result["sparkline"]} if result.get("sparkline") else {}),

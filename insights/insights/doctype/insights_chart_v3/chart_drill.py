@@ -31,10 +31,9 @@ from frappe import _
 from frappe.utils import add_to_date, get_datetime
 
 from insights.insights.doctype.insights_chart_v3.chart_query import count_of_rows
+from insights.insights.doctype.insights_chart_v3.record_link import record_links
 from insights.insights.doctype.insights_data_source_v3.data_authority import data_authority_of
 from insights.insights.doctype.insights_data_source_v3.ibis_utils import get_columns_from_schema
-
-DATA_SOURCE = "Insights Data Source v3"
 
 RECORDS = "records"
 BREAKDOWN = "breakdown"
@@ -227,9 +226,9 @@ def drill_data(
         "executed_at": frappe.utils.now(),
     }
 
-    link = _record_link(sliced, result["columns"]) if action["type"] == RECORDS else None
-    if link:
-        response["record_link"] = link
+    links = record_links(sliced, result["columns"]) if action["type"] == RECORDS else {}
+    if links:
+        response["record_links"] = links
 
     if with_operations:
         response["operations"] = drilled
@@ -615,53 +614,3 @@ def _surface_column(name: str, surface: list[dict]) -> dict:
             return column
 
     frappe.throw(_("{0} is not a column this chart can be drilled by").format(name or "?"))
-
-
-# the record behind a row
-
-
-def _record_link(operations: list[dict], columns: list[dict]) -> dict | None:
-    """The desk record a drilled row opens, when the row can name one.
-
-    By convention only: the pipeline starts at a site-DB doctype table and the
-    table's `name` column reaches the result unrenamed. Anything else — a
-    renamed or dropped `name`, an external source, a union — carries no link at
-    all, because a wrong record is worse than no control.
-    """
-    if not any(column["name"] == "name" for column in columns):
-        return None
-
-    table = _base_table(operations, set())
-    if not table:
-        return None
-
-    data_source, table_name = table
-    if not frappe.db.get_value(DATA_SOURCE, data_source, "is_site_db"):
-        return None
-    if not table_name.startswith("tab"):
-        return None
-
-    doctype = table_name[len("tab") :]
-    return {"doctype": doctype, "column": "name"} if frappe.db.exists("DocType", doctype) else None
-
-
-def _base_table(operations: list[dict], seen: set) -> tuple[str, str] | None:
-    """The one table this pipeline reads, followed through the queries it is built on."""
-    for operation in operations:
-        if operation.get("type") in ("union", "sql", "code"):
-            return None
-
-    source = next((o for o in operations if o.get("type") == "source"), None)
-    table = (source or {}).get("table") or {}
-
-    if table.get("type") == "table":
-        return table.get("data_source"), table.get("table_name")
-
-    if table.get("type") != "query" or table.get("query_name") in seen:
-        return None
-
-    query = table["query_name"]
-    seen.add(query)
-    return _base_table(
-        frappe.parse_json(frappe.db.get_value("Insights Query v3", query, "operations")) or [], seen
-    )

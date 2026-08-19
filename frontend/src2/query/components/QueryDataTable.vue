@@ -27,6 +27,9 @@ const props = defineProps<{
 	enableDrillDown?: boolean
 	enableNewColumn?: boolean
 	onSortChange?: (column_name: string, sort_order: SortDirection) => void
+	// what a cell's value opens, asked of the raw row — the caller reads the
+	// value that was queried, not the one that was printed
+	getCellLink?: (column: QueryResultColumn, row: QueryResultRow) => string | undefined
 }>()
 
 const emit = defineEmits<{ segmentClick: [click: ChartSegmentClick] }>()
@@ -101,6 +104,11 @@ function onDrillDown(column: QueryResultColumn, formattedRow: QueryResultRow, ev
 		target: { column: column.name, row },
 		point: { x: event.clientX, y: event.clientY },
 	})
+}
+
+function cellLink(column: QueryResultColumn, formattedRow: QueryResultRow) {
+	const row = rawRowOf(props.query.result, formattedRow)
+	return row ? props.getCellLink?.(column, row) : undefined
 }
 
 // Export dialog state
@@ -193,6 +201,7 @@ function onFilterChange(filters: Record<string, string>) {
 		:on-sort-change="props.enableSort ? onSortChange : undefined"
 		:on-column-rename="props.enableColumnRename ? onRename : undefined"
 		:on-drilldown="props.enableDrillDown ? onDrillDown : undefined"
+		:cell-link="props.getCellLink ? cellLink : undefined"
 		:enable-new-column="props.enableNewColumn"
 		v-bind="$attrs"
 	>
@@ -201,11 +210,6 @@ function onFilterChange(filters: Record<string, string>) {
 		</template>
 		<template #header-suffix="{ column }">
 			<slot name="header-suffix" :column="column" />
-		</template>
-		<!-- only rendered when a caller fills it, so the table stays the width of
-		     its columns everywhere else -->
-		<template v-if="$slots['row-action']" #row-action="{ row }">
-			<slot name="row-action" :row="row" />
 		</template>
 		<template #footer-right-actions>
 			<slot name="footer-actions" />

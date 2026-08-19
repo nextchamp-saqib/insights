@@ -52,6 +52,7 @@ const adapted = computed(() => {
 		chart_type: chart_type.value,
 		config: config.value,
 		result: result.value,
+		recordLinks: props.chart.recordLinks,
 		sparklineResult: props.chart.sparklineResult,
 		title: props.chart.doc.title,
 		readonly: props.readonly,

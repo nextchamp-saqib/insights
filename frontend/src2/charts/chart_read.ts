@@ -21,6 +21,7 @@ import type { AdhocFilters, Operation, QueryResult } from '../types/query.types'
 import type { ChartType } from '../types/chart.types'
 import type { InsightsChartv3, WorkbookDashboardItem } from '../types/workbook.types'
 import { fetchDrillData } from './drill/drill_api'
+import type { RecordLinks } from './record_link'
 import type { DrillDimension, DrillLevel, DrillLevelData, DrillSubject } from './drill/drill_stack'
 import { normalizeChartConfig } from './helpers'
 import { labelWindowRows } from './window'
@@ -67,6 +68,9 @@ type ChartDataResponse = {
 	// rows because a menu that has to ask first puts a round trip in the one place
 	// latency is felt — between the click and the menu.
 	drill?: { dimensions: DrillDimension[] }
+	// which result columns name a desk document, when the rows are documents. A
+	// grid draws them as links; every other chart type ignores them.
+	record_links?: RecordLinks
 }
 
 export type ChartFeed = {
@@ -104,6 +108,8 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 	const configErrors = ref<string[]>([])
 	// the columns a segment click may break this card down by
 	const drillDimensions = ref<DrillDimension[]>([])
+	// the columns of these rows that name a document, when any of them do
+	const recordLinks = ref<RecordLinks>()
 
 	const ready = ref(false)
 	const executing = ref(true)
@@ -188,6 +194,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 			operations.value = response.operations || []
 			routedFilters.value = response.adhoc_filters
 			drillDimensions.value = response.drill?.dimensions || []
+			recordLinks.value = response.record_links
 			executedAt.value = result.value.lastExecutedAt
 			ready.value = true
 		} catch (error) {
@@ -224,6 +231,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 		routedFilters,
 		configErrors,
 		drillDimensions,
+		recordLinks,
 		drillSubject,
 
 		ready,
