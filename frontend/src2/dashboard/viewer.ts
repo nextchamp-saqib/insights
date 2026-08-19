@@ -11,7 +11,7 @@
 // instead. Above the fetch the page is the same either way.
 
 import { call } from 'frappe-ui'
-import { markRaw, reactive, type Component } from 'vue'
+import { markRaw, reactive, toValue, watch, type Component, type MaybeRefOrGetter } from 'vue'
 import type { FilterType } from '../helpers/constants'
 import { navigate } from '../helpers/navigation'
 import { isFilterApplied } from '../query/components/filter_utils'
@@ -169,8 +169,16 @@ export type DashboardSource = {
 /** The same feed, from the one surface that always holds the writing half. */
 export type AuthoredDashboardSource = DashboardSource & { authoring: DashboardAuthoring }
 
-/** The read feed: a saved dashboard, named to the server. */
-export function useSavedDashboard(dashboard: string): DashboardSource {
+/**
+ * The read feed: a saved dashboard, named to the server.
+ *
+ * The name is read reactively, because a surface can outlive the dashboard it
+ * was mounted for. The desk island keeps one Vue app across a route change and
+ * hands down the next reference as a prop, and the SPA's dashboard route reuses
+ * its component when only the parameter moves. Both would otherwise sit on the
+ * first dashboard they fetched.
+ */
+export function useSavedDashboard(dashboard: MaybeRefOrGetter<string>): DashboardSource {
 	const source = reactive<DashboardSource>({
 		loading: true,
 		unavailable: false,
@@ -183,28 +191,58 @@ export function useSavedDashboard(dashboard: string): DashboardSource {
 		grid: markRaw(StaticGridLayout),
 	})
 
-	// A dashboard that is missing and one the viewer may not read answer the same,
-	// so there is one page state for both.
-	fetchDashboard(dashboard)
-		.then((doc) => {
-			source.name = doc.name
-			source.title = doc.title
-			source.items = doc.items
-			source.verticalCompact = doc.vertical_compact_layout
-			// a reader comes back to the filters they left, over the defaults the
-			// author set. Nothing on the server holds per-user view state
-			source.filters = { ...defaultFilters(doc.items), ...readFilters(doc.name) }
-			source.saveFilters = (filters) => writeFilters(doc.name, filters)
-			if (doc.can_edit && doc.workbook) {
-				const workbook = doc.workbook
-				source.openBuilder = () => navigate(`/workbook/${workbook}/dashboard/${doc.name}`)
-			}
-			if (doc.can_duplicate) {
-				source.duplicate = duplicateCapability(doc.name)
-			}
-		})
-		.catch(() => (source.unavailable = true))
-		.finally(() => (source.loading = false))
+	// What the page is waiting for. A reply for anything else is a reply to a
+	// dashboard the reader has already left, and writing it would draw the wrong
+	// one — two fetches can land out of order.
+	let awaited: string
+
+	function load(name: string) {
+		awaited = name
+		source.loading = true
+		source.unavailable = false
+		source.name = ''
+		source.title = ''
+		source.items = []
+		source.filters = {}
+		// Every capability closes over the dashboard it was built for, so the next
+		// one starts without them rather than with the last one's.
+		source.saveFilters = undefined
+		source.openBuilder = undefined
+		source.duplicate = undefined
+
+		// A dashboard that is missing and one the viewer may not read answer the
+		// same, so there is one page state for both.
+		fetchDashboard(name)
+			.then((doc) => {
+				if (awaited !== name) return
+				source.name = doc.name
+				source.title = doc.title
+				source.items = doc.items
+				source.verticalCompact = doc.vertical_compact_layout
+				// a reader comes back to the filters they left, over the defaults the
+				// author set. Nothing on the server holds per-user view state
+				source.filters = { ...defaultFilters(doc.items), ...readFilters(doc.name) }
+				source.saveFilters = (filters) => writeFilters(doc.name, filters)
+				if (doc.can_edit && doc.workbook) {
+					const workbook = doc.workbook
+					source.openBuilder = () =>
+						navigate(`/workbook/${workbook}/dashboard/${doc.name}`)
+				}
+				if (doc.can_duplicate) {
+					source.duplicate = duplicateCapability(doc.name)
+				}
+			})
+			.catch(() => {
+				if (awaited !== name) return
+				source.unavailable = true
+			})
+			.finally(() => {
+				if (awaited !== name) return
+				source.loading = false
+			})
+	}
+
+	watch(() => toValue(dashboard), load, { immediate: true })
 
 	return source
 }

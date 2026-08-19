@@ -8,7 +8,7 @@ import { __ } from '../translation'
 // name of the tab it is open in.
 const props = defineProps<{ name: string }>()
 
-const source = useSavedDashboard(props.name)
+const source = useSavedDashboard(() => props.name)
 
 const crumbs = [{ label: __('Dashboards'), route: '/dashboards' }]
 

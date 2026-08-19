@@ -9,7 +9,7 @@ import { useDesk } from './desk'
 // they are on, and that desk draws its page controls subtle.
 const props = defineProps<{ dashboard: string; filters?: ViewerFilters }>()
 
-const source = useSavedDashboard(props.dashboard)
+const source = useSavedDashboard(() => props.dashboard)
 
 const desk = useDesk()
 
