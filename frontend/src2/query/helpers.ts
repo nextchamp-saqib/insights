@@ -200,7 +200,45 @@ export function rawRowOf(
 	return row
 }
 
+/** How a date reads in a cell, a tooltip or a header — spelled out in full. */
+const LONG_DATE_FORMATS: Record<string, string> = {
+	second: 'MMMM D, YYYY h:mm:ss A',
+	minute: 'MMMM D, YYYY h:mm A',
+	hour: 'MMMM D, YYYY h:00 A',
+	day: 'MMMM D, YYYY',
+	week: 'MMM Do, YYYY',
+	month: 'MMMM, YYYY',
+	year: 'YYYY',
+	quarter: '[Q]Q, YYYY',
+}
+
+/**
+ * How the same date reads on an axis. A category axis draws a label per column,
+ * so a spelled-out month is dropped by the overlap rule and the reader is left
+ * with a bare grid. Everything is abbreviated, and the year is kept: a category
+ * carries no neighbours to read it against.
+ */
+const AXIS_DATE_FORMATS: Record<string, string> = {
+	second: 'MMM D, YYYY h:mm:ss A',
+	minute: 'MMM D, YYYY h:mm A',
+	hour: 'MMM D, YYYY h A',
+	day: 'MMM D, YYYY',
+	week: 'MMM D, YYYY',
+	month: 'MMM YYYY',
+	year: 'YYYY',
+	quarter: '[Q]Q YYYY',
+}
+
 export function getFormattedDate(date: string, granularity: string) {
+	return formatDateBy(date, granularity, LONG_DATE_FORMATS)
+}
+
+/** `getFormattedDate`, abbreviated for an axis tick. */
+export function getAxisDate(date: string, granularity: string) {
+	return formatDateBy(date, granularity, AXIS_DATE_FORMATS)
+}
+
+function formatDateBy(date: string, granularity: string, formats: Record<string, string>) {
 	if (!date) return ''
 
 	const isTimeOnlyValue = /^\d{1,2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(date)
@@ -230,19 +268,8 @@ export function getFormattedDate(date: string, granularity: string) {
 		return `FY ${startYear}-${String(endYear).slice(-2)}`
 	}
 
-	const dayjsFormat: Record<string, string> = {
-		second: 'MMMM D, YYYY h:mm:ss A',
-		minute: 'MMMM D, YYYY h:mm A',
-		hour: 'MMMM D, YYYY h:00 A',
-		day: 'MMMM D, YYYY',
-		week: 'MMM Do, YYYY',
-		month: 'MMMM, YYYY',
-		year: 'YYYY',
-		quarter: '[Q]Q, YYYY',
-	}
-
-	if (!dayjsFormat[granularity]) return date
-	return dayjs(date).format(dayjsFormat[granularity])
+	if (!formats[granularity]) return date
+	return dayjs(date).format(formats[granularity])
 }
 
 export function getMeasures(columns: QueryResultColumn[]): Measure[] {

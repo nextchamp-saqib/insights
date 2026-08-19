@@ -60,14 +60,14 @@ describe('a heatmap', () => {
 			measure: 'revenue',
 		}).props
 
-		expect(props.xFormat('2024-03-01 00:00:00')).toBe('March, 2024')
-		expect(props.yFormat).toBeUndefined()
+		expect(props.xAxis.format('2024-03-01 00:00:00')).toBe('Mar 2024')
+		expect(props.yAxis).toBeUndefined()
 	})
 
 	it('leaves a plain category to print itself', () => {
 		const props = adapt({ x: 'day', y: 'hour', measure: 'orders' }).props
-		expect(props.xFormat).toBeUndefined()
-		expect(props.yFormat).toBeUndefined()
+		expect(props.xAxis).toBeUndefined()
+		expect(props.yAxis).toBeUndefined()
 	})
 
 	it('draws nothing until the Chart names all three columns', () => {
