@@ -220,6 +220,24 @@ describe('the comparison', () => {
 		expect(card.deltaCaption).toBe('vs plan')
 	})
 
+	it('leaves the unit off the gap, because the value line already carries it', () => {
+		// The card reads "67 days / 45 days": a third "days" on the delta row
+		// says nothing and pushes the caption out of the card.
+		const card = cardsOf({
+			values: [
+				{
+					name: 'Days of Inventory',
+					readings: [67],
+					suffix: ' days',
+					comparison: { source: 'constant', value: 97, show: 'delta', label: 'vs plan' },
+				},
+			],
+		})[0]
+		expect(card.suffix).toBe(' days')
+		expect(card.delta).toBe(-30)
+		expect(card.deltaSuffix).toBeUndefined()
+	})
+
 	it("prints a percent measure's gap in points, not percent", () => {
 		// 42% against a 42.8% target is a gap of 0.8 points, not -0.8%.
 		const card = cardsOf({

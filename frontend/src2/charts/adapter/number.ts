@@ -112,9 +112,10 @@ function readingOf(
 				if (prefix) card.deltaPrefix = prefix
 				// A percent Measure's gap is points, not percent: the reading and its
 				// comparison are both percentages, so the shift between them is a
-				// change in percentage points, not a further percent change.
+				// change in percentage points, not a further percent change. Every
+				// other unit already stands on the value line above, and repeating
+				// it here only crowds the delta row out of its single line.
 				if (percent) card.deltaSuffix = ' ' + __('pts')
-				else if (unit) card.deltaSuffix = unit
 			} else {
 				card.delta = percentChange(latest, against)
 				card.deltaSuffix = '%'
