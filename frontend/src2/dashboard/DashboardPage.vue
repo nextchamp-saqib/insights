@@ -39,7 +39,15 @@ const pageTitle = computed(() => props.source.title || __('Dashboard'))
 
 // The trail that led here, drawn in this header because a page box is all a
 // surface gives us: the shim hands down the ancestors it can vouch for.
-const crumbs = computed(() => [...(props.breadcrumbs || []), { label: pageTitle.value }])
+//
+// An ancestor named like the page is dropped. A module dashboard carries its
+// module's name so that it wins the reference the old dashboard had, which puts
+// the same word in the workspace crumb and in the title: `Stock / Stock`. The
+// way back up is still in the sidebar.
+const crumbs = computed(() => [
+	...(props.breadcrumbs || []).filter((crumb) => crumb.label !== pageTitle.value),
+	{ label: pageTitle.value },
+])
 
 watch(pageTitle, (title) => emit('title', title), { immediate: true })
 </script>
