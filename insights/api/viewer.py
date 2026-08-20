@@ -178,13 +178,24 @@ def routed_filters(chart: str, dashboard: str | None, filters: dict | None) -> d
 
 
 @frappe.whitelist(allow_guest=True)
-def get_filter_values(dashboard: str, filter_name: str, search_term: str | None = None):
+def get_filter_values(
+    dashboard: str,
+    filter_name: str,
+    search_term: str | None = None,
+    filters: dict | None = None,
+):
     """The values a filter on this dashboard offers.
 
     A viewer names the filter; the column behind it is looked up here, because the
     link that names it is exactly what never crosses the boundary. The lookup runs
     under the authority of the chart the filter is linked to, so the values on
     offer are the ones that user is allowed to see.
+
+    `filters` is the other filters' current state, keyed by filter name — the
+    same shape `routed_filters` above turns into a chart's adhoc filters. It goes
+    through the same `route_filters`, with this filter left out of its own list:
+    narrowing its own offer by what it currently holds would make picking a
+    second value impossible.
     """
     doc = frappe.get_doc(DASHBOARD, resolve_for_read(DASHBOARD, dashboard))
     source = doc.filter_source(filter_name)
@@ -192,10 +203,12 @@ def get_filter_values(dashboard: str, filter_name: str, search_term: str | None 
         not_available()
     chart, query, column = source
 
+    adhoc_filters = route_filters(doc.items, chart, filters, exclude_filter=filter_name)
+
     query_doc = frappe.get_cached_doc(QUERY, query)
 
     with data_authority_of(frappe.get_doc(CHART, chart)):
-        return query_doc.distinct_column_values(column, search_term=search_term)
+        return query_doc.distinct_column_values(column, search_term=search_term, adhoc_filters=adhoc_filters)
 
 
 def resolve_chart(chart: str, dashboard: str | None) -> str:

@@ -279,13 +279,25 @@ export function fetchDashboard(dashboard: string): Promise<ViewerDashboard> {
 	return call('insights.api.viewer.get_dashboard', { dashboard })
 }
 
-/** The values a filter offers. The column behind it is the server's to know. */
+/**
+ * The values a filter offers. The column behind it is the server's to know.
+ *
+ * `filters` is the other filters' current state — the same shape a card's own
+ * `filters` prop holds. The server routes it and leaves this filter out of its
+ * own list, so the offer narrows to what the rest of the grid currently holds.
+ */
 export function fetchFilterValues(
 	dashboard: string,
 	filter_name: string,
 	search_term?: string,
+	filters?: ViewerFilters,
 ): Promise<string[]> {
-	return call('insights.api.viewer.get_filter_values', { dashboard, filter_name, search_term })
+	return call('insights.api.viewer.get_filter_values', {
+		dashboard,
+		filter_name,
+		search_term,
+		filters,
+	})
 }
 
 /** Where a duplicate landed: the workbook it made, and the dashboard inside it. */

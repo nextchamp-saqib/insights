@@ -67,7 +67,8 @@ watch(draft, () => {
 			:filter-type="props.item.filter_type!"
 			:icon="props.item.icon"
 			:values-provider="
-				(search: string) => fetchFilterValues(props.dashboard, filterName, search)
+				(search: string) =>
+					fetchFilterValues(props.dashboard, filterName, search, props.filters)
 			"
 			v-model:operator="draft.operator"
 			v-model:value="draft.value"
