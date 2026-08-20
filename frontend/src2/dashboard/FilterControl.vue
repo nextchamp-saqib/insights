@@ -36,6 +36,11 @@ const applied = computed(() => isFilterApplied(props.filterType, operator.value,
 // this build has no CSS for, and that one falls back to the type icon.
 const iconClass = computed(() => filterIconClass(props.icon))
 
+function clear() {
+	operator.value = undefined
+	value.value = undefined
+}
+
 const label = computed(() => {
 	if (!applied.value) return props.filterName
 	if (value.value === undefined) return `${props.filterName} ${operator.value}`
@@ -45,12 +50,13 @@ const label = computed(() => {
 </script>
 
 <template>
-	<div class="h-8 [&>div:first-child]:h-full">
+	<div class="relative h-8 [&>div:first-child]:h-full">
 		<Popover class="h-full" match-trigger-width>
 			<template #trigger>
 				<Button
 					variant="outline"
 					class="flex h-full w-full !justify-start overflow-hidden text-sm [&>span]:truncate"
+					:class="applied ? 'pr-8' : ''"
 				>
 					<template #prefix>
 						<span v-if="iconClass" :class="iconClass" class="h-4 w-4 flex-shrink-0" />
@@ -77,5 +83,17 @@ const label = computed(() => {
 				</div>
 			</template>
 		</Popover>
+
+		<!-- Outside the popover trigger: a click here clears the filter rather
+		than opening the selector. -->
+		<Button
+			v-if="applied"
+			variant="ghost"
+			size="xs"
+			icon="lucide-x"
+			:tooltip="`Clear ${props.filterName}`"
+			class="absolute top-1/2 right-1 -translate-y-1/2"
+			@click="clear"
+		/>
 	</div>
 </template>
