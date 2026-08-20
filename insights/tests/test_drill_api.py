@@ -31,6 +31,8 @@ AUTHOR_TODOS = {
     CLOSED_HIGH: ("Closed", "High"),
 }
 OUTSIDER_TODO = f"{TODO_PREFIX} outsider open high"
+# those three by the number a ranked records page puts first, biggest first
+BY_WEIGHT = sorted(AUTHOR_TODOS, key=len, reverse=True)
 
 # the todos the ordered tests break down: dated, spread unevenly over one year,
 # so chronological order and a ranking by the measure disagree about every
@@ -72,6 +74,23 @@ def todo_operations(prefix=TODO_PREFIX):
     ]
 
 
+def weighted_operations():
+    """The same query with a number per row, which is what a records page ranks by.
+
+    `tabToDo` carries no measurable column of its own, so the tests that turn on
+    the ranking derive one the fixtures already differ on.
+    """
+    return [
+        *todo_operations(),
+        {
+            "type": "mutate",
+            "new_name": "weight",
+            "data_type": "Integer",
+            "expression": {"type": "expression", "expression": "description.length()"},
+        },
+    ]
+
+
 def has_role_operations():
     """A query over a child table — a `tabHas Role` row belongs to a User."""
     return [
@@ -96,6 +115,16 @@ def count(measure_name="Todos"):
         "measure_name": measure_name,
         "column_name": "name",
         "aggregation": "count",
+        "data_type": "Integer",
+    }
+
+
+def weight(measure_name="Weight"):
+    """A measure over a number, which is the only kind a records page can rank by."""
+    return {
+        "measure_name": measure_name,
+        "column_name": "weight",
+        "aggregation": "sum",
         "data_type": "Integer",
     }
 
@@ -380,6 +409,39 @@ class TestDrillAPI(InsightsIntegrationTestCase):
             )
 
         self.assertEqual(len(result["rows"]), 3)
+
+    # the order a records page comes back in
+
+    def test_a_records_page_is_ranked_by_the_measure_that_was_clicked(self):
+        """One page is shown, so it holds the rows that made the number biggest."""
+        _, chart, dashboard = self.make_content(
+            operations=weighted_operations(), config=bar_config([weight()])
+        )
+
+        result = self.drill(
+            DESK_USER, chart.name, dashboard.name, drill_stack=[records_level(measure="Weight")]
+        )
+
+        self.assertEqual([row["description"] for row in result["rows"]], BY_WEIGHT)
+
+    def test_a_records_page_that_names_no_measure_follows_the_chart_s_own(self):
+        _, chart, dashboard = self.make_content(
+            operations=weighted_operations(), config=bar_config([weight()])
+        )
+
+        result = self.drill(DESK_USER, chart.name, dashboard.name, drill_stack=[records_level()])
+
+        self.assertEqual([row["description"] for row in result["rows"]], BY_WEIGHT)
+
+    def test_a_measure_with_no_number_under_it_leaves_the_page_unranked(self):
+        """Counting rows ranks none of them, and a name is no size."""
+        _, chart, dashboard = self.make_content(config=bar_config([count()]))
+
+        result = self.drill(
+            DESK_USER, chart.name, dashboard.name, drill_stack=[records_level(measure="Todos")]
+        )
+
+        self.assertEqual(self.descriptions(result), sorted(AUTHOR_TODOS))
 
     # the order a breakdown comes back in
     #

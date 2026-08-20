@@ -55,6 +55,11 @@ DIMENSION_TYPES = ("String", "Date", "Datetime", "Time")
 # number moved, not which of its slices is biggest.
 ORDERED_TYPES = ("Date", "Datetime", "Time")
 
+# the column types a page of records can be ranked by. A measure over anything
+# else — a count of names, an expression that names no column at all — leaves
+# no row that is the biggest one
+RANKABLE_TYPES = ("Integer", "Decimal")
+
 # The aggregations whose group values add up to the value of the whole. Only
 # these let a level be read as parts of one total: two groups' averages do not
 # average, and two distinct counts do not add. An expression measure names no
@@ -199,7 +204,8 @@ def drill_data(
             breakdown = _breakdown(chart, segment, action, step, surface, adhoc_filters)
             page_size = BREAKDOWN_SIZE
 
-        drilled = [*segment, *breakdown["operations"]] if breakdown else segment
+        tail = breakdown["operations"] if breakdown else _records_order(_clicked(last), step, surface)
+        drilled = [*segment, *tail]
         query = chart.get_query(operations=drilled)
         # a level is fetched once and then kept by the dialog for as long as it
         # is open, so back and crumb pops never come here. What does come here
@@ -293,6 +299,31 @@ def _action(level: dict) -> dict:
 def _clicked(level: dict) -> str | None:
     """The measure the click landed on, as the level names it."""
     return (level.get("action") or {}).get("measure")
+
+
+def _records_order(clicked: str | None, step: dict, surface: list[dict]) -> list[dict]:
+    """Rank the rows of a records level by the number that was clicked.
+
+    One page of the segment is shown, so which rows land on it is the level's
+    answer: the ones that made the number biggest, ranked by the column the
+    measure aggregated. A click that names no measure follows the chart's first,
+    and a measure with nothing rankable underneath it leaves the page in
+    whatever order the engine hands it back, as it was before.
+    """
+    measures = _measures(step)
+    measure = _measure_named(clicked, measures) or (measures[0] if measures else None)
+    column = (measure or {}).get("column_name")
+    rankable = any(c["name"] == column and c["type"] in RANKABLE_TYPES for c in surface)
+    if not rankable:
+        return []
+
+    return [
+        {
+            "type": "order_by",
+            "column": {"type": "column", "column_name": column},
+            "direction": "desc",
+        }
+    ]
 
 
 def _breakdown(chart, segment: list[dict], action: dict, step: dict, surface: list[dict], adhoc_filters):
