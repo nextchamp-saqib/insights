@@ -77,6 +77,34 @@ def _windowed_config(span="month to date", shift=None):
     }
 
 
+def _two_reading_config():
+    """A card of two readings, for the options list to measure against."""
+    config = _windowed_config()
+    config.pop("window")
+    config["number_columns"].append(
+        {
+            "aggregation": "sum",
+            "column_name": "line_cogs",
+            "data_type": "Decimal",
+            "measure_name": "COGS MTD",
+        }
+    )
+    return config
+
+
+def _against_measure(column, name):
+    """A comparison reading its number off a measure of its own."""
+    return {
+        "source": "measure",
+        "measure": {
+            "aggregation": "sum",
+            "column_name": column,
+            "data_type": "Decimal",
+            "measure_name": name,
+        },
+    }
+
+
 def _sparkline_config(span="month to date", shift=None):
     """The same card, with the trend inside its window turned on."""
     return {**_windowed_config(span, shift), "sparkline": True}
@@ -261,6 +289,43 @@ class TestChartDerivation(unittest.TestCase):
 
         operations = derive_operations("Number", "sales-invoice-lines", config)
         self.assertEqual(len(operations[1]["filters"]), 2)
+
+    def test_a_name_naming_two_measures_is_reported(self):
+        """Every reading, target and comparison is read back off one result by
+        name, so two measures under one name would hand one card a number the
+        other one asked for."""
+        config = _two_reading_config()
+        config["number_column_options"] = [
+            {"comparison": _against_measure("base_net_amount", "Last Month")},
+            {"comparison": _against_measure("line_cogs", "Last Month")},
+        ]
+        errors = config_errors("Number", "sales-invoice-lines", config)
+        self.assertTrue(errors)
+        self.assertIn("Last Month", errors[0])
+
+        config["number_column_options"][1]["comparison"]["measure"]["measure_name"] = "COGS Last Month"
+        self.assertEqual(config_errors("Number", "sales-invoice-lines", config), [])
+
+    def test_a_comparison_cannot_rename_a_readings_fold_either(self):
+        config = _two_reading_config()
+        config["number_column_options"] = [
+            {"comparison": _against_measure("line_cogs", "Revenue MTD")},
+        ]
+        self.assertTrue(config_errors("Number", "sales-invoice-lines", config))
+
+    def test_two_readings_measured_against_one_measure_share_one_column(self):
+        """One name naming one fold twice is one column, however many cards read it."""
+        config = _two_reading_config()
+        config["number_column_options"] = [
+            {"comparison": _against_measure("base_net_amount", "Last Month")},
+            {"comparison": _against_measure("base_net_amount", "Last Month")},
+        ]
+        self.assertEqual(config_errors("Number", "sales-invoice-lines", config), [])
+
+        operations = derive_operations("Number", "sales-invoice-lines", config)
+        summarize = next(op for op in operations if op["type"] == "summarize")
+        names = [m["measure_name"] for m in summarize["measures"]]
+        self.assertEqual(names, ["Revenue MTD", "COGS MTD", "Last Month"])
 
     def test_a_card_with_no_window_derives_what_it_derived_before(self):
         """A window is the only thing that writes a card's filter and its sort."""

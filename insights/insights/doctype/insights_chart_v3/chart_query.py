@@ -23,6 +23,7 @@ operations.
 """
 
 import copy
+import json
 
 from frappe import _
 
@@ -164,6 +165,7 @@ def config_errors(chart_type: str, query: str, config: dict | None) -> list[str]
         if not _named_measures(config.get("number_columns")):
             errors.append(_("Number column is required"))
         errors += _window_errors(config)
+        errors += _measure_name_errors(config)
 
     if chart_type == "Donut":
         if not (config.get("label_column") or {}).get("column_name"):
@@ -405,19 +407,59 @@ def _number_measures(config: dict) -> list[dict]:
 
     A target or a comparison read off a measure is a column of the card's own
     result, so the summarize has to carry it even though no card is drawn
-    behind it.
+    behind it. Two readings measured against the same measure share one column,
+    which is why the list is deduped by name — `_measure_name_errors` is what
+    guarantees a shared name means a shared measure.
     """
-    measures = _named_measures(config.get("number_columns"))
-    named = {m["measure_name"] for m in measures}
+    measures = []
+    named = set()
+    for measure in _all_number_measures(config):
+        if measure["measure_name"] not in named:
+            named.add(measure["measure_name"])
+            measures.append(measure)
 
+    return measures
+
+
+def _all_number_measures(config: dict):
+    """Every measure the card's config names, duplicates included: the readings
+    first, then each reading's target and comparison."""
+    yield from _named_measures(config.get("number_columns"))
     for options in config.get("number_column_options") or []:
         for slot in ("target", "comparison"):
             measure = ((options or {}).get(slot) or {}).get("measure") or {}
-            if measure.get("measure_name") and measure["measure_name"] not in named:
-                named.add(measure["measure_name"])
-                measures.append(measure)
+            if measure.get("measure_name"):
+                yield measure
 
-    return measures
+
+def _measure_name_errors(config: dict) -> list[str]:
+    """The names that name two different measures on one card, empty when none do.
+
+    A name is a column of the card's one result, and the card reads every
+    reading, target and comparison back by name. Two measures under one name
+    collapse to one column, so every card that named the other one silently
+    reads a number it never asked for.
+    """
+    computations = {}
+    errors = []
+    for measure in _all_number_measures(config):
+        name = measure["measure_name"]
+        computation = _computation(measure)
+        if name in computations and computations[name] != computation:
+            errors.append(_('"{0}" names two different measures. Rename one.').format(name))
+        computations.setdefault(name, computation)
+
+    return errors
+
+
+def _computation(measure: dict) -> str:
+    """What a measure computes, minus how it is displayed.
+
+    A comparison picked to match a reading names the same fold without carrying
+    the reading's display options, and the two are still one column.
+    """
+    keys = ("expression", "column_name", "aggregation")
+    return json.dumps({key: measure.get(key) for key in keys}, sort_keys=True, default=str)
 
 
 def _add_donut_operation(operations: list[dict], config: dict):
