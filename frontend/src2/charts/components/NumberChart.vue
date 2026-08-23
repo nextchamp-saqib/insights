@@ -122,7 +122,7 @@ function onDoubleClick(measure_name: string) {
 					color,
 				} in cards"
 				:key="measure_name"
-				class="flex max-h-[140px] items-center gap-2 overflow-hidden rounded bg-surface-base px-6 pt-5 border border-outline-gray-2 cursor-pointer"
+				class="flex max-h-[140px] items-center gap-2 overflow-hidden rounded-4 bg-surface-base px-6 pt-5 border border-outline-gray-2 cursor-pointer"
 				:class="config.comparison ? 'pb-6' : 'pb-3'"
 				@dblclick="onDoubleClick(measure_name)"
 			>

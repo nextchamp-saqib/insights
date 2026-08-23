@@ -3,7 +3,7 @@
 		<template #target="{ togglePopover }">
 			<div class="relative flex items-center justify-between">
 				<div
-					class="absolute left-2 top-[6px] z-10 h-4 w-4 rounded shadow-sm"
+					class="absolute left-2 top-[6px] z-10 h-4 w-4 rounded-4 shadow-sm"
 					@click="togglePopover"
 					:style="{
 						background: value
@@ -15,7 +15,7 @@
 				></div>
 				<Input
 					type="text"
-					class="dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:focus:bg-zinc-700 w-full rounded-md text-sm text-gray-700"
+					class="dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:focus:bg-zinc-700 w-full rounded-5 text-sm text-gray-700"
 					placeholder="Select Color"
 					inputClass="pl-8 pr-6"
 					:modelValue="value"

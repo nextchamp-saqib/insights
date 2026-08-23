@@ -83,7 +83,7 @@ function addNewColumn() {
 
 <template>
 	<div
-		class="relative flex w-full flex-1 flex-col overflow-hidden rounded border border-outline-gray-2"
+		class="relative flex w-full flex-1 flex-col overflow-hidden rounded-4 border border-outline-gray-2"
 	>
 		<QueryDataTable
 			:query="query"
@@ -109,7 +109,7 @@ function addNewColumn() {
 						<template #trigger="{ isOpen }">
 							<Button
 								variant="ghost"
-								class="rounded-sm"
+								class="rounded-1"
 								:class="isOpen ? '!bg-surface-gray-2' : ''"
 							>
 								<template #icon>

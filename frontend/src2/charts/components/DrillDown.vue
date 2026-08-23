@@ -68,7 +68,7 @@ const groupBy = debounce(_groupBy, 50)
 					<QueryToolbar>
 						<QueryExecutionStatus />
 					</QueryToolbar>
-					<div class="flex flex-1 overflow-hidden rounded border border-outline-gray-2">
+					<div class="flex flex-1 overflow-hidden rounded-4 border border-outline-gray-2">
 						<QueryDataTable
 							:enable-sort="true"
 							:enable-drill-down="true"
@@ -95,7 +95,7 @@ const groupBy = debounce(_groupBy, 50)
 					</div>
 				</div>
 				<div
-					class="relative flex h-full w-[17rem] flex-shrink-0 overflow-y-auto rounded border border-outline-gray-2"
+					class="relative flex h-full w-[17rem] flex-shrink-0 overflow-y-auto rounded-4 border border-outline-gray-2"
 				>
 					<QueryOperations />
 				</div>

@@ -9,7 +9,8 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ".*json$|.*txt$|.*csv|.*md|.*svg"
+        # a .patch is data: a context line for a blank line is a single space
+        exclude: ".*json$|.*txt$|.*csv|.*md|.*svg|.*patch$"
       - id: check-merge-conflict
       - id: check-ast
       - id: check-json

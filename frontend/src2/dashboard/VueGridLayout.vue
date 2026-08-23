@@ -25,7 +25,7 @@
 					:w="layout.w"
 					:h="layout.h"
 				>
-					<pre class="h-full w-full rounded bg-surface-base p-4 shadow-sm">
+					<pre class="h-full w-full rounded-4 bg-surface-base p-4 shadow-sm">
 						{{ { i: layout.i, x: layout.x, y: layout.y, w: layout.w, h: layout.h } }}
 					</pre
 					>

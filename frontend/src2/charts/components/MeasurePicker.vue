@@ -213,7 +213,7 @@ function handleRemove() {
 							{{ props.label }}
 						</div>
 						<button
-							class="flex h-7 w-full items-center justify-between gap-2 rounded bg-surface-gray-2 py-1 px-2 text-base transition-colors hover:bg-surface-gray-3 focus:ring-2 focus:ring-outline-gray-3"
+							class="flex h-7 w-full items-center justify-between gap-2 rounded-4 bg-surface-gray-2 py-1 px-2 text-base transition-colors hover:bg-surface-gray-3 focus:ring-2 focus:ring-outline-gray-3"
 						>
 							<div class="flex flex-1 items-center gap-2 overflow-hidden truncate">
 								<span v-if="measure.measure_name">
@@ -227,7 +227,7 @@ function handleRemove() {
 
 				<template #default="{ isOpen, toggle: togglePopover }">
 					<div
-						class="relative mt-1 overflow-hidden rounded-lg bg-surface-base p-1.5 text-base shadow-2xl"
+						class="relative mt-1 overflow-hidden rounded-6 bg-surface-base p-1.5 text-base shadow-2xl"
 					>
 						<template v-if="columnMeasure && !expressionMeasure">
 							<span
@@ -257,7 +257,7 @@ function handleRemove() {
 									<div
 										v-for="option in aggregationOptions"
 										:key="option.value"
-										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded px-2.5 text-base hover:bg-surface-gray-2"
+										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded-4 px-2.5 text-base hover:bg-surface-gray-2"
 										@click.prevent.stop="
 											() => {
 												if (!columnMeasure) return
@@ -287,7 +287,7 @@ function handleRemove() {
 									<div
 										v-for="option in filteredColumnOptions"
 										:key="option.value"
-										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded px-2.5 text-base hover:bg-surface-gray-2"
+										class="flex h-7 flex-shrink-0 cursor-pointer items-center justify-between rounded-4 px-2.5 text-base hover:bg-surface-gray-2"
 										@click.prevent.stop="
 											() => {
 												;(measure as ColumnMeasure).column_name =

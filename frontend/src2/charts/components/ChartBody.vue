@@ -250,7 +250,7 @@ async function onNumberChartDrillDown(column: any, row: any) {
 		     server accepted. -->
 		<div
 			v-if="!props.readonly && chart.configErrors.length"
-			class="flex flex-shrink-0 flex-col gap-0.5 rounded-t border border-b-0 border-outline-gray-2 bg-surface-amber-1 px-3 py-1.5"
+			class="flex flex-shrink-0 flex-col gap-0.5 rounded-t-4 border border-b-0 border-outline-gray-2 bg-surface-amber-1 px-3 py-1.5"
 		>
 			<p v-for="error in chart.configErrors" :key="error" class="text-p-sm text-ink-amber-3">
 				{{ error }}
@@ -260,7 +260,7 @@ async function onNumberChartDrillDown(column: any, row: any) {
 		<div class="min-h-0 w-full flex-1">
 			<BaseChart
 				v-if="state === 'chart' && eChartOptions"
-				class="rounded bg-surface-base py-1 border border-outline-gray-2"
+				class="rounded-4 bg-surface-base py-1 border border-outline-gray-2"
 				:class="props.chart.doc.chart_type == 'Map' ? '[&>div:last-child]:p-4' : ''"
 				:title="props.chart.doc.title"
 				:options="eChartOptions"
@@ -283,12 +283,12 @@ async function onNumberChartDrillDown(column: any, row: any) {
 			     a dashboard fills in card by card and the grid should hold its shape -->
 			<div
 				v-else-if="state === 'loading' && props.readonly"
-				class="h-full w-full animate-pulse rounded border border-outline-gray-2 bg-surface-gray-2"
+				class="h-full w-full animate-pulse rounded-4 border border-outline-gray-2 bg-surface-gray-2"
 			/>
 
 			<div
 				v-else
-				class="flex h-full w-full flex-col overflow-hidden rounded border border-outline-gray-2 bg-surface-base"
+				class="flex h-full w-full flex-col overflow-hidden rounded-4 border border-outline-gray-2 bg-surface-base"
 			>
 				<ChartTitle v-if="state === 'empty' && chart.doc.title" :title="chart.doc.title" />
 				<div class="flex flex-1 flex-col items-center justify-center gap-2 p-2">
