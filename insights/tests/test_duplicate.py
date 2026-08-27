@@ -13,7 +13,7 @@ from insights.api.standard_content import duplicate_dashboard as duplicate_throu
 from insights.api.standard_content import duplicate_workbook as duplicate_workbook_through_the_api
 from insights.api.standard_content import get_standard_content
 from insights.duplicate import duplicate_dashboard
-from insights.insights.doctype.insights_data_source_v3.data_authority import get_authority_user_for
+from insights.permission_user import permission_user_for
 from insights.resolver import ContentNotAvailableError, resolve
 from insights.standard_content import sync_app_content as sync
 from insights.tests.base import InsightsIntegrationTestCase
@@ -228,8 +228,8 @@ class TestDuplicateToEdit(InsightsIntegrationTestCase):
         self.assertEqual(copies[CHART].data_authority, "Author")
         # but the author it means is the copy's owner, so the copy can never show
         # rows the person who made it could not already reach
-        self.assertEqual(get_authority_user_for(DT.CHART, self.standard(CHART).name), "Administrator")
-        self.assertEqual(get_authority_user_for(DT.CHART, copies[CHART].name), AUTHOR)
+        self.assertEqual(permission_user_for(self.standard(CHART)), "Administrator")
+        self.assertEqual(permission_user_for(copies[CHART]), AUTHOR)
 
     # ------------------------------------------------------- who may duplicate
 

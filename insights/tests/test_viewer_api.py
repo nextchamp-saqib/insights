@@ -4,8 +4,8 @@ from unittest.mock import patch
 import frappe
 
 from insights.api.viewer import get_chart, get_chart_data, get_dashboard, get_filter_values
-from insights.insights.doctype.insights_data_source_v3.data_authority import data_authority_of
 from insights.insights.doctype.insights_data_source_v3.insights_data_source_v3 import db_connections
+from insights.permission_user import permission_user, permission_user_for
 from insights.resolver import ContentNotAvailableError
 from insights.tests.base import InsightsIntegrationTestCase
 from insights.tests.factories import DT, as_user, create_user, delete_users, delete_workbooks
@@ -484,7 +484,7 @@ class TestViewerAPI(InsightsIntegrationTestCase):
 
         with as_user(DESK_USER), db_connections():
             values = get_filter_values(dashboard=dashboard.name, filter_name="Description")
-            with data_authority_of(frappe.get_doc(DT.CHART, chart.name)):
+            with permission_user(permission_user_for(frappe.get_doc(DT.CHART, chart.name))):
                 count = query_doc.count_rows()
 
         self.assertEqual(sorted(values), sorted(AUTHOR_TODOS))

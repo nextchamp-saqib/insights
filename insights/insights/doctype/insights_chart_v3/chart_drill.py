@@ -32,8 +32,8 @@ from frappe.utils import add_to_date, get_datetime
 
 from insights.insights.doctype.insights_chart_v3.chart_query import count_of_rows
 from insights.insights.doctype.insights_chart_v3.record_link import record_links
-from insights.insights.doctype.insights_data_source_v3.data_authority import data_authority_of
 from insights.insights.doctype.insights_data_source_v3.ibis_utils import get_columns_from_schema
+from insights.permission_user import permission_user, permission_user_for
 
 RECORDS = "records"
 BREAKDOWN = "breakdown"
@@ -165,7 +165,7 @@ def drill_dimensions(chart, operations: list[dict] | None = None) -> list[dict]:
     if index is None:
         return []
 
-    with data_authority_of(chart):
+    with permission_user(permission_user_for(chart)):
         return _dimensions_on(_surface(chart, operations, index))
 
 
@@ -192,7 +192,7 @@ def drill_data(
     step = operations[index]
     sliced = operations[:index]
 
-    with data_authority_of(chart):
+    with permission_user(permission_user_for(chart)):
         surface = _surface(chart, operations, index)
 
         last = drill_stack[-1]

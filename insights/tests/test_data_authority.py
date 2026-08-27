@@ -6,13 +6,9 @@ import ibis
 
 from insights.api import run_doc_method as insights_run_doc_method
 from insights.api.workbooks import update_share_permissions
-from insights.insights.doctype.insights_data_source_v3.data_authority import (
-    data_authority_of,
-    get_authority_user,
-    get_authority_user_for,
-)
 from insights.insights.doctype.insights_data_source_v3.insights_data_source_v3 import db_connections
 from insights.insights.doctype.insights_table_v3.insights_table_v3 import apply_user_permissions
+from insights.permission_user import get_permission_user, permission_user_for
 from insights.tests.base import InsightsIntegrationTestCase
 from insights.tests.factories import DT, as_user, create_user, delete_users, delete_workbooks
 
@@ -157,7 +153,7 @@ class TestDataAuthority(InsightsIntegrationTestCase):
         self.assertEqual(chart.data_authority, "Viewer")
 
         with as_user(VIEWER):
-            self.assertEqual(get_authority_user_for(DT.CHART, chart.name), VIEWER)
+            self.assertEqual(permission_user_for(frappe.get_doc(DT.CHART, chart.name)), VIEWER)
 
     def test_viewer_authority_filters_rows_per_session_user(self):
         self.set_authority("Viewer")
@@ -180,7 +176,7 @@ class TestDataAuthority(InsightsIntegrationTestCase):
                 result = chart.get_data(force=True)
 
             self.assertEqual(frappe.session.user, VIEWER)
-            self.assertEqual(get_authority_user(), VIEWER)
+            self.assertEqual(get_permission_user(), VIEWER)
 
         self.assertEqual(self.descriptions(result), sorted(AUTHOR_TODOS))
 
@@ -201,8 +197,8 @@ class TestDataAuthority(InsightsIntegrationTestCase):
 
         # the seam reads the declaration off the stored document, so it holds even
         # when it is handed a document built out of the request payload
-        with as_user(VIEWER), data_authority_of(frappe.get_doc(forged)) as authority_user:
-            self.assertEqual(authority_user, VIEWER)
+        with as_user(VIEWER):
+            self.assertEqual(permission_user_for(frappe.get_doc(forged)), VIEWER)
 
     def test_request_argument_cannot_flip_declared_authority(self):
         self.set_authority("Viewer")

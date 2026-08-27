@@ -32,7 +32,7 @@ Two things are deliberately not carried over the same way:
   is not a way to re-publish someone else's audience.
 - **`data_authority` does come along, but the authority *user* changes.** The
   authority is how the content is meant to run, so it is copied as declared. The
-  user it resolves to is the document owner (see `data_authority.py`), and the
+  user it resolves to is the document owner (see `insights.permission_user`), and the
   copy's owner is the duplicator — so an `Author` chart in a copy runs under the
   person who duplicated it, never under whoever owned the original. A copy can
   therefore never show rows its owner could not already reach.

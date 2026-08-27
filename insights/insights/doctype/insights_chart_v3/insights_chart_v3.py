@@ -10,8 +10,8 @@ from insights.insights.doctype.insights_chart_v3.chart_query import (
     derive_operations,
     sparkline_operations,
 )
-from insights.insights.doctype.insights_data_source_v3.data_authority import data_authority_of
 from insights.insights.doctype.insights_query_v3.insights_query_v3 import import_query
+from insights.permission_user import permission_user, permission_user_for
 from insights.utils import deep_convert_dict_to_dict
 
 QUERY = "Insights Query v3"
@@ -102,7 +102,7 @@ class InsightsChartv3(Document):
         """
         chart = frappe.get_doc(self.doctype, self.name)
         query = chart.get_query()
-        with data_authority_of(chart):
+        with permission_user(permission_user_for(chart)):
             result = query.execute(
                 force=force,
                 page=page,

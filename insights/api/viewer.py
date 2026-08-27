@@ -25,7 +25,7 @@ from insights.insights.doctype.insights_chart_v3.chart_drill import drill_data, 
 from insights.insights.doctype.insights_chart_v3.chart_query import column_granularity
 from insights.insights.doctype.insights_chart_v3.record_link import record_links
 from insights.insights.doctype.insights_dashboard_v3.insights_dashboard_v3 import route_filters
-from insights.insights.doctype.insights_data_source_v3.data_authority import data_authority_of
+from insights.permission_user import permission_user, permission_user_for
 from insights.permissions import check_app_permission
 from insights.resolver import CHART, DASHBOARD, ContentNotAvailableError, resolve, resolve_for_read
 
@@ -207,7 +207,7 @@ def get_filter_values(
 
     query_doc = frappe.get_cached_doc(QUERY, query)
 
-    with data_authority_of(frappe.get_doc(CHART, chart)):
+    with permission_user(permission_user_for(frappe.get_doc(CHART, chart))):
         return query_doc.distinct_column_values(column, search_term=search_term, adhoc_filters=adhoc_filters)
 
 

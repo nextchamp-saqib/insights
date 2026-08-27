@@ -161,12 +161,25 @@ class IbisQueryBuilder:
 
     @cached_property
     def saved_references(self):
-        """The references stored on this query, which `validate` authorised.
+        """The references this execution already carries authorisation for.
 
         Read from the row, not from the document being built: that one may have
         come from a request body, which authorises nothing.
+
+        Two rows answer, because two kinds of document reach here under a name. A
+        saved query carries the dependencies `validate` authorised. A chart runs a
+        query document it mints from its config under the chart's own name, and
+        what that pipeline sources is the chart's stored `query` link, which
+        `check_chart_query_access` authorised when it was written.
         """
-        return set(get_direct_dependencies(self.doc.get("name")))
+        name = self.doc.get("name")
+        references = set(get_direct_dependencies(name))
+
+        chart_query = frappe.db.get_value("Insights Chart v3", name, "query")
+        if chart_query:
+            references.add(chart_query)
+
+        return references
 
     def check_query_reference(self, query_name):
         """A saved reference is authorised. Anything else is checked now."""
