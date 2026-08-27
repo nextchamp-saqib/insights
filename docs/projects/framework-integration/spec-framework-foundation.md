@@ -1,6 +1,11 @@
 # Spec: framework-side island foundation
 
-Status: ready-for-agent
+Status: shipped — the `ui_islands` registry, `frappe.ui.mount_island`, the mount
+contract, the Vite preset and the renderer bridge. The runtime design below did
+not ship and is superseded: there is no runtime artifact, no import map and no
+shared runtime stylesheet. An app bundles its own island, and framework owns a
+name, a URL and a `mount(el, context)` export. Read
+`apps/frappe/ui/island/decisions/` for the design that shipped.
 Target: `apps/frappe`, framework v16, behind a site flag.
 
 This spec covers only the framework-side deliverables. The Insights-side work

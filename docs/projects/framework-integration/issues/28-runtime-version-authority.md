@@ -82,3 +82,14 @@ Options, with what each costs:
 
 Whatever is chosen, ticket 07's wording needs amending: "runtime skew is
 unreachable" is now known to be false as stated.
+
+## Comments
+
+2026-08-27 — the question dissolved. Framework ships no runtime, so there is no
+closure to walk and no import map to publish. An island is a self-contained ES
+module that the app builds and bundles, from the app's own lockfile, so one
+bundle holds one copy of each package and no second authority can arbitrate a
+version. Framework no longer depends on frappe-ui at all. See
+`apps/frappe/ui/island/decisions/0001-an-app-bundles-its-own-island.md`.
+
+This ticket now has nothing left to settle. Close it rather than answer it.

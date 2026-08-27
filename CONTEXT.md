@@ -134,9 +134,9 @@ _Avoid_: unknown table, stray table
 
 **Island**:
 An app-provided, self-contained UI unit that the framework mounts into a host page
-(desk or a Vue-frontend app) — shadow-root isolated, linked to the framework-provided
-shared runtime. Declared via the `ui_islands` hook; Insights ships `insights.dashboard`
-and `insights.chart`.
+(desk or a Vue-frontend app) — shadow-root isolated, and bundled by the app, so it
+carries its own Vue and frappe-ui. Declared via the `ui_islands` hook; Insights
+ships `insights.dashboard` and `insights.chart`.
 _Avoid_: widget, block, embed (embed = the public iframe-sharing feature)
 
 **Chrome**:

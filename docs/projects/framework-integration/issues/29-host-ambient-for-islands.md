@@ -91,3 +91,14 @@ exception that proves it, since an asset is the runtime's to carry, not the
 host's.
 
 Unchanged: this is still unratified, and the icon sprite still has only a floor.
+
+2026-08-27 — one candidate is gone. "**The runtime carries it**" has no
+mechanism behind it any more: an app bundles its own island and ships its own
+stylesheet, so there is no shared artifact for an asset to ride on
+(`apps/frappe/ui/island/decisions/0001-an-app-bundles-its-own-island.md`). Icons
+stop being the exception that proves the rule. Insights' island sheet spells out
+the 112 lucide names a filter can wear, and pays 198 kB of masked SVG for them —
+which is what carrying an asset per app now costs.
+
+Two candidates are left: `desk` carries it, or the island asks. The rule the
+three instances point at is unchanged.
