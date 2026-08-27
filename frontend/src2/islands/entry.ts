@@ -2,6 +2,7 @@
 // mount shell. One module, because an entry that set this up itself would be a
 // second copy of it, and the two would drift.
 
+import { mountVueIsland } from '@framework/ui/island'
 import { frappeRequest, setConfig } from 'frappe-ui'
 import type { App } from 'vue'
 import { APP_PATH } from '../app_path'
@@ -51,7 +52,7 @@ setNavigationProvider({
 export async function mountIsland(component: any, el: HTMLElement, context: Record<string, any>) {
 	await session.initialize().catch(() => {})
 
-	return window.frappe.ui.mount_vue_island(el, {
+	return mountVueIsland(el, {
 		...context,
 		component,
 		configure: (app: App) => registerGlobalComponents(app),

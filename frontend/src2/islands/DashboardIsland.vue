@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { useDesk } from '@framework/ui/island'
 import { computed } from 'vue'
 import DashboardPage from '../dashboard/DashboardPage.vue'
 import { useSavedDashboard, type ViewerFilters } from '../dashboard/viewer'
-import { useDesk } from './desk'
 
 // Where a dashboard sits on a desk page. `DashboardPage` shows everything. This
 // carries what only desk knows: where the reader came from, how to name the tab

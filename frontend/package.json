@@ -13,7 +13,8 @@
 		"test": "vitest run",
 		"build": "vite build -l warn --base=/assets/insights/frontend/ && yarn copy-html-entry",
 		"build:islands": "node build-islands.mjs --production",
-		"copy-html-entry": "cp ../insights/public/frontend/index.html ../insights/www/_insights.html"
+		"copy-html-entry": "cp ../insights/public/frontend/index.html ../insights/www/_insights.html",
+		"postinstall": "patch-package && patch-package --patch-dir node_modules/@framework/ui/patches"
 	},
 	"dependencies": {
 		"@codemirror/lang-javascript": "^6.0.2",
