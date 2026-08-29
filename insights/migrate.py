@@ -11,6 +11,12 @@ def after_migrate():
     except Exception:
         frappe.log_error(title="Error creating Admin Team")
 
+    # the fields a desk document links Insights content with. They sit on
+    # framework doctypes, so only a migrate puts them there.
+    from insights.desk import install_custom_fields
+
+    install_custom_fields()
+
     # every app's shipped analytics, reconciled into documents.
     # sync_standard_content isolates each app itself; this catch is for discovery
     # blowing up before any app is reached.

@@ -36,6 +36,11 @@ ui_islands = {
     "insights.dashboard": "insights_dashboard",
 }
 
+# The desk documents Insights draws. A desk document is ours when it links to
+# Insights content — see insights/desk.py.
+dashboard_renderer = "insights.desk.render"
+dashboard_chart_renderer = "insights.desk.render"
+
 
 # Includes in <head>
 # ------------------
