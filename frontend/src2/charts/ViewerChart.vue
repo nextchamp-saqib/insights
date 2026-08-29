@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import ChartBody from './components/ChartBody.vue'
+import ChartCardFrame from './components/ChartCardFrame.vue'
 import type { ViewerFilters } from '../dashboard/viewer'
 import session from '../session'
 import { useSavedChart } from './chart_read'
 import ChartDrillDown from './drill/ChartDrillDown.vue'
 import type { ChartSegmentClick } from './drill/segment_click'
 
-// One chart card, on a dashboard grid or on its own. It owns its whole
-// lifecycle — its own request, its own reloads — so a card that cannot load
-// leaves every other card on the page alone. What it shows while it has no
-// picture is the card's own business, and ChartBody is the card.
+// One chart a reader gets, on a dashboard grid or on its own. It owns its whole
+// lifecycle — its own request, its own reloads — so a chart that cannot load
+// leaves every other one on the page alone. What it shows while it has no
+// picture is its own business.
+//
+// It draws an Insights card by default and offers the chart to whoever wants a
+// different frame. A host that frames the chart itself — a desk widget — fills
+// the slot with ChartBody alone, and gets the same lifecycle and the same drill
+// without a second border around them.
 const props = defineProps<{
 	chart: string
 	// the dashboard the card sits on. It carries the chart's audience, and it is
@@ -69,14 +74,16 @@ watch(viewer, () => (clicked.value = undefined))
 <template>
 	<div class="h-full w-full">
 		<!-- read-only: sorting is a query, and a viewer has no way to ask for one.
-		     It is also what picks the reader's half of every message the card has. -->
-		<ChartBody
-			:chart="viewer"
-			readonly
-			:filtered="filtered"
-			@segment-click="onSegmentClick"
-			@reset-filters="emit('resetFilters')"
-		/>
+		     It is also what picks the reader's half of every message the chart has. -->
+		<slot :chart="viewer" :filtered="filtered" :on-segment-click="onSegmentClick">
+			<ChartCardFrame
+				:chart="viewer"
+				readonly
+				:filtered="filtered"
+				@segment-click="onSegmentClick"
+				@reset-filters="emit('resetFilters')"
+			/>
+		</slot>
 
 		<!-- keyed on the click, so every drill starts from an empty stack -->
 		<ChartDrillDown

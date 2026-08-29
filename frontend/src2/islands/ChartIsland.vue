@@ -1,14 +1,31 @@
 <script setup lang="ts">
+import ChartBody from '../charts/components/ChartBody.vue'
 import ViewerChart from '../charts/ViewerChart.vue'
 import type { ViewerFilters } from '../dashboard/viewer'
 
-// The card is all this island is. Everything it does — load, skeleton, degrade —
-// is what a card on the dashboard grid does, so the two share one component.
+// The chart body is all this island is. Desk frames it itself — border, title,
+// menu, loading and error — and the host's frame wins, so the island fills
+// ViewerChart's slot with the body alone and draws no card of its own. What it
+// keeps is what a reader would call the chart: the picture, and the states that
+// belong to the data behind it.
+//
+// It prints no title either. Desk heads the widget with the name its own
+// document carries, which is not always the Insights chart's title, and one
+// label is the point.
 defineProps<{ chart: string; dashboard?: string; filters?: ViewerFilters }>()
 </script>
 
 <template>
-	<ViewerChart :chart="chart" :dashboard="dashboard" :filters="filters" />
+	<ViewerChart
+		:chart="chart"
+		:dashboard="dashboard"
+		:filters="filters"
+		v-slot="{ chart: viewer, onSegmentClick }"
+	>
+		<!-- no `filtered`: desk owns the filters it sends, so an empty chart here
+		     has no reset to offer -->
+		<ChartBody :chart="viewer" readonly @segment-click="onSegmentClick" />
+	</ViewerChart>
 </template>
 
 <style>

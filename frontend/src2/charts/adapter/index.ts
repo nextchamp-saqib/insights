@@ -22,7 +22,7 @@
  *   2. an Insights plot built on v2's `useChart`, for Map, whose geography layer
  *      v2's scope rule keeps out of the library;
  *   3. no plot at all, for Table: the filler draws the grid, and wears the same
- *      card and the same states as every other type.
+ *      states as every other type.
  *
  * `undefined` means there is nothing to draw: a slot is unfilled, or the result
  * carries no column the config asks for. The card shows its unconfigured state.
@@ -92,4 +92,17 @@ const ADAPTERS: Partial<Record<ChartType, ChartAdapter>> = {
 
 export function adaptChart(input: ChartAdapterInput): ChartFiller | undefined {
 	return ADAPTERS[input.chart_type]?.(input)
+}
+
+// The types whose filler draws cards of its own.
+const OWN_CARDS: ChartType[] = ['Number']
+
+/**
+ * Whether the chrome leaves the card surface undrawn. A Number Chart's readings
+ * are cards already, and a grid of cards inside a card borders each one twice.
+ * It is a property of the type and not of its data, so the chrome can ask before
+ * there is a result to adapt.
+ */
+export function drawsOwnCards(chart_type: string): boolean {
+	return OWN_CARDS.includes(chart_type as ChartType)
 }

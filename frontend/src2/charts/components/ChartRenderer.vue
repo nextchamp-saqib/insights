@@ -5,10 +5,10 @@ import { computed, ref, watch } from 'vue'
 import { ChartRead } from '../chart_read'
 import AuthoringDrillDown from '../drill/AuthoringDrillDown.vue'
 import type { ChartSegmentClick } from '../drill/segment_click'
-import ChartBody from './ChartBody.vue'
+import ChartCardFrame from './ChartCardFrame.vue'
 
 // The chart with the affordances the builder and the SPA give it: expand, and
-// drill into the rows behind a segment. The chart itself is ChartBody.
+// drill into the rows behind a segment. The card itself is ChartCardFrame.
 const props = defineProps<{ chart: ChartRead; hideMaximize?: boolean }>()
 
 // The author's drill is the reader's drill plus "open as query" — one dialog,
@@ -29,7 +29,7 @@ const canMaximize = computed(
 
 <template>
 	<div class="group relative h-full w-full">
-		<ChartBody :chart="props.chart" @segment-click="clicked = $event" />
+		<ChartCardFrame :chart="props.chart" @segment-click="clicked = $event" />
 
 		<div
 			v-if="canMaximize"
@@ -53,7 +53,7 @@ const canMaximize = computed(
 	<Dialog v-if="chart" v-model:open="showExpandedChartDialog" size="7xl" bare>
 		<template #default>
 			<div class="h-[85vh] w-full">
-				<ChartBody :chart="props.chart" @segment-click="clicked = $event" />
+				<ChartCardFrame :chart="props.chart" @segment-click="clicked = $event" />
 				<div class="absolute top-2 right-2">
 					<Button variant="ghost" @click="showExpandedChartDialog = false">
 						<template #icon>

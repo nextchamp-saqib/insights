@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { numberChart, type NumberChartSpec } from './fixtures'
-import { adaptChart } from './index'
+import { adaptChart, drawsOwnCards } from './index'
 import NumberCards from './NumberCards.vue'
 
 function adapt(spec: NumberChartSpec) {
@@ -44,7 +44,7 @@ describe('a Number Chart with several values', () => {
 	})
 
 	it('draws the cards itself, so the chrome draws none around them', () => {
-		expect(adapt({ values: [{ name: 'Revenue', readings: [100] }] }).card).toBe(false)
+		expect(drawsOwnCards('Number')).toBe(true)
 	})
 
 	it('reads the newest row, which is the reading a KPI states', () => {

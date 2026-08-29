@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button } from 'frappe-ui'
-import { ChartCard, ChartContainer } from 'frappe-ui/charts'
+import { ChartContainer } from 'frappe-ui/charts'
 import { AlertTriangle, RefreshCcw } from 'lucide-vue-next'
 import { computed, shallowRef, watch } from 'vue'
 import { __ } from '../../translation'
@@ -11,15 +11,19 @@ import { segmentClickEvents, type ChartSegmentClick, type ClickPoint } from '../
 import ChartSectionEmptySvg from './ChartSectionEmptySvg.vue'
 
 // The chart itself: the type it is, the data it has, and every state in between.
-// One card, one state machine — a surface that draws a chart card draws this,
-// and gets the failure, the reload and the empty result along with the picture.
-// Segment clicks are reported, never handled — drill-down is a dialog the caller
-// offers, so it is the caller that carries it.
+// One state machine — a surface that draws a chart draws this, and gets the
+// failure, the reload and the empty result along with the picture. Segment
+// clicks are reported, never handled — drill-down is a dialog the caller offers,
+// so it is the caller that carries it.
 //
-// The card and the states are frappe-ui's, for every chart type without
-// exception. What goes inside them is the adapter's answer: it says which
-// component draws this Chart and what to hand it, so nothing here switches on
-// chart type. A new type is added in `charts/adapter`, not here.
+// It draws no card. The border, the padding and the title belong to whoever
+// frames the chart: `ChartCardFrame` on an Insights page, the widget frame on a
+// desk workspace. A host that has one mounts this and gets the chart alone.
+//
+// The states are frappe-ui's, for every chart type without exception. What goes
+// inside them is the adapter's answer: it says which component draws this Chart
+// and what to hand it, so nothing here switches on chart type. A new type is
+// added in `charts/adapter`, not here.
 //
 // `readonly` is for a surface that cannot change the chart. It decides two
 // things, and they are the same thing: a table's sort rewrites the chart's config
@@ -28,6 +32,9 @@ import ChartSectionEmptySvg from './ChartSectionEmptySvg.vue'
 // told about the data ("No data") where an author is told about the config.
 const props = defineProps<{
 	chart: ChartRead
+	// heads the chart. Left out, no title is drawn anywhere in it — which is what
+	// a host that prints its own asks for.
+	title?: string
 	readonly?: boolean
 	// whether filters narrowed the rows, so an empty card can offer to clear them.
 	// Only a surface that owns filter state can say, and only it can reset them.
@@ -54,7 +61,7 @@ const adapted = computed(() => {
 		result: result.value,
 		recordLinks: props.chart.recordLinks,
 		sparklineResult: props.chart.sparklineResult,
-		title: props.chart.doc.title,
+		title: props.title,
 		readonly: props.readonly,
 		executing: props.chart.executing,
 	})
@@ -100,11 +107,6 @@ const failure = computed(() => {
 	return null
 })
 
-// A filler that draws cards of its own is left to draw them. Only the picture is
-// asked: a loading, empty or failed card is chrome, and chrome is the same for
-// every type.
-const drawCard = computed(() => state.value !== 'chart' || filler.value?.card !== false)
-
 // The events a filler reports a click through, bound without knowing which chart
 // type emits which. The adapter names them and turns each payload into the point
 // behind it.
@@ -128,84 +130,63 @@ function reportSegment(target: DrillDownTarget) {
 </script>
 
 <template>
-	<div class="flex h-full w-full flex-col" @click.capture="rememberPoint">
-		<!-- the errors name slots in the config, so only a surface that can fill
-		     them has any use for them. It sits above the picture rather than in
-		     place of it, because the picture under it is still the last one the
-		     server accepted. -->
-		<div
-			v-if="!props.readonly && chart.configErrors.length"
-			class="flex flex-shrink-0 flex-col gap-0.5 rounded-t-4 border border-b-0 border-outline-gray-2 bg-surface-amber-1 px-3 py-1.5"
+	<div class="h-full w-full" @click.capture="rememberPoint">
+		<component
+			v-if="state === 'chart' && filler"
+			:is="filler.component"
+			v-bind="filler.props"
+			v-on="fillerEvents"
+		/>
+
+		<!-- Every state but the picture. `#loading` is left alone: v2 draws a
+		     skeleton the size of the plot, which is what a chart still filling in
+		     should read as to a reader and to an author alike. -->
+		<ChartContainer
+			v-else
+			:title="props.title"
+			:loading="state === 'loading'"
+			:error="failure"
+			:empty="true"
 		>
-			<p v-for="error in chart.configErrors" :key="error" class="text-p-sm text-ink-amber-2">
-				{{ error }}
-			</p>
-		</div>
-
-		<div class="min-h-0 w-full flex-1">
-			<ChartCard class="h-full" :card="drawCard">
-				<component
-					v-if="state === 'chart' && filler"
-					:is="filler.component"
-					v-bind="filler.props"
-					v-on="fillerEvents"
+			<!-- the queue turns a card away rather than queueing it, so asking
+			     again is the whole remedy — and a chart that failed for any
+			     other reason is worth one more try too -->
+			<template #error>
+				<AlertTriangle
+					v-if="state === 'failed'"
+					class="h-6 w-6 text-ink-gray-4"
+					stroke-width="1"
 				/>
-
-				<!-- Every state but the picture. `#loading` is left alone: v2 draws a
-				     skeleton the size of the plot, which is what a card still filling
-				     in should read as to a reader and to an author alike. -->
-				<ChartContainer
-					v-else
-					:title="chart.doc.title"
-					:loading="state === 'loading'"
-					:error="failure"
-					:empty="true"
+				<p class="text-p-base text-ink-gray-5">{{ failure }}</p>
+				<Button
+					variant="outline"
+					:label="state === 'serverBusy' ? __('Try again') : __('Retry')"
+					@click="chart.load(true)"
 				>
-					<!-- the queue turns a card away rather than queueing it, so asking
-					     again is the whole remedy — and a chart that failed for any
-					     other reason is worth one more try too -->
-					<template #error>
-						<AlertTriangle
-							v-if="state === 'failed'"
-							class="h-6 w-6 text-ink-gray-4"
-							stroke-width="1"
-						/>
-						<p class="text-p-base text-ink-gray-5">{{ failure }}</p>
-						<Button
-							variant="outline"
-							:label="state === 'serverBusy' ? __('Try again') : __('Retry')"
-							@click="chart.load(true)"
-						>
-							<template #prefix>
-								<RefreshCcw class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
-							</template>
-						</Button>
+					<template #prefix>
+						<RefreshCcw class="h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 					</template>
+				</Button>
+			</template>
 
-					<template #empty>
-						<template v-if="state === 'empty'">
-							<p class="text-p-base text-ink-gray-5">{{ __('No data') }}</p>
-							<Button
-								v-if="props.filtered"
-								variant="outline"
-								:label="__('Reset filters')"
-								@click="emit('resetFilters')"
-							/>
-						</template>
+			<template #empty>
+				<template v-if="state === 'empty'">
+					<p class="text-p-base text-ink-gray-5">{{ __('No data') }}</p>
+					<Button
+						v-if="props.filtered"
+						variant="outline"
+						:label="__('Reset filters')"
+						@click="emit('resetFilters')"
+					/>
+				</template>
 
-						<template v-else>
-							<ChartSectionEmptySvg></ChartSectionEmptySvg>
-							<p class="text-ink-gray-4">
-								{{
-									__(
-										'Pick a chart type and configure options to see the chart here',
-									)
-								}}
-							</p>
-						</template>
-					</template>
-				</ChartContainer>
-			</ChartCard>
-		</div>
+				<template v-else>
+					<ChartSectionEmptySvg></ChartSectionEmptySvg>
+					<p class="text-ink-gray-4">
+						{{ __('Pick a chart type and configure options to see the chart here') }}
+					</p>
+				</template>
+			</template>
+		</ChartContainer>
 	</div>
 </template>
