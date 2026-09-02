@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { debounce } from 'frappe-ui'
-import { computed, watchEffect } from 'vue'
+import { computed } from 'vue'
 import ColorInput from '../../components/ColorInput.vue'
 import DraggableList from '../../components/DraggableList.vue'
 import InlineFormControlLabel from '../../components/InlineFormControlLabel.vue'
 import { FIELDTYPES } from '../../helpers/constants'
 import { measuredAgainst } from '../adapter/number'
 import { NumberChartConfig, NumberColumnOptions } from '../../types/chart.types'
-import { ColumnOption, Dimension, DimensionOption, MeasureOption } from '../../types/query.types'
+import { ColumnOption, Dimension, DimensionOption } from '../../types/query.types'
 import CollapsibleSection from './CollapsibleSection.vue'
 import DimensionPicker from './DimensionPicker.vue'
 import MeasurePicker from './MeasurePicker.vue'
@@ -31,25 +31,6 @@ const config = defineModel<NumberChartConfig>({
 const date_dimensions = computed(() =>
 	props.dimensions.filter((d) => FIELDTYPES.DATE.includes(d.data_type)),
 )
-
-watchEffect(() => {
-	if (!config.value.number_columns?.length) {
-		addNumberColumn()
-	}
-	if (!config.value.date_column) {
-		config.value.date_column = {} as DimensionOption
-	}
-	if (!config.value.number_column_options) {
-		config.value.number_column_options = []
-	}
-})
-
-function addNumberColumn() {
-	if (!config.value.number_columns) {
-		config.value.number_columns = []
-	}
-	config.value.number_columns.push({} as MeasureOption)
-}
 
 const updateColor = debounce((color: string) => {
 	config.value.sparkline_color = color

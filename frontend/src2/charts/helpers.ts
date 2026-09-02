@@ -74,6 +74,10 @@ export function handleOldReferenceLines(config: any) {
 // Every chart type reads a fixed set of slots off the config, and the validator and the
 // config forms reach into them without guarding. A type switch replaces the config
 // wholesale, so the incoming type's slots have to exist before anything reads them.
+//
+// This runs on load, before the document baseline is set. A config form that wrote
+// its own slots when it mounted would leave every chart dirty for being opened —
+// one autosave and two re-runs of the chart data.
 export function ensureConfigSlots(config: any, chart_type: string) {
 	if (AXIS_CHARTS.includes(chart_type)) {
 		config.x_axis = config.x_axis || {}
@@ -82,8 +86,58 @@ export function ensureConfigSlots(config: any, chart_type: string) {
 		config.y_axis.series = config.y_axis.series || []
 	}
 
+	// A bar stacks unless its author says otherwise, and the form reads the flag
+	// rather than the absence of one.
+	if (chart_type === 'Bar' || chart_type === 'Row') {
+		if (config.y_axis.stack === undefined) {
+			config.y_axis.stack = true
+		}
+	}
+
+	if (chart_type === 'Number') {
+		// one empty value, so the form opens on a picker rather than on nothing
+		config.number_columns = config.number_columns?.length ? config.number_columns : [{}]
+		config.number_column_options = config.number_column_options || []
+		config.date_column = config.date_column || {}
+	}
+
+	if (chart_type === 'Donut') {
+		config.label_column = config.label_column || {}
+		config.value_column = config.value_column || {}
+	}
+
+	if (chart_type === 'Funnel') {
+		config.measures = config.measures || []
+		config.label_column = config.label_column || {}
+		config.value_column = config.value_column || {}
+	}
+
+	if (chart_type === 'Table') {
+		config.rows = config.rows?.length ? config.rows : [{}]
+		config.columns = config.columns?.length ? config.columns : [{}]
+		config.values = config.values?.length ? config.values : [{}]
+	}
+
 	if (chart_type === 'Map') {
 		config.location_column = config.location_column || {}
+		config.value_column = config.value_column || {}
+	}
+
+	if (chart_type === 'Bubble') {
+		config.xAxis = config.xAxis || {}
+		config.yAxis = config.yAxis || {}
+		config.size_column = config.size_column || {}
+	}
+
+	if (chart_type === 'Sankey') {
+		config.source_column = config.source_column || {}
+		config.target_column = config.target_column || {}
+		config.value_column = config.value_column || {}
+	}
+
+	if (chart_type === 'Heatmap') {
+		config.x_column = config.x_column || {}
+		config.y_column = config.y_column || {}
 		config.value_column = config.value_column || {}
 	}
 

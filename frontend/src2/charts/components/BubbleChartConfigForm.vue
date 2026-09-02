@@ -22,16 +22,6 @@ const config = defineModel<BubbleChartConfig>({
 		show_quadrants: false,
 	}),
 })
-
-if (!config.value.xAxis) {
-	config.value.xAxis = {} as Measure
-}
-if (!config.value.yAxis) {
-	config.value.yAxis = {} as Measure
-}
-if (!config.value.size_column) {
-	config.value.size_column = {} as Measure
-}
 </script>
 
 <template>

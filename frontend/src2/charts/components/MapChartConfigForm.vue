@@ -1,14 +1,8 @@
 <script setup lang="ts">
-import { computed, inject, ref, watch, watchEffect } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { __ } from '../../translation'
 import { MapChartConfig } from '../../types/chart.types'
-import {
-	DimensionOption,
-	ColumnOption,
-	Measure,
-	Dimension,
-	QueryResult,
-} from '../../types/query.types'
+import { DimensionOption, ColumnOption, QueryResult } from '../../types/query.types'
 import DimensionPicker from './DimensionPicker.vue'
 import MeasurePicker from './MeasurePicker.vue'
 import CollapsibleSection from './CollapsibleSection.vue'
@@ -35,15 +29,6 @@ const config = defineModel<MapChartConfig>({
 		value_column: {},
 		map_type: 'world',
 	}),
-})
-
-watchEffect(() => {
-	if (!config.value.location_column) {
-		config.value.location_column = {} as Dimension
-	}
-	if (!config.value.value_column) {
-		config.value.value_column = {} as Measure
-	}
 })
 
 const discrete_dimensions = computed(() =>
