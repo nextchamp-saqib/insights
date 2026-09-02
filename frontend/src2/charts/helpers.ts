@@ -41,6 +41,36 @@ export function handleOldYAxisConfig(old_y_axis: any): AxisChartConfig['y_axis']
 	return old_y_axis
 }
 
+// `statistic` is what develop called a computed reference line before this
+// branch named it `aggregate`. It read every plotted number on the axis, so it
+// never named a Measure; the nearest Measure here is the first series that
+// axis draws.
+export function handleOldReferenceLines(config: any) {
+	const lines = config?.y_axis?.reference_lines
+	if (!Array.isArray(lines)) return config
+
+	const series = config.y_axis.series || []
+	for (const line of lines) {
+		if (!line.statistic) {
+			delete line.statistic
+			continue
+		}
+		if (!line.aggregate) {
+			const align = line.align === 'Right' ? 'Right' : 'Left'
+			const target =
+				series.find((s: any) => (s.align || 'Left') === align) || series[0]
+			const measure_name = target?.measure?.measure_name
+			if (measure_name) {
+				line.aggregate = line.statistic
+				line.measure_name = measure_name
+				line.axis = 'y'
+			}
+		}
+		delete line.statistic
+	}
+	return config
+}
+
 // Every chart type reads a fixed set of slots off the config, and the validator and the
 // config forms reach into them without guarding. A type switch replaces the config
 // wholesale, so the incoming type's slots have to exist before anything reads them.
@@ -121,6 +151,7 @@ export function normalizeChartConfig(config: any, chart_type: string) {
 
 	config = setDimensionNames(config)
 	config = ensureConfigSlots(config, chart_type)
+	config = handleOldReferenceLines(config)
 	return config
 }
 

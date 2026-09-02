@@ -6,6 +6,7 @@ import { computed, reactive, ref, toRefs, unref, watch } from 'vue'
 import {
 	copy,
 	copyToClipboard,
+	getErrorMessage,
 	getUniqueId,
 	safeJSONParse,
 	waitUntil,
@@ -150,6 +151,7 @@ export function makeQuery(name: string) {
 	})
 
 	const isServerBusy = ref(false)
+	const executionError = ref('')
 	const result = ref({ ...EMPTY_RESULT })
 	const executing = ref(false)
 	const downloading = ref(false)
@@ -168,34 +170,51 @@ export function makeQuery(name: string) {
 	// set by whoever owns the layout, so a screenful of queries runs in a sensible
 	// order once they outnumber the free slots
 	const executionPriority = ref<number>()
+
+	function currentExecutionArgs() {
+		return {
+			operations: currentOperations.value,
+			adhoc_filters: adhocFilters.value,
+			page: currentPage.value,
+			page_size: pageSize.value,
+		}
+	}
+
+	// "make sure this query has a result" - for the reactive and mount-time
+	// callers that re-ask on every render. execute() is "run it now", so it
+	// must not be the one that answers them: a caller that reads the result and
+	// re-asks when it is empty would loop for as long as the run keeps failing.
+	async function ensureResult() {
+		if (!query.islocal) {
+			await waitUntil(() => query.isloaded)
+		}
+		if (lastExecutionArgs && isEqual(lastExecutionArgs, currentExecutionArgs())) {
+			return
+		}
+		return execute()
+	}
+
 	async function execute(force: boolean = false, page_size?: number) {
 		if (!query.islocal) {
 			await waitUntil(() => query.isloaded)
 		}
 
 		isServerBusy.value = false
-
-		if (!query.doc.operations.length) {
-			result.value = { ...EMPTY_RESULT }
-			return
-		}
+		executionError.value = ''
 
 		if (page_size) {
 			pageSize.value = page_size
 			currentPage.value = 1
 		}
 
-		if (
-			!force &&
-			lastExecutionArgs &&
-			isEqual(lastExecutionArgs, {
-				operations: currentOperations.value,
-				adhoc_filters: adhocFilters.value,
-				page: currentPage.value,
-				page_size: pageSize.value,
-			})
-		) {
-			return Promise.resolve()
+		// recorded before the request, and above the empty-operations return,
+		// because both paths replace `result`. A caller watching it would
+		// otherwise re-ask before the write landed, or never see one at all.
+		lastExecutionArgs = currentExecutionArgs()
+
+		if (!query.doc.operations.length) {
+			result.value = { ...EMPTY_RESULT }
+			return
 		}
 
 		executing.value = true
@@ -246,17 +265,14 @@ export function makeQuery(name: string) {
 			.catch((err) => {
 				if (isStale()) return
 				isServerBusy.value = isServerBusyError(err)
+				// a failed run used to clear the table and say nothing, so the
+				// message has to survive the reset for the editor to show it
+				executionError.value = isServerBusy.value ? '' : getErrorMessage(err)
 				result.value = { ...EMPTY_RESULT }
 			})
 			.finally(() => {
 				if (isStale()) return
 				executing.value = false
-				lastExecutionArgs = {
-					operations: currentOperations.value,
-					adhoc_filters: adhocFilters.value,
-					page: currentPage.value,
-					page_size: pageSize.value,
-				}
 			})
 	}
 
@@ -816,7 +832,7 @@ export function makeQuery(name: string) {
 	}
 
 	const autoExecute = ref(false)
-	watchToggle(currentOperations, () => autoExecute.value && execute(), {
+	watchToggle(currentOperations, () => autoExecute.value && ensureResult(), {
 		immediate: true,
 		deep: true,
 		toggleCondition: () => autoExecute.value,
@@ -846,6 +862,7 @@ export function makeQuery(name: string) {
 		executing,
 		fetchingCount,
 		isServerBusy,
+		executionError,
 		result,
 
 		currentPage,
@@ -853,6 +870,7 @@ export function makeQuery(name: string) {
 		goToPage,
 
 		execute,
+		ensureResult,
 		fetchResultCount,
 		refreshStoredTables,
 		importingTables,

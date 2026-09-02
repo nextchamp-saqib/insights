@@ -103,7 +103,12 @@ const state = computed(() => {
 // draws the message itself, because a retry belongs beside it.
 const failure = computed(() => {
 	if (state.value === 'serverBusy') return __('The server is busy')
-	if (state.value === 'failed') return __('This chart is not available')
+	// An author can act on what the server said; a reader owns neither the query
+	// nor the config it names, so they are told the chart is out, not why.
+	if (state.value === 'failed') {
+		if (!props.readonly && props.chart.failure) return props.chart.failure
+		return __('This chart is not available')
+	}
 	return null
 })
 
@@ -157,7 +162,13 @@ function reportSegment(target: DrillDownTarget) {
 					class="h-6 w-6 text-ink-gray-4"
 					stroke-width="1"
 				/>
-				<p class="text-p-base text-ink-gray-5">{{ failure }}</p>
+				<p
+					class="line-clamp-3 px-4 text-center text-p-base text-ink-gray-5"
+					:class="{ 'font-mono text-xs leading-5': !props.readonly && chart.failure }"
+					:title="failure || undefined"
+				>
+					{{ failure }}
+				</p>
 				<Button
 					variant="outline"
 					:label="state === 'serverBusy' ? __('Try again') : __('Retry')"

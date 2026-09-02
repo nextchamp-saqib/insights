@@ -15,6 +15,7 @@
 import { call } from 'frappe-ui'
 import { computed, reactive, ref, unref, type ComputedRef } from 'vue'
 import type { ViewerFilters } from '../dashboard/viewer'
+import { getErrorMessage } from '../helpers'
 import { isServerBusyError, scheduleQueryExecution } from '../query/execution_queue'
 import { EMPTY_RESULT, formatResultRows } from '../query/helpers'
 import type { AdhocFilters, Operation, QueryResult } from '../types/query.types'
@@ -115,6 +116,9 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 	const executing = ref(true)
 	const failed = ref(false)
 	const serverBusy = ref(false)
+	// what the server said went wrong, for a surface that may show it. A busy
+	// server is its own state, so it leaves this empty.
+	const failure = ref('')
 	// when the rows on screen were produced. It is the card that knows, so the
 	// page's freshness stamp is read off the cards
 	const executedAt = ref<Date>()
@@ -130,6 +134,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 		executing.value = true
 		failed.value = false
 		serverBusy.value = false
+		failure.value = ''
 
 		const token = ++currentLoad
 		const isStale = () => token !== currentLoad
@@ -203,6 +208,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 			// result nobody is waiting for
 			if (isStale()) return
 			serverBusy.value = isServerBusyError(error)
+			failure.value = serverBusy.value ? '' : getErrorMessage(error)
 			failed.value = true
 			result.value = { ...EMPTY_RESULT }
 			sparklineResult.value = undefined
@@ -238,6 +244,7 @@ export function makeChartRead(feed: ChartFeed, priority?: number) {
 		executing,
 		failed,
 		serverBusy,
+		failure,
 		empty,
 		executedAt,
 		executionPriority,

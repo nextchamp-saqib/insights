@@ -1,6 +1,8 @@
 import ast
 import re
+import sys
 import time
+import traceback
 from contextlib import contextmanager
 from datetime import date
 from functools import cached_property
@@ -12,7 +14,7 @@ import pandas as pd
 import sqlglot as sg
 import sqlparse
 from frappe.utils.data import flt
-from frappe.utils.safe_exec import safe_eval, safe_exec
+from frappe.utils.safe_exec import SERVER_SCRIPT_FILE_PREFIX, safe_eval, safe_exec
 from ibis import _
 from ibis.expr.datatypes import DataType
 from ibis.expr.operations.relations import DatabaseTable, Field
@@ -49,6 +51,10 @@ except ImportError:
         return decorator
 
 
+# the relation a `sql_column` fragment selects from, standing for the pipeline so far
+SQL_COLUMN_RELATION = "_insights_sql_column"
+
+
 class CircularQueryReferenceError(frappe.ValidationError):
     """Raised when a circular query reference is detected during query building."""
 
@@ -61,6 +67,7 @@ class IbisQueryBuilder:
         self.title = self.doc.title or self.doc.name
         self.active_operation_idx = active_operation_idx
         self.use_live_connection = bool(doc.use_live_connection)
+        self.force = False
         self.operations = doc.operations
         self.set_operations()
 
@@ -141,6 +148,8 @@ class IbisQueryBuilder:
             return self.apply_remove(operation)
         elif operation.type == "mutate":
             return self.apply_mutate(operation)
+        elif operation.type == "sql_column":
+            return self.apply_sql_column(operation)
         elif operation.type == "cast":
             return self.apply_cast(operation)
         elif operation.type == "summarize":
@@ -157,7 +166,14 @@ class IbisQueryBuilder:
             return self.apply_sql(operation)
         elif operation.type == "code":
             return self.apply_code(operation)
-        return self.query
+
+        # Not `return self.query`: skipping an operation nobody recognises answers
+        # with a table that is missing a column, a filter or a join, and nothing
+        # says so. A query written by a newer client has to fail, not quietly
+        # return different numbers.
+        frappe.throw(
+            frappe._("This query uses an operation this version does not know: {0}").format(operation.type),
+        )
 
     @cached_property
     def saved_references(self):
@@ -202,7 +218,7 @@ class IbisQueryBuilder:
         if table_args.type == "query":
             self.check_query_reference(table_args.query_name)
             q = frappe.get_doc("Insights Query v3", table_args.query_name)
-            _table = q.build(use_live_connection=self.use_live_connection)
+            _table = q.build(use_live_connection=self.use_live_connection, force=self.force)
 
         if _table is None:
             frappe.throw("Table or Query not found")
@@ -538,6 +554,74 @@ class IbisQueryBuilder:
             new_column = new_column.cast(dtype)
         return self.query.mutate(**{new_name: new_column})
 
+    def apply_sql_column(self, sql_column_args):
+        """Add one column from a raw SQL expression.
+
+        Written by the v2 migrator, for the constructs v2 expressed in SQL and v3
+        has no expression for. ibis has no scalar-level SQL escape - only
+        `Table.sql()` - so this is a relation-level operation and not a `mutate`.
+
+        `new_name` is not sanitized, unlike `apply_mutate` and `apply_rename`: a
+        migrated column keeps the name the v2 charts and filters already use.
+        """
+        new_name = sql_column_args.new_name
+        raw_sql = sql_column_args.raw_sql
+
+        if not new_name or not raw_sql or not raw_sql.strip():
+            frappe.throw(
+                frappe._("A SQL column needs both a name and an expression"),
+            )
+
+        if not sql_column_args.data_source:
+            frappe.throw(
+                frappe._("A SQL column needs the data source its expression is written for"),
+            )
+
+        data_source = frappe.get_doc("Insights Data Source v3", sql_column_args.data_source)
+        source_dialect = data_source.get_sqlglot_dialect()
+
+        raw_sql = sqlparse.format(sql=raw_sql, strip_comments=True).strip()
+
+        alias = sg.to_identifier(new_name, quoted=True).sql(dialect=source_dialect)
+        statement = f"SELECT *, {raw_sql} AS {alias} FROM {SQL_COLUMN_RELATION}"
+        self._validate_sql_column_statement(statement, source_dialect)
+
+        if not self.use_live_connection:
+            statement = self._transpile_sql_to_duckdb(statement, source_dialect)
+
+        # the alias is what puts the current pipeline in scope: without it ibis emits
+        # `FROM <original table>` and any column derived mid-pipeline is unresolvable
+        query = self.query.alias(SQL_COLUMN_RELATION).sql(statement)
+
+        dtype = self.get_ibis_dtype(sql_column_args.data_type) if sql_column_args.data_type else None
+        return query.cast({new_name: dtype}) if dtype else query
+
+    def _validate_sql_column_statement(self, statement: str, dialect: str) -> None:
+        """Validate the assembled statement, not the expression alone.
+
+        An expression parsed on its own is read as the start of a statement, so
+        `replace(...)` reads as MySQL's REPLACE. In place, it is one projection.
+        """
+        try:
+            parsed = sg.parse(statement, dialect=dialect)
+        except Exception as e:
+            frappe.throw(
+                frappe._("Failed to parse the SQL column expression: {0}").format(e),
+            )
+
+        if len(parsed) != 1 or not isinstance(parsed[0], sg.exp.Select):
+            frappe.throw(
+                frappe._("A SQL column expression must be a single expression"),
+            )
+
+        select = parsed[0]
+        tables = {table.name for table in select.find_all(sg.exp.Table)}
+        nested = len(list(select.find_all(sg.exp.Select))) > 1 or select.find(sg.exp.Subquery)
+        if nested or tables != {SQL_COLUMN_RELATION}:
+            frappe.throw(
+                frappe._("A SQL column expression cannot read another table"),
+            )
+
     def apply_summary(self, summarize_args):
         aggregates = [self.translate_measure(measure) for measure in summarize_args.measures]
         aggregates = {agg.get_name(): agg for agg in aggregates}
@@ -812,15 +896,15 @@ class IbisQueryBuilder:
         code = code_args.code
 
         adhoc_filters = frappe.as_json(getattr(frappe.local, "insights_adhoc_filters", {}))
-        digest = make_digest(code + adhoc_filters)
+        variables = resolve_variables(getattr(self.doc, "variables", None))
+        # a variable value changes the output as surely as the code does, so it
+        # belongs in the key that decides whether the script runs again
+        digest = make_digest(code, adhoc_filters, frappe.as_json(variables))
 
-        cached_results = get_cached_results(digest)
+        cached_results = None if self.force else get_cached_results(digest)
         if cached_results is not None:
             results = cached_results
         else:
-            variables = None
-            if hasattr(self.doc, "variables") and self.doc.variables:
-                variables = self.doc.variables
             results = get_code_results(code, variables=variables)
             cache_results(digest, results, cache_expiry=60 * 5)
 
@@ -1208,7 +1292,66 @@ class SafePandasDataFrame(pd.DataFrame):
         raise NotImplementedError("to_json is not supported in this context")
 
 
-def get_code_results(code: str, variables=None):
+def publish_script_logs():
+    # this runs in a finally, so an unguarded raise here would replace the
+    # script's own exception - or its result - with a realtime transport error
+    try:
+        frappe.publish_realtime(
+            event="insights_script_log",
+            user=frappe.session.user,
+            message={
+                "user": frappe.session.user,
+                "logs": frappe.debug_log,
+            },
+        )
+    except Exception:
+        frappe.log_error("Failed to publish script query logs")
+
+
+def format_script_error(code: str) -> str:
+    exc_type, exc_value, tb = sys.exc_info()
+    name = getattr(exc_type, "__name__", "Error")
+    message = f"{name}: {exc_value}"
+
+    lineno = get_script_line_number(exc_value, tb)
+    if not lineno:
+        return message
+
+    lines = code.splitlines()
+    source = lines[lineno - 1].strip() if 0 < lineno <= len(lines) else ""
+    return f"Line {lineno}: {source}\n{message}" if source else f"Line {lineno}\n{message}"
+
+
+def get_script_line_number(exc_value, tb) -> int | None:
+    # RestrictedPython compiles the script under this filename, so its frames are
+    # the only ones with a line number that means anything to the author
+    for frame in traceback.extract_tb(tb):
+        if frame.filename.startswith(SERVER_SCRIPT_FILE_PREFIX):
+            return frame.lineno
+
+    # a syntax error never runs, so it has no frame of its own
+    if isinstance(exc_value, SyntaxError):
+        return exc_value.lineno
+
+    return None
+
+
+def resolve_variables(variables) -> dict:
+    if not variables:
+        return {}
+
+    from frappe.utils.password import get_decrypted_password
+
+    resolved = {}
+    for var in variables:
+        if isinstance(var, dict):
+            resolved[var.get("variable_name")] = var.get("variable_value")
+        else:
+            resolved[var.variable_name] = get_decrypted_password(var.doctype, var.name, "variable_value")
+    return resolved
+
+
+def get_code_results(code: str, variables: dict | None = None):
     pandas = frappe._dict()
     pandas.DataFrame = SafePandasDataFrame
     pandas.read_csv = pd.read_csv
@@ -1217,52 +1360,46 @@ def get_code_results(code: str, variables=None):
     results = []
     frappe.local.debug_log = []
 
-    variable_context = {}
-    if variables:
-        from frappe.utils.password import get_decrypted_password
+    _locals = {"results": results, **(variables or {})}
+    start = time.monotonic()
+    try:
+        with ensure_rollback():
+            _, _locals = safe_exec(
+                code,
+                _globals={"pandas": pandas},
+                _locals=_locals,
+                restrict_commit_rollback=True,
+            )
+    except Exception:
+        # the panel is the only place the script author sees anything, so the
+        # error has to land there before it travels on as a request failure
+        frappe.log(format_script_error(code))
+        raise
+    else:
+        results = to_dataframe(_locals["results"])
+        frappe.log(f"{len(results)} rows in {flt(time.monotonic() - start, 3)}s")
+        return results
+    finally:
+        publish_script_logs()
 
-        for var in variables:
-            if hasattr(var, "variable_name") and hasattr(var, "variable_value"):
-                variable_context[var.variable_name] = get_decrypted_password(
-                    var.doctype, var.name, "variable_value"
-                )
-            elif isinstance(var, dict):
-                variable_context[var.get("variable_name")] = var.get("variable_value")
 
-    _locals = {"results": results, **variable_context}
-    with ensure_rollback():
-        _, _locals = safe_exec(
-            code,
-            _globals={"pandas": pandas},
-            _locals=_locals,
-            restrict_commit_rollback=True,
-        )
+def to_dataframe(results) -> pd.DataFrame:
+    if isinstance(results, pd.DataFrame):
+        return results
 
-    results = _locals["results"]
     if results is None or len(results) == 0:
-        results = [{"error": "No results"}]
+        # DuckDB cannot hold a table with no columns, so an empty run still needs
+        # one. A named column beats the fake row of errors this used to return.
+        return pd.DataFrame({"results": pd.Series([], dtype="string")})
 
-    frappe.publish_realtime(
-        event="insights_script_log",
-        user=frappe.session.user,
-        message={
-            "user": frappe.session.user,
-            "logs": frappe.debug_log,
-        },
-    )
+    try:
+        if isinstance(results, list) and isinstance(results[0], list | tuple):
+            return pd.DataFrame.from_records(results)
+        return pd.DataFrame(results)
+    except (ValueError, TypeError):
+        import json as _json
 
-    if not isinstance(results, pd.DataFrame):
-        try:
-            if isinstance(results, list) and results and isinstance(results[0], list | tuple):
-                results = pd.DataFrame.from_records(results)
-            else:
-                results = pd.DataFrame(results)
-        except (ValueError, TypeError):
-            import json as _json
-
-            results = pd.DataFrame(_json.loads(frappe.as_json(results)))
-
-    return results
+        return pd.DataFrame(_json.loads(frappe.as_json(results)))
 
 
 @contextmanager

@@ -53,6 +53,9 @@ export type ReferenceLine = {
 	value?: number | string
 	measure_name?: string
 	aggregate?: ReferenceAggregate
+	// What develop called the same thing before this branch named it `aggregate`.
+	// Charts saved on develop carry it, so normalizeChartConfig reads it and drops it.
+	statistic?: ReferenceAggregate | null
 	label?: string
 	color?: string
 	dashed?: boolean
