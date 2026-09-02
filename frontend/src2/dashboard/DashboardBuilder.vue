@@ -27,7 +27,10 @@ const source = useDashboardAuthoring(props.dashboard_name, props.charts)
 <template>
 	<DashboardBody :source="source">
 		<template #header="{ refresh, menuOptions }">
-			<div class="flex flex-shrink-0 items-center justify-between gap-2 px-4 pt-3">
+			<!-- 24px, not the scroller's 16px: a cell carries an 8px gutter of its
+			     own, so a card's edge sits that much further in. The title and the
+			     actions line up with the cards, not with the box around them. -->
+			<div class="flex flex-shrink-0 items-center justify-between gap-2 px-6 pt-3">
 				<ContentEditable
 					class="cursor-text rounded-1 text-lg-semibold !text-ink-gray-7 focus:ring-2 focus:ring-outline-gray-6 focus:ring-offset-4"
 					:modelValue="source.title"
