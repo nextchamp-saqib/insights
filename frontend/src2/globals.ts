@@ -10,11 +10,10 @@ import {
 	LoadingIndicator,
 	MultiSelect,
 	Popover,
-	Switch,
 	TabButtons,
 	Tooltip,
 } from 'frappe-ui'
-import Checkbox from './components/Checkbox.vue'
+import Toggle from './components/Toggle.vue'
 
 import { App } from 'vue'
 
@@ -25,11 +24,10 @@ export function registerGlobalComponents(app: App) {
 	app.component('Button', Button)
 	app.component('Dialog', Dialog)
 	app.component('Avatar', Avatar)
-	app.component('Switch', Switch)
 	app.component('TabButtons', TabButtons)
 	app.component('Popover', Popover)
 	app.component('Tooltip', Tooltip)
-	app.component('Toggle', Checkbox)
+	app.component('Toggle', Toggle)
 	app.component('Dropdown', Dropdown)
 	app.component('FormControl', FormControl)
 	app.component('LoadingIndicator', LoadingIndicator)

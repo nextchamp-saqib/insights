@@ -1,11 +1,9 @@
 <template>
-	<Switch
-		v-bind="$attrs"
-		v-model="checked"
-		:label="props.label"
-		:size="props.size || 'md'"
-		:disabled="props.disabled"
-	/>
+	<Switch v-bind="$attrs" v-model="checked" :size="props.size || 'sm'" :disabled="props.disabled">
+		<template v-if="props.label" #label>
+			<span class="text-xs text-ink-gray-5">{{ props.label }}</span>
+		</template>
+	</Switch>
 </template>
 
 <script setup lang="ts">

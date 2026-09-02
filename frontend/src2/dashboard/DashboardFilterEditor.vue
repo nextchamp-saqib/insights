@@ -17,7 +17,7 @@ import { ColumnOption, FilterOperator } from '../types/query.types'
 import { WorkbookDashboardFilter } from '../types/workbook.types'
 import { Dashboard, parseFilterLink } from './dashboard'
 import { __ } from '../translation'
-import { Switch, Tabs, DatePicker, DateRangePicker } from 'frappe-ui'
+import { Tabs, DatePicker, DateRangePicker } from 'frappe-ui'
 
 const dashboard = inject<Dashboard>('dashboard')!
 const props = defineProps<{ item: WorkbookDashboardFilter }>()
@@ -206,11 +206,10 @@ function saveEdit() {
 									:key="link.name"
 									class="flex h-8 w-full items-center gap-2"
 								>
-									<Switch
-										size="sm"
+									<Toggle
 										:modelValue="enabledLinks.includes(link.name)"
 										@update:modelValue="toggleLink(link.name)"
-									></Switch>
+									/>
 									<p class="flex-1 truncate text-base">{{ link.title }}</p>
 									<div
 										v-if="enabledLinks.includes(link.name)"
