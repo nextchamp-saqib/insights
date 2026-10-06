@@ -29,7 +29,7 @@ jobs:
         # apps allow, which a site gets once another app or a later deploy upgrades them.
         include: >-
           ${{ fromJSON(github.event_name == 'pull_request'
-          && '[{"frappe_branch": "version-15"}, {"frappe_branch": "version-16"}]'
+          && '[{"frappe_branch": "version-16"}]'
           || '[{"insights_branch": "main", "frappe_branch": "version-15"},
           {"insights_branch": "version-3", "frappe_branch": "version-15"},
           {"insights_branch": "version-3", "frappe_branch": "version-16"},
