@@ -38,6 +38,8 @@ def get_mariadb_connection(data_source):
             # CA to check against. Same connection, under a name that says so.
             ssl_options = {"ssl_mode": "REQUIRED"}
 
+        socket_options = {"unix_socket": data_source.socket} if data_source.get("socket") else {}
+
         return ibis.mysql.connect(
             host=data_source.host,
             port=data_source.port,
@@ -48,4 +50,5 @@ def get_mariadb_connection(data_source):
             use_unicode=True,
             connect_timeout=5,
             **ssl_options,
+            **socket_options,
         )
