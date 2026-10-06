@@ -48,3 +48,26 @@ class TestSiteDBConnection(InsightsIntegrationTestCase):
 
         self.assertEqual(replica.host, "replica.internal")
         self.assertIsNone(replica.socket)
+
+    # @feature data-source.ssl
+    def test_a_site_database_behind_ssl_is_read_with_the_frameworks_certificate(self):
+        conf = {
+            "db_ssl_ca": "/etc/ssl/db-ca.pem",
+            "db_ssl_cert": "/etc/ssl/c.pem",
+            "db_ssl_key": "/etc/ssl/k.pem",
+        }
+        with patch.dict(frappe.local.conf, conf):
+            kwargs = sitedb_connect_kwargs()
+
+        self.assertEqual(kwargs["ssl_mode"], "VERIFY_CA")
+        self.assertEqual(
+            kwargs["ssl"], {"ca": "/etc/ssl/db-ca.pem", "cert": "/etc/ssl/c.pem", "key": "/etc/ssl/k.pem"}
+        )
+
+    # @feature data-source.ssl
+    def test_a_site_database_checks_the_hostname_only_when_the_framework_does(self):
+        conf = {"db_ssl_ca": "/etc/ssl/db-ca.pem", "db_ssl_check_hostname": True}
+        with patch.dict(frappe.local.conf, conf):
+            kwargs = sitedb_connect_kwargs()
+
+        self.assertEqual(kwargs["ssl_mode"], "VERIFY_IDENTITY")
