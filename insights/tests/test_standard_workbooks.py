@@ -104,8 +104,14 @@ def module_folder() -> str:
 
 
 def delete_standard_workbooks():
-    """Delete the rows and the files. A developer-mode save writes a file."""
-    standard_workbooks = frappe.get_all(DT.WORKBOOK, filters={"is_standard": 1}, pluck="name")
+    """Delete the rows and the files. A developer-mode save writes a file.
+
+    Only this module's: a developer-mode delete also deletes the files another
+    installed app ships.
+    """
+    standard_workbooks = frappe.get_all(
+        DT.WORKBOOK, filters={"is_standard": 1, "module": MODULE}, pluck="name"
+    )
     for name in {*standard_workbooks, *frappe.get_all(DT.WORKBOOK, {"name": WORKBOOK}, pluck="name")}:
         with developer_mode():
             frappe.delete_doc(DT.WORKBOOK, name, force=True, delete_permanently=True)
@@ -933,9 +939,7 @@ class WhatTheExportToAppDialogReads(InsightsIntegrationTestCase):
         # the list must match the framework's module list. Frappe never reads a
         # module that no app's `modules.txt` lists, so the next migrate deletes a
         # file written there as an orphan
-        from frappe.modules.utils import get_module_list
-
-        shipped = {(app, module) for app in installed for module in get_module_list(app)}
+        shipped = {(app, module) for app in installed for module in frappe.get_module_list(app)}
         self.assertTrue(
             all((module["app"], module["module"]) in shipped for module in modules),
             "a module no app ships cannot take a file",

@@ -58,6 +58,24 @@ describe('a Number Chart with several values', () => {
 		expect(cell.props.preview).toBe(false)
 	})
 
+	// @feature desk.number-card-island
+	it('shows only the first reading where the host draws the card', () => {
+		// What `ChartIsland` renders in a desk Number Card.
+		const spec = {
+			values: [
+				{ name: 'Revenue', readings: [100] },
+				{ name: 'Profit', readings: [40] },
+			],
+		}
+		const one = adaptChart({ ...numberChart(spec), card: false })!.props
+		expect(one.cards.map((card: any) => [card.title, card.card])).toEqual([['Revenue', false]])
+		expect(one.preview).toBe(false)
+
+		const all = adapt(spec).props
+		expect(all.cards.map((card: any) => card.title)).toEqual(['Revenue', 'Profit'])
+		expect(all.preview).toBe(true)
+	})
+
 	// @feature charts.number-readings
 	it('renders the cards itself, so the chrome renders none around them', () => {
 		expect(rendersOwnCards('Number')).toBe(true)
@@ -298,7 +316,7 @@ describe('the comparison', () => {
 	// @feature charts.number-comparison
 	it('says what it would have compared against when that window came back empty', () => {
 		// The question stands — the card asked it and the server ran it — so the
-		// caption prints with no figure in front of it.
+		// caption prints with a dash where the figure would be.
 		const card = cardsOf({
 			values: [{ name: 'Revenue', readings: [300], comparison: previousPeriod }],
 			period: { name: 'created_at', type: 'Datetime' },
@@ -306,7 +324,7 @@ describe('the comparison', () => {
 			comparisonRows: { previous: null },
 		})[0]
 		expect(card.delta).toBeNull()
-		expect(card.deltaCaption).toBe('vs same period last month')
+		expect(card.deltaCaption).toBe('— vs same period last month')
 	})
 
 	// @feature charts.number-comparison
@@ -454,14 +472,18 @@ describe('the comparison', () => {
 			})[0].delta,
 		).toBeNull()
 		// A change from zero has no percentage.
-		expect(
-			cardsOf({
-				values: [
-					{ name: 'Revenue', readings: [0, 300], comparison: { source: 'previous' } },
-				],
-				period: monthly,
-			})[0].delta,
-		).toBeNull()
+		const fromZero = cardsOf({
+			values: [
+				{
+					name: 'Revenue',
+					readings: [0, 300],
+					comparison: { source: 'previous', label: 'vs last FY' },
+				},
+			],
+			period: monthly,
+		})[0]
+		expect(fromZero.delta).toBeNull()
+		expect(fromZero.deltaCaption).toBe('— vs last FY')
 	})
 
 	// @feature charts.number-comparison

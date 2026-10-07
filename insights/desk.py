@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-"""How Insights renders a desk `Dashboard` and a desk `Dashboard Chart`.
+"""How Insights renders a desk `Dashboard`, `Dashboard Chart` and `Number Card`.
 
 The framework renders a desk document with an island when its `__onload.island`
 names one. Without the key, desk renders the document itself. Insights sets the
@@ -21,10 +21,11 @@ workbook that its app no longer ships is deleted whole, like any unshipped
 standard document, so a claim never blocks a migrate. The migrate lists each
 claim it leaves dangling (`report_dangling_claims`).
 
-A claim decides who renders, never who may read. The desk document's own
-permission already checked the load. The island shows its own Not Permitted
-state for the Insights content. A permission check here would make one desk
-page render differently for two readers.
+A claim decides who renders. Who may read is the desk document's own
+permission, which already checked the load, and the island shows its own Not
+Permitted state for the Insights content. A permission check in `claim` would
+make one desk page render differently for two readers. A document Show in Desk
+makes is the exception: only the chart's readers see it (`has_permission`).
 """
 
 import os
@@ -32,12 +33,14 @@ import os
 import click
 import frappe
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+from frappe.model.naming import append_number_if_name_exists
+from frappe.utils import get_url_to_form
 
 from insights.hooks import insights_path
 
-# desk doctype -> the Custom Field that links it to Insights content, and the
-# island that renders it. Another desk doctype needs one entry here and one
-# line in `hooks.py`.
+# desk doctype -> the Custom Field that links it to Insights content, the
+# island that renders it, and any props the island gets beside the link.
+# Another desk doctype needs one entry here and one line in `hooks.py`.
 DESK_ISLANDS = {
     "Dashboard": {
         "fieldname": "insights_dashboard",
@@ -57,6 +60,16 @@ DESK_ISLANDS = {
         "island": "insights.chart",
         "prop": "chart",
     },
+    "Number Card": {
+        "fieldname": "insights_chart",
+        "label": "Insights Chart",
+        "options": "Insights Chart v3",
+        "insert_after": "label",
+        "folder": "number_card",
+        "island": "insights.chart",
+        "prop": "chart",
+        "props": {"card": False},
+    },
 }
 
 
@@ -75,12 +88,104 @@ def boot_app_path(bootinfo) -> None:
 def claim(doc, method=None) -> None:
     """Set the island that renders `doc`, if Insights renders it.
 
-    Both `doc_events` handlers call this one method. The document includes its
+    Every `doc_events` handler calls this one method. The document includes its
     doctype, so a per-doctype entry point would only add a second name.
     """
     island = island_for(doc)
     if island:
         doc.set_onload("island", island)
+
+
+def show_in_desk(chart) -> dict:
+    """The user adds the desk document to workspaces and dashboards with desk's
+    own tools.
+
+    A document that already shows the chart is reused, so a second click opens
+    it instead of adding a copy. The search runs with the caller's permission,
+    and a document they cannot read is not theirs to open.
+    """
+    chart = frappe.get_doc(chart.doctype, chart.name)
+    doctype = desk_doctype(chart)
+    fieldname = DESK_ISLANDS[doctype]["fieldname"]
+    name = next(iter(frappe.get_list(doctype, filters={fieldname: chart.name}, pluck="name", limit=1)), None)
+    if not name:
+        doc = frappe.get_doc({"doctype": doctype, fieldname: chart.name, **desk_definition(doctype, chart)})
+        name = doc.insert().name
+    return {"doctype": doctype, "name": name, "url": get_url_to_form(doctype, name)}
+
+
+def desk_doctype(chart) -> str:
+    return "Number Card" if chart.chart_type == "Number" else "Dashboard Chart"
+
+
+def can_show_in_desk(chart) -> bool:
+    """Whether the caller may create the desk document Show in Desk makes for
+    `chart`. Desk grants create to System Manager and Dashboard Manager."""
+    return bool(frappe.has_permission(desk_doctype(chart), "create"))
+
+
+def desk_definition(doctype: str, chart) -> dict:
+    """The fields desk requires before it saves a `doctype`, though the island
+    renders it.
+
+    Desk shows a Dashboard Chart or Number Card to whoever may read its
+    `document_type`. Counting Insights charts marks the document as one Show in
+    Desk made, and `has_permission` narrows it to the chart's readers.
+    """
+    title = chart.title or chart.name
+    if doctype == "Number Card":
+        return {
+            "label": title,
+            "type": "Document Type",
+            "document_type": chart.doctype,
+            "function": "Count",
+            "filters_json": "[]",
+        }
+    return {
+        "chart_name": append_number_if_name_exists(doctype, title, "chart_name"),
+        "chart_type": "Count",
+        "document_type": chart.doctype,
+        "based_on": "creation",
+        "filters_json": "[]",
+    }
+
+
+def has_permission(doc, ptype, user) -> bool:
+    """Refuse a desk document that Show in Desk made to whoever may not read
+    its chart. Frappe's own rule for the doctype still applies.
+
+    Only a document that counts Insights charts is narrowed. One claimed by
+    hand counts what its author chose, and is read by the readers of that.
+    """
+    from insights.permissions import has_doc_permission
+
+    chart = shown_chart(doc)
+    return not chart or bool(has_doc_permission(chart, "read", user))
+
+
+def get_permission_query_conditions(user, doctype) -> str:
+    """`has_permission` for a list."""
+    from insights.permissions import get_permission_query_conditions
+
+    field = DESK_ISLANDS[doctype]
+    readable = get_permission_query_conditions(user, field["options"])
+    if not readable:
+        return ""
+    table = f"`tab{doctype}`"
+    claim = f"{table}.`{field['fieldname']}`"
+    return (
+        f"(coalesce({table}.`document_type`, '') != {frappe.db.escape(field['options'])}"
+        f" or coalesce({claim}, '') = ''"
+        f" or {claim} not in (select `name` from `tab{field['options']}` where not {readable}))"
+    )
+
+
+def shown_chart(doc) -> frappe._dict | None:
+    """The chart a desk document shows, if it counts Insights charts as
+    `desk_definition` makes it."""
+    field = DESK_ISLANDS[doc.doctype]
+    if doc.get("document_type") == field["options"] and doc.get(field["fieldname"]):
+        return frappe._dict(doctype=field["options"], name=doc.get(field["fieldname"]))
 
 
 def claims_on(doctype: str, filters: dict) -> list[tuple[str, str, str]]:
@@ -165,14 +270,16 @@ def island_for(doc) -> dict | None:
     if not reference:
         return None
 
-    return {"name": field["island"], "props": {field["prop"]: reference}}
+    return {"name": field["island"], "props": {field["prop"]: reference, **field.get("props", {})}}
 
 
 def install_custom_fields() -> None:
     """Add the Custom Fields that link desk documents to Insights content.
 
     Idempotent, and run on every migrate. The fields are ours but the doctypes
-    are not, so nothing else restores them if a site loses them.
+    are not, so nothing else restores them if a site loses them. Their module is
+    Insights, so removing the app removes them. A field left behind links a
+    doctype that no longer exists, and the desk document it sits on fails to load.
     """
     new = [
         doctype
@@ -188,6 +295,7 @@ def install_custom_fields() -> None:
                     "fieldtype": "Link",
                     "options": field["options"],
                     "insert_after": field["insert_after"],
+                    "module": "Insights",
                 }
             ]
             for doctype, field in DESK_ISLANDS.items()

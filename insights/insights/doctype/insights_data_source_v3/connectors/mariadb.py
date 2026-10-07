@@ -25,7 +25,9 @@ def get_mariadb_connection(data_source):
     data_source.port = int(data_source.port or 3306)
 
     with ca_certificate_file(data_source) as ca_certificate:
-        if not data_source.use_ssl:
+        if data_source.get("ssl_options"):
+            ssl_options = data_source.ssl_options
+        elif not data_source.use_ssl:
             ssl_options = {"ssl_mode": "DISABLED"}
         elif ca_certificate:
             # Measured against MariaDB Connector/C, which is what mysqlclient
@@ -38,6 +40,8 @@ def get_mariadb_connection(data_source):
             # CA to check against. Same connection, under a name that says so.
             ssl_options = {"ssl_mode": "REQUIRED"}
 
+        socket_options = {"unix_socket": data_source.socket} if data_source.get("socket") else {}
+
         return ibis.mysql.connect(
             host=data_source.host,
             port=data_source.port,
@@ -48,4 +52,5 @@ def get_mariadb_connection(data_source):
             use_unicode=True,
             connect_timeout=5,
             **ssl_options,
+            **socket_options,
         )
