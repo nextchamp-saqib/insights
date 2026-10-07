@@ -81,13 +81,17 @@ const cardless = computed(() => props.card.card === false)
 	>
 		<!-- Card-less, the card's title row stays as an empty row, and `-mt-1.5`
 		     takes back the gap under it so the number starts where the host's
-		     own number would. The number takes the size of the host's own number
-		     too: `text-3xl-semibold` is the class `NumberCard` prints its value
-		     and loading line in. -->
+		     own number would. The number and its comparison take the size of the
+		     host's own: `text-3xl-semibold` is the class `NumberCard` prints its
+		     value and loading line in, `text-sm` its comparison row. The host
+		     sizes its body to the card, so the card takes no `h-full`: against
+		     that height it would cut the `-mt-1.5` off its last row. -->
 		<NumberCard
 			v-bind="reading"
 			:class="
-				cardless ? 'h-full -mt-1.5 [&_.text-3xl-semibold]:text-xl-semibold' : 'h-full !py-2'
+				cardless
+					? '-mt-1.5 [&_.text-3xl-semibold]:text-xl-semibold [&_.text-sm]:text-p-base [&_.text-sm-medium]:text-p-base-medium'
+					: 'h-full !py-2'
 			"
 			:title="cardless ? '' : reading.title"
 			:loading="props.loading && !card.missing"
