@@ -98,7 +98,7 @@ Do not ask for tests of helpers, configuration or plumbing. The real-path test c
 
 **Running.** Before merge: a production build, the patches on a copy of production data, and the most-used paths timed against the base. A number the change states, or a cost it accepts (bundle size, queries, migration time, rates), is measured on this code, or removed. It is not argued or taken from elsewhere.
 
-**Finish.** When the code stops changing, read the comments, prose, commit history and stray changes once. This runs once because only then is the code final. Hold the change to this:
+**Finish.** One reader reads the whole change for its comments, prose, commit history and stray changes, beside the first reading, and the check after the fix pass reads the whole change again. A whole-change read finds what a reader of one question misses. *Only the whole-change reader found that every Insights user saw the title of a chart they could not open.* Hold the change to this:
 
 - Each commit holds one logical change, with a plain subject and no ticket ids. It has a body only for a reason the code cannot show. Review fixes are amended into the commit they fix.
 - Commits, PR descriptions, docs and comments say each thing once, in Simplified Technical English, at a length that matches the change.
@@ -112,12 +112,12 @@ Why: a fix is a small design change, held to parts 3 to 5. *On the 11-round revi
 
 - Plan the pass by cause before any code: the owner, how the fix works, and the guard. Only the causes that need a decision go to the maintainer, each with its consequence.
 - A larger improvement is welcome when the plan includes it: a new owner, a deleted duplicate. An unplanned change on the way is not.
-- A fix's test runs the real path and its nearest untouched neighbour. It fails before the fix and passes after.
+- A fix's test runs the real path and its nearest untouched neighbour. It fails before the fix and passes after. A test that needs tooling the bench does not have is deferred and reported; the pass verifies with the checks that exist. *A fixer spent 18 minutes installing Cypress for one test.*
 - A reader who did not write the fix checks the pass's diff for callers it broke, and the guards run.
 - A security fix's branch, commits, tests and comments name the rule it enforces, not the attack.
-- Minor findings wait until the code stops changing. Then they get one pass, with the same check.
+- A minor finding that is cheap and in scope is fixed in the same pass as the must-fix findings. The rest are listed in the PR. *A separate pass for minor findings added a plan, fixers and a check in series, each one to twelve minutes.*
 - The plan sets a limit on passes. At the limit, the open findings go to the maintainer to rule on or defer.
-- After the last pass, write a short retro. For each top class of finding, name the lowest layer that would have stopped it: first a guard in the code or the framework, then a wider scope for a rule that exists and did not apply, and a new rule only when neither works. A new rule names the other cases it catches. Write each as a diff.
+- After a miss or a surprise, write a short retro: a must-fix that a pass introduced, one that a later read found in code an earlier read covered, or the pass limit reached. For each top class of finding, name the lowest layer that would have stopped it: first a guard in the code or the framework, then a wider scope for a rule that exists and did not apply, and a new rule only when neither works. A new rule names the other cases it catches. Write each as a diff.
 
 ## Size
 
