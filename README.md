@@ -30,7 +30,7 @@ Insights is a 100% open-source BI tool designed to make data analysis and report
 <summary>Screenshots</summary>
 
 ![Query Builder](.github/query-builder.png)
-![Query Builder](.github/join-editor.png)
+![Join Editor](.github/join-editor.png)
 ![Chart Builder](.github/chart-builder.png)
 </details>
 
