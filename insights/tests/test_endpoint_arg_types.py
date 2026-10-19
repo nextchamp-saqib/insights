@@ -74,7 +74,7 @@ class EndpointsCheckArgumentTypes(InsightsIntegrationTestCase):
         """`require_type_annotated_api_methods` is on, so frappe refuses one."""
         if "force_types" not in inspect.signature(validate_argument_types).parameters:
             self.skipTest(
-                "frappe v16 ignores require_type_annotated_api_methods; https://github.com/nextchamp-saqib/insights/pull/3, Saqib, 2026-12-31"
+                "frappe v16 ignores require_type_annotated_api_methods; lifts with https://github.com/frappe/frappe/pull/36744, Saqib, 2026-12-31"
             )
 
         @insights_whitelist()
