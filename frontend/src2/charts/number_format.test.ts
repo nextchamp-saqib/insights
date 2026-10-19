@@ -86,6 +86,33 @@ describe("what the Measure's own format says", () => {
 	})
 })
 
+describe("what the currency's number format says", () => {
+	// @feature charts.measure-unit
+	it("groups and shortens an amount the way its currency does, not the site's", () => {
+		session.site.country = 'India'
+		session.site.currency = 'INR'
+		session.site.currency_symbols = {
+			INR: { symbol: '₹', symbol_on_right: false, number_format: '#,##,###.##' },
+			USD: { symbol: '$', symbol_on_right: false, number_format: '#,###.##' },
+		}
+		const revenue = measure('revenue', 'currency')
+		const shorten = { number_format: { shorten: true } }
+		const dollars = [{ revenue: 2350000, revenue__currency: 'USD' }]
+		const rupees = [{ revenue: 2350000, revenue__currency: 'INR' }]
+
+		expect(numberFormatter(shorten, revenue, dollars)(2350000)).toBe('$ 2.4M')
+		expect(numberFormatter(null, revenue, dollars)(2350000)).toBe('$ 2,350,000')
+		expect(numberFormatter(shorten, revenue, rupees)(2350000)).toBe('₹ 23.5L')
+		expect(numberFormatter(null, revenue, rupees)(2350000)).toBe('₹ 23,50,000')
+		// a total over both currencies has none to follow, so it follows the site
+		expect(numberFormatter(shorten, revenue, [...dollars, ...rupees])(2350000)).toBe('23.5L')
+
+		session.site.country = ''
+		session.site.currency = null
+		session.site.currency_symbols = {}
+	})
+})
+
 describe('what the chart says', () => {
 	// @feature charts.number-format
 	it('shortens, fixes the places, and states its own units', () => {

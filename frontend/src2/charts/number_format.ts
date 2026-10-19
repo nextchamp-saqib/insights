@@ -77,6 +77,8 @@ export type NumberFormatConfigSource = NumberFormatSource & {
 export type ResolvedNumberFormat = NumberFormat & {
 	/** What the stored number is multiplied by before it prints. */
 	scale: number
+	/** The currency's digit grouping, so `$ 2.35M` and `₹ 23.5L`. Else the site's. */
+	locale?: string
 }
 
 /** Decimal places a shortened number prints when no layer states one. v2's default. */
@@ -105,7 +107,7 @@ export function numberFormatOf(
 			measure?.measure_name ? config?.number_formats?.[measure.measure_name] : null,
 		),
 	])
-	return { ...merged, scale: unit.scale }
+	return { ...merged, scale: unit.scale, locale: unit.locale }
 }
 
 /**
@@ -181,8 +183,12 @@ export function printNumber(value: any, format: ResolvedNumberFormat): string {
 	// digits are the locale's, so no digit of ours can be tested for.
 	const print = (magnitude: number) =>
 		format.shorten
-			? getShortNumber(magnitude, format.decimals ?? SHORT_DECIMALS)
-			: formatNumber(magnitude, format.decimals ?? guessPrecision(Math.abs(scaled)))
+			? getShortNumber(magnitude, format.decimals ?? SHORT_DECIMALS, format.locale)
+			: formatNumber(
+					magnitude,
+					format.decimals ?? guessPrecision(Math.abs(scaled)),
+					format.locale,
+			  )
 	const printed = print(Math.abs(scaled))
 	const sign = scaled < 0 && printed !== print(0) ? '-' : ''
 	return `${sign}${format.prefix ?? ''}${printed}${format.suffix ?? ''}`

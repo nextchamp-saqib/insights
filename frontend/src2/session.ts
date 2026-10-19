@@ -26,7 +26,7 @@ type SessionUser = {
 // Settings of the site, not of whoever is reading it. A guest opening a public
 // dashboard gets these and nothing else, so a shared chart prints its amounts
 // the same way the workbook does.
-type CurrencySymbol = { symbol: string; symbol_on_right: boolean }
+type CurrencySymbol = { symbol: string; symbol_on_right: boolean; number_format?: string | null }
 type SiteInfo = {
 	country: string
 	/** The day a week is counted from, as `Insights Settings` names it. */

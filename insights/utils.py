@@ -256,13 +256,17 @@ def get_currency_symbols(codes) -> dict:
 
     # one read: a measure pointed at the wrong column names as many codes as rows
     rows = frappe.db.get_all(
-        "Currency", filters={"name": ("in", list(codes))}, fields=["name", "symbol", "symbol_on_right"]
+        "Currency",
+        filters={"name": ("in", list(codes))},
+        fields=["name", "symbol", "symbol_on_right", "number_format"],
     )
     known = {row.name: row for row in rows}
     return {
         code: {
             "symbol": (known[code].symbol if code in known else None) or code,
             "symbol_on_right": bool(known[code].symbol_on_right) if code in known else False,
+            # desk prints an amount in its currency's digit grouping, not the site's
+            "number_format": known[code].number_format if code in known else None,
         }
         for code in codes
     }

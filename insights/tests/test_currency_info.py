@@ -27,7 +27,12 @@ class TestCurrencyInfo(InsightsIntegrationTestCase):
         with currency, hidden:
             self.assertEqual(
                 get_currency_info(),
-                {"currency": "USD", "currency_symbols": {"USD": {"symbol": "$", "symbol_on_right": False}}},
+                {
+                    "currency": "USD",
+                    "currency_symbols": {
+                        "USD": {"symbol": "$", "symbol_on_right": False, "number_format": "#,###.##"}
+                    },
+                },
             )
 
     # @feature charts.measure-unit
@@ -38,7 +43,17 @@ class TestCurrencyInfo(InsightsIntegrationTestCase):
         with hidden:
             symbols = get_currency_symbols(["INR", "SEK"])
         self.assertEqual(symbols["INR"]["symbol"], "₹")
-        self.assertEqual(symbols["SEK"], {"symbol": "kr", "symbol_on_right": True})
+        self.assertEqual(symbols["SEK"]["symbol"], "kr")
+        self.assertTrue(symbols["SEK"]["symbol_on_right"])
+
+    # @feature charts.measure-unit
+    def test_a_code_brings_its_currencys_number_format(self):
+        # desk prints an amount in its currency's grouping: lakhs for INR, millions for USD
+        _, hidden = _defaults()
+        with hidden:
+            symbols = get_currency_symbols(["INR", "USD"])
+        self.assertEqual(symbols["INR"]["number_format"], "#,##,###.##")
+        self.assertEqual(symbols["USD"]["number_format"], "#,###.##")
 
     # @feature charts.measure-unit
     def test_a_currency_without_a_symbol_prints_as_its_code(self):
@@ -53,7 +68,8 @@ class TestCurrencyInfo(InsightsIntegrationTestCase):
         _, hidden = _defaults()
         with hidden:
             self.assertEqual(
-                get_currency_symbols(["High"])["High"], {"symbol": "High", "symbol_on_right": False}
+                get_currency_symbols(["High"])["High"],
+                {"symbol": "High", "symbol_on_right": False, "number_format": None},
             )
 
     # @feature charts.measure-unit
