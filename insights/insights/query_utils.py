@@ -282,26 +282,45 @@ UNBOUND_READ_FUNCTION = re.compile(
 )
 
 
+# table functions that make rows from their arguments alone, as sqlglot types
+# them, and by name where a dialect leaves them untyped
+ROW_FUNCTIONS = (sg.exp.GenerateSeries, sg.exp.ExplodingGenerateSeries, sg.exp.JSONTable, sg.exp.Unnest)
+ROW_FUNCTION_NAME = re.compile(
+    r"generate_series|range|unnest|json_table|json_tree"
+    r"|jsonb?_(each|each_text|array_elements|array_elements_text|to_recordset)",
+    re.IGNORECASE,
+)
+
+
 def unbound_reads(parsed: sg.Expression) -> list[str]:
     """What `parsed` reads without naming a table, so no binding can replace it.
 
     A FROM source such as DuckDB's `query_table('tabUser')`, or a function such
     as Postgres' `query_to_xml('select ...')`, reads a table the binding never
-    sees.
+    sees. A FROM source that makes rows from its arguments, such as
+    `generate_series`, reads none.
     """
     sources = [
         table.this.sql()
         for table in parsed.find_all(sg.exp.Table)
-        if not isinstance(table.this, sg.exp.Identifier)
+        if not isinstance(table.this, sg.exp.Identifier) and not makes_rows(table.this)
     ]
     functions = [
         name
         for func in parsed.find_all(sg.exp.Func)
-        if UNBOUND_READ_FUNCTION.fullmatch(
-            name := func.name if isinstance(func, sg.exp.Anonymous) else func.sql_name()
-        )
+        if UNBOUND_READ_FUNCTION.fullmatch(name := function_name(func))
     ]
     return sources + functions
+
+
+def function_name(func: sg.exp.Func) -> str:
+    return func.name if isinstance(func, sg.exp.Anonymous) else func.sql_name()
+
+
+def makes_rows(source: sg.Expression) -> bool:
+    return isinstance(source, ROW_FUNCTIONS) or (
+        isinstance(source, sg.exp.Anonymous) and bool(ROW_FUNCTION_NAME.fullmatch(source.name))
+    )
 
 
 def extract_query_deps_from_operations(operations: list) -> list[str]:

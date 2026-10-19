@@ -595,6 +595,38 @@ class TestNativeSQL(InsightsIntegrationTestCase):
         return data_source
 
     # @feature query.native-sql-one-statement
+    def test_a_table_function_that_makes_rows_from_its_arguments_is_accepted(self):
+        # v3 ran these: a date spine, rows from a JSON column, a list of values
+        for dialect, raw_sql in (
+            (
+                "postgres",
+                """select d::date as day, count(so.name) from generate_series('2026-01-01'::date,
+                '2026-03-31'::date, interval '1 day') as d left join "tabSales Order" so
+                on so.transaction_date = d::date group by 1""",
+            ),
+            ("postgres", "select x from unnest(array['Open', 'Closed']) as u(x)"),
+            ("postgres", """select e->>'item' from "tabToDo", jsonb_array_elements('[]'::jsonb) as e"""),
+            (
+                "mysql",
+                """select jt.item from tabToDo, json_table('[{"item": "a"}]', '$[*]'
+                columns (item varchar(140) path '$.item')) as jt""",
+            ),
+            ("mysql", "select * from (values (1, 'Open'), (2, 'Closed')) as v(id, status)"),
+            ("duckdb", "select range as n from range(10)"),
+            ("sqlite", "select value from json_each('[1, 2]')"),
+        ):
+            with self.subTest(raw_sql=raw_sql):
+                self.builder._validate_native_sql(raw_sql, use_live_connection=True, dialect=dialect)
+
+    # @feature query.native-sql
+    def test_json_table_runs_on_the_site_database(self):
+        rows = self.run_native_sql(
+            """select jt.status from json_table('[{"status": "Open"}, {"status": "Closed"}]', '$[*]'
+            columns (status varchar(140) path '$.status')) as jt"""
+        )
+        self.assertEqual(list(rows["status"]), ["Open", "Closed"])
+
+    # @feature query.native-sql-one-statement
     def test_a_function_that_runs_a_query_is_refused(self):
         # the query it runs is a string, so no binding replaces the table it reads
         for dialect, raw_sql in (
