@@ -1,5 +1,5 @@
 import { useStorage } from '@vueuse/core'
-import { Building2, Lock, Users } from 'lucide-vue-next'
+import { Building2, Lock, ShieldCheck, Users } from 'lucide-vue-next'
 import { computed } from 'vue'
 import session from '../session'
 import { __ } from '../translation'
@@ -31,15 +31,25 @@ export function useAccessSources(storageKey: string) {
 	return { options, selected, shown, sources }
 }
 
-type Shared = { shared_with?: string[]; shared_with_organization?: boolean }
+type Shared = {
+	shared_with?: string[]
+	shared_with_organization?: boolean
+	visible_to_roles?: string[]
+}
 
 export function accessIcon(item: Shared) {
 	if (item.shared_with_organization) return Building2
+	if (item.visible_to_roles?.length) return ShieldCheck
 	return item.shared_with?.length ? Users : Lock
 }
 
 export function accessLabel(item: Shared, getName: (email: string) => string) {
 	if (item.shared_with_organization) return __('Everyone')
+	if (item.visible_to_roles?.length && !item.shared_with?.length) {
+		return item.visible_to_roles.length > 1
+			? __('{0} roles', String(item.visible_to_roles.length))
+			: item.visible_to_roles[0]
+	}
 	if (!item.shared_with?.length) return __('Private')
 	return item.shared_with.length > 1
 		? __('{0} people', String(item.shared_with.length))
