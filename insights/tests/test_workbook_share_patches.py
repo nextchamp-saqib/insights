@@ -136,8 +136,8 @@ class TestWorkbookSharePatches(InsightsIntegrationTestCase):
         self.assertIn(f'The chart "{PREFIX} Chart"', message)
         self.assertIn("shared with everyone to edit", message)
 
-    def alert_enabled_by(self, user):
-        query = create_test_query(OWNER, self.workbook)
+    def alert_enabled_by(self, user, operations=None):
+        query = create_test_query(OWNER, self.workbook, operations=operations)
         alert = frappe.get_doc(
             {
                 "doctype": "Insights Alert",
@@ -157,13 +157,28 @@ class TestWorkbookSharePatches(InsightsIntegrationTestCase):
 
     # @feature upgrade.alerts-keep-running
     def test_an_alert_its_enabler_may_not_run_runs_as_the_workbook_owner(self):
-        alert = self.alert_enabled_by(AUTHOR)
+        # it reads no table, so the owner reads the rows the enabler did
+        alert = self.alert_enabled_by(
+            AUTHOR, operations=[{"type": "sql", "data_source": "Site DB", "raw_sql": "select 1 as one"}]
+        )
 
         move_alert_run_as()
 
         self.assertEqual(frappe.db.get_value("Insights Alert", alert, "permission_user"), OWNER)
         message = frappe.db.get_value(ITEM, {"code": "P19", "reference_name": alert}, "message")
         self.assertIn(f"now runs as {OWNER}", message)
+
+    # @feature upgrade.alerts-keep-running
+    def test_an_alert_is_not_moved_to_an_owner_who_may_read_other_rows(self):
+        # the enabler chose the recipients, so the owner's rows must not reach them
+        alert = self.alert_enabled_by(AUTHOR)
+
+        move_alert_run_as()
+
+        self.assertEqual(frappe.db.get_value("Insights Alert", alert, "permission_user"), AUTHOR)
+        message = frappe.db.get_value(ITEM, {"code": "P19", "reference_name": alert}, "message")
+        self.assertIn("will stop at its next run", message)
+        self.assertIn("reads the site table tabToDo", message)
 
     # @feature upgrade.alerts-keep-running
     def test_an_alert_its_enabler_may_run_is_left_alone(self):
