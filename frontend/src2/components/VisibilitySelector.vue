@@ -52,10 +52,6 @@ const roleOptions = computed(() => roleStore.roles.map((role) => ({ label: role,
 			:options="roleOptions"
 			:loading="roleStore.loading"
 			:placeholder="__('Select roles')"
-		>
-			<template #summary>
-				<span class="text-ink-gray-4">{{ __('Select roles') }}</span>
-			</template>
-		</MultiSelect>
+		/>
 	</div>
 </template>
