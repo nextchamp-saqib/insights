@@ -13,11 +13,13 @@ const sections = translatedTable(() => ({
 			__(
 				'What the upgrade could not carry over is under Needs attention, with a fix where one exists.',
 			),
-			__('Desk permissions now apply to every site table, for admins too.'),
-			__("Colleagues' workbooks and dashboards are under Others."),
 			__(
-				'ERPNext ships its standard dashboards as workbooks, replacing the template library.',
+				'Site data follows desk permissions alone, for admins too. Team access and Table Restrictions now apply only to other data sources. To show someone rows, give them a desk role.',
 			),
+			__(
+				'ERPNext and HRMS ship their dashboards as standard workbooks, shown to the roles that use them. They replace the template library. Duplicate one to change it.',
+			),
+			__("Workbook and dashboard lists include colleagues' work."),
 			__('Query execution logs are kept for 90 days.'),
 		],
 	},
@@ -26,7 +28,11 @@ const sections = translatedTable(() => ({
 		points: [
 			__('Dashboards are rebuilt on new charts, and dark mode is here.'),
 			__('Click a chart to see its rows or break it down.'),
-			__('A new filter picker remembers your last choice.'),
+			__(
+				'A new filter picker remembers your last choice. A Company filter opens on your default company.',
+			),
+			__("Amounts print in each company's currency."),
+			__("A chart you can't read says so, and names the access you need."),
 			__(
 				'Some numbers change, because Insights 3 computed them wrongly: whole-day date filters, "next N months", period comparisons, pivots (they now keep the largest columns) and `date_diff` in hours or minutes.',
 			),
@@ -37,11 +43,18 @@ const sections = translatedTable(() => ({
 		points: [
 			__('Share a workbook, not its charts. Sharing a chart or dashboard gives read access.'),
 			__(
+				'Share a dashboard with roles, and anyone with those roles can open it, even without an Insights role.',
+			),
+			__(
 				"Charts run with each reader's permissions, unless Run as owner is on. A public dashboard needs it on every chart.",
+			),
+			__(
+				'Put a chart on a desk dashboard or workspace with Show in Desk, or pick it on a Dashboard Chart or Number Card form.',
 			),
 			__(
 				'Scripts and SQL expressions are admin-only and run in a narrower sandbox. `sql()` is gone.',
 			),
+			__('SQL queries cannot call functions that read files or run other queries.'),
 			__('An alert needs write access to its workbook.'),
 		],
 	},
