@@ -5,7 +5,7 @@ import { useMagicKeys, whenever } from '@vueuse/core'
 import { Avatar, Badge, Breadcrumbs, MultiSelect } from 'frappe-ui'
 import { List, ListCell, ListHeader, ListHeaderCell, ListRow } from 'frappe-ui/list'
 import { PlusIcon } from 'lucide-vue-next'
-import { accessIcon, accessLabel, AccessSource, useAccessSources } from '../components/access'
+import { access, AccessSource, useAccessSources } from '../components/access'
 import { computed, ref, toRef, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { wheneverChanges } from '../helpers'
@@ -212,11 +212,11 @@ watchEffect(() => {
 					>
 						<div class="relative flex min-w-0 items-center">
 							<component
-								:is="accessIcon(workbook)"
+								:is="access(workbook, userStore.getName).icon"
 								class="size-4 shrink-0 text-ink-gray-5"
 							/>
 							<span class="ml-2 truncate text-base text-ink-gray-6">
-								{{ accessLabel(workbook, userStore.getName) }}
+								{{ access(workbook, userStore.getName).label }}
 							</span>
 						</div>
 					</Tooltip>

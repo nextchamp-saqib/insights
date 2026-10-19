@@ -37,21 +37,22 @@ type Shared = {
 	visible_to_roles?: string[]
 }
 
-export function accessIcon(item: Shared) {
-	if (item.shared_with_organization) return Building2
-	if (item.visible_to_roles?.length) return ShieldCheck
-	return item.shared_with?.length ? Users : Lock
-}
+/** The icon and label of who a listed document is shared with. */
+export function access(item: Shared, getName: (email: string) => string) {
+	if (item.shared_with_organization) return { icon: Building2, label: __('Everyone') }
 
-export function accessLabel(item: Shared, getName: (email: string) => string) {
-	if (item.shared_with_organization) return __('Everyone')
-	if (item.visible_to_roles?.length && !item.shared_with?.length) {
-		return item.visible_to_roles.length > 1
-			? __('{0} roles', String(item.visible_to_roles.length))
-			: item.visible_to_roles[0]
+	const shared = item.shared_with || []
+	const people =
+		shared.length > 1
+			? __('{0} people', String(shared.length))
+			: shared.length
+			  ? getName(shared[0])
+			  : ''
+	const roles = item.visible_to_roles || []
+	if (roles.length) {
+		const label = roles.length > 1 ? __('{0} roles', String(roles.length)) : __(roles[0])
+		return { icon: ShieldCheck, label: people ? __('{0}, {1}', label, people) : label }
 	}
-	if (!item.shared_with?.length) return __('Private')
-	return item.shared_with.length > 1
-		? __('{0} people', String(item.shared_with.length))
-		: getName(item.shared_with[0])
+	if (people) return { icon: Users, label: people }
+	return { icon: Lock, label: __('Private') }
 }

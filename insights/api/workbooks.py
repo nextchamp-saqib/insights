@@ -68,7 +68,7 @@ def get_workbooks(
     data_sources = _workbook_data_sources(workbook_names)
     last_opened = get_last_opened("Insights Workbook", workbook_names)
     shipped_by = standard.shipped_by(workbook_names)
-    roles = _dashboard_roles(list(shipped_by))
+    roles = _dashboard_roles(workbook_names)
     for workbook in workbooks:
         workbook["data_sources"] = data_sources.get(workbook["name"], [])
         workbook["last_opened"] = last_opened.get(workbook["name"])
@@ -82,6 +82,8 @@ def _dashboard_roles(workbooks: list[str]) -> dict[str, list[str]]:
     """The roles the dashboards of each workbook show to.
 
     An app shares its workbook through these, not through the workbook's shares.
+    A dashboard keeps its roles when its visibility moves off Roles, and they
+    then show it to nobody.
     """
     if not workbooks:
         return {}
@@ -95,6 +97,7 @@ def _dashboard_roles(workbooks: list[str]) -> dict[str, list[str]]:
         .where(
             (HasRole.parenttype == "Insights Dashboard v3")
             & (HasRole.parentfield == "visible_to_roles")
+            & (Dashboard.visibility == "Roles")
             & Dashboard.workbook.isin(workbooks)
         )
         .distinct()
