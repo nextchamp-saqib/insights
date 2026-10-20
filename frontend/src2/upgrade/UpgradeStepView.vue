@@ -278,7 +278,11 @@ function onKeydown(event: KeyboardEvent) {
 					v-if="group.picture"
 					class="flex justify-center rounded-[10px] bg-surface-alpha-gray-1 p-2.5"
 				>
-					<UpgradePicture :name="group.picture" :person="person" />
+					<UpgradePicture
+						:name="group.picture"
+						:person="person"
+						:doctype="current?.item.data?.doctypes?.[0]"
+					/>
 				</div>
 
 				<div

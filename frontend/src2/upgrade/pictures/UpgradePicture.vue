@@ -23,6 +23,8 @@ const props = defineProps<{
 	name: PictureName
 	/** Who the share rows show. */
 	person: { full_name: string; email: string }
+	/** The doctype a Not Permitted card says the reader lacks. */
+	doctype?: string
 }>()
 
 const BARS = [40, 62, 50, 84, 58, 70]
@@ -151,7 +153,11 @@ const runsAsOwner = ref(true)
 		</DialogPicture>
 
 		<div v-else-if="props.name === 'notPermitted'" class="h-28 w-[22rem]">
-			<ChartPicture :title="__('Revenue by month')" not-permitted="Sales Invoice" />
+			<ChartPicture
+				:key="props.doctype"
+				:title="__('Revenue by month')"
+				:not-permitted="props.doctype || 'Sales Invoice'"
+			/>
 		</div>
 
 		<DialogPicture
