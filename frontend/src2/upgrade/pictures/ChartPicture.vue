@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ChartCard, useChartTokens } from 'frappe-ui/charts'
+import { color } from 'echarts/core'
+import { ChartCard, paletteColors, useChartTokens } from 'frappe-ui/charts'
 import { computed, onMounted, ref } from 'vue'
 import { adaptChart } from '../../charts/adapter'
 import { makeChartRead } from '../../charts/chart_view'
@@ -11,6 +12,8 @@ const props = defineProps<{
 	title: string
 	/** One reading per bar. */
 	values?: number[]
+	/** The bar a reader clicked: the others are drawn pale. */
+	selected?: number
 	/** The doctype the reader lacks: the card shows Not Permitted. */
 	notPermitted?: string
 }>()
@@ -49,7 +52,8 @@ const result = {
 const root = ref<HTMLElement>()
 const { tokens } = useChartTokens(root)
 
-// A picture is still: no bars growing in on every visit.
+// A picture is still: no bars growing in on every visit, and the picked bar
+// stands out of the others.
 const filler = computed(() => {
 	if (props.notPermitted) return
 	const adapted = adaptChart({
@@ -61,9 +65,27 @@ const filler = computed(() => {
 		readonly: true,
 	})
 	if (!adapted) return
+	// the one color a lone series draws in, and the same faded
+	const [strong] = paletteColors(undefined, tokens.value, 1)
+	const pale = color.modifyAlpha(strong, 0.35)
+	const picked =
+		props.selected === undefined
+			? {}
+			: {
+					seriesConfig: {
+						amount: {
+							echartOptions: {
+								itemStyle: {
+									color: ({ dataIndex }: { dataIndex: number }) =>
+										dataIndex === props.selected ? strong : pale,
+								},
+							},
+						},
+					},
+			  }
 	return {
 		component: adapted.component,
-		props: { ...adapted.props, echartOptions: { animation: false } },
+		props: { ...adapted.props, ...picked, echartOptions: { animation: false } },
 	}
 })
 

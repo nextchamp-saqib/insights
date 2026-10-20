@@ -92,7 +92,11 @@ const runsAsOwner = ref(true)
 
 		<div v-else-if="props.name === 'drill'" class="flex items-center gap-4">
 			<div class="h-44 w-72">
-				<ChartPicture :title="__('Sales by month')" :values="[40, 84, 50, 62, 58, 70]" />
+				<ChartPicture
+					:title="__('Sales by month')"
+					:values="[40, 84, 50, 62, 58, 70]"
+					:selected="1"
+				/>
 			</div>
 			<MenuPicture class="w-48">
 				<DrillActions can-rows can-break-down />
