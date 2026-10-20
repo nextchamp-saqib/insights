@@ -227,6 +227,22 @@ describe('an item sentence', () => {
 	})
 
 	// @feature upgrade.item-sentences
+	it('opens what an admin-only script lives in, by its kind', () => {
+		const data = { title: 'Script rows', author: ALICE }
+		const onChart = {
+			reference_doctype: 'Insights Chart v3',
+			reference_name: 'c1',
+			workbook: '9',
+		}
+		const onAlert = { reference_doctype: 'Insights Alert', form_url: '/desk/insights-alert/a1' }
+		expect(sentenceOf(item('a', 'P20', data, onChart), DAVE).action?.label).toBe('Open chart')
+		expect(sentenceOf(item('b', 'P20', data, onAlert), DAVE).action?.label).toBe('Open alert')
+		expect(text(sentenceOf(item('c', 'P20', data), DAVE).text)).toBe(
+			'Only admins can edit Alice’s script “Script rows” now. It still runs.',
+		)
+	})
+
+	// @feature upgrade.item-sentences
 	it('falls back to the stored message for an item written before it had data', () => {
 		const old = item('a', 'P17', {})
 		expect(text(sentenceOf(old, DAVE).text)).toBe('P17 message')

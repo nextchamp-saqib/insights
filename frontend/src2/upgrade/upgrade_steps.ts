@@ -757,7 +757,14 @@ const SENTENCES: Partial<Record<string, Build>> = {
 				{ text: kind },
 				quoted(d.title),
 			),
-			action: routeTo(item, __('Open query')),
+			action: routeTo(
+				item,
+				item.reference_doctype === 'Insights Chart v3'
+					? __('Open chart')
+					: item.reference_doctype === 'Insights Alert'
+					  ? __('Open alert')
+					  : __('Open query'),
+			),
 		}
 	},
 	J1(item, d) {
