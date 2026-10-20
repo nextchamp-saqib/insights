@@ -53,7 +53,6 @@ const appDashboards = computed(() =>
 )
 
 const inr = (value: number) => value.toLocaleString('en-IN')
-const usd = (value: number) => value.toLocaleString('en-US')
 
 const publicVisibility = ref<'Public'>('Public')
 const rolesVisibility = ref<'Roles'>('Roles')
@@ -132,10 +131,10 @@ const runsAsOwner = ref(true)
 				</div>
 				<div class="w-52">
 					<NumberCard
-						:title="__('Total Sales')"
-						prefix="$ "
-						:value="15200"
-						:format="usd"
+						:title="__('Outstanding')"
+						prefix="₹ "
+						:value="318500"
+						:format="inr"
 					/>
 				</div>
 			</div>
