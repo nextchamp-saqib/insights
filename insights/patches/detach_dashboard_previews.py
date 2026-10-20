@@ -12,9 +12,9 @@ def execute():
     preview shows the rows of the user it was rendered for. Insights 3
     attached them to the workbook, later to the dashboard.
     `get_dashboard_preview` serves them now. A file that is not its
-    dashboard's current preview goes: a copied dashboard pointed at the
-    original's image, and an app's dashboard kept its file after its preview
-    was cleared.
+    dashboard's current preview goes: Frappe saves identical content once, so
+    a dashboard can point at another's file, and an app's dashboard kept its
+    file after its preview was cleared.
     """
     previews = {}
     for dashboard in frappe.get_all(
