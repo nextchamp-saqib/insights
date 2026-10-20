@@ -68,7 +68,10 @@ function progressStore() {
 const sharing = computed(() => session.user.is_admin || Boolean(session.user.owns_workbooks))
 
 const steps = computed(() =>
-	wizardSteps([...items.value, ...done.value], { sharing: sharing.value }),
+	wizardSteps([...items.value, ...done.value], {
+		sharing: sharing.value,
+		me: session.user.email,
+	}),
 )
 const details = computed(() => detailsOf([...items.value, ...done.value]))
 

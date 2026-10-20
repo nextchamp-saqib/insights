@@ -43,33 +43,50 @@ describe('the wizard steps', () => {
 			item('c', 'P7', { workbook: 'Sales', users: [], shared: [], removed: [] }),
 			item('d', 'W2', { workbook: 'Sales Performance', standard: 'Selling', app: 'ERPNext' }),
 		]
-		expect(wizardSteps(items, { sharing: true }).map((step) => step.id)).toEqual([
+		expect(wizardSteps(items, { sharing: true, me: DAVE }).map((step) => step.id)).toEqual([
 			'welcome',
 			'sharing',
 			'access',
 			'workbooks',
 		])
-		expect(wizardSteps([], { sharing: false }).map((step) => step.id)).toEqual(['welcome'])
+		expect(wizardSteps([], { sharing: false, me: DAVE }).map((step) => step.id)).toEqual([
+			'welcome',
+		])
 		expect(detailsOf(items).map((group) => group.title)).toEqual([
 			'Copies of Insights 3 templates',
 		])
 	})
 
 	// @feature upgrade.wizard
-	it('show an admin one row for the two items that tell both people of one change', () => {
+	it('show one row for the two items that tell both people of one change', () => {
 		const data = { chart: 'Bob published, script rows', publisher: BOB, owner: ALICE }
 		const reference = { reference_doctype: 'Insights Chart v3', reference_name: 'kvubr6gkub' }
 		const steps = wizardSteps(
 			[
-				item('to-alice', 'P11', data, { ...reference, user: ALICE }),
-				item('to-bob', 'P11', data, { ...reference, user: BOB }),
+				item('to-alice', 'P10', data, { ...reference, user: ALICE }),
+				item('to-bob', 'P10', data, { ...reference, user: BOB }),
 			],
-			{ sharing: true },
+			{ sharing: true, me: DAVE },
 		)
-		const notes = steps.find((step) => step.id === 'notes')!
-		expect('rows' in notes && notes.rows.map((row) => row.names)).toEqual([
+		const publicCharts = steps.find((step) => step.id === 'public')!
+		expect('rows' in publicCharts && publicCharts.rows.map((row) => row.names)).toEqual([
 			['to-alice', 'to-bob'],
 		])
+	})
+
+	// @feature upgrade.wizard
+	it('leave a note to the person it is addressed to', () => {
+		const data = { chart: 'Bob published, script rows', publisher: BOB, owner: ALICE }
+		const notes = [
+			item('to-alice', 'P11', data, { user: ALICE }),
+			item('to-bob', 'P11', data, { user: BOB }),
+		]
+		const ids = (me: string) => wizardSteps(notes, { sharing: true, me }).map((step) => step.id)
+		expect(ids(DAVE)).toEqual(['welcome', 'sharing'])
+		const toAlice = wizardSteps(notes, { sharing: true, me: ALICE }).find(
+			(step) => step.id === 'notes',
+		)!
+		expect('rows' in toAlice && toAlice.rows.map((row) => row.names)).toEqual([['to-alice']])
 	})
 })
 

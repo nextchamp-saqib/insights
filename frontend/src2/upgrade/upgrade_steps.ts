@@ -197,21 +197,28 @@ export function rowsOf(items: UpgradeItem[]): Row[] {
 	return [...rows.values()]
 }
 
-/** The wizard's steps for this reader. A step with nothing in it is left out. */
-export function wizardSteps(items: UpgradeItem[], options: { sharing: boolean }): Step[] {
+/**
+ * The wizard's steps for this reader. A step with nothing in it is left out.
+ *
+ * A note only tells, so it stays for the person it is addressed to: an admin
+ * gets no step for another user's note.
+ */
+export function wizardSteps(
+	items: UpgradeItem[],
+	options: { sharing: boolean; me: string },
+): Step[] {
 	const steps: Step[] = [{ id: 'welcome', label: __('Welcome'), section: 'new' }]
 	if (options.sharing) steps.push({ id: 'sharing', label: __('Sharing'), section: 'new' })
-	const rows = rowsOf(items)
 	for (const group of groups()) {
-		const inGroup = rows.filter((row) => group.codes.includes(row.item.code))
-		if (inGroup.length) {
-			steps.push({
-				id: group.id,
-				label: group.label,
-				section: 'upgrade',
-				group,
-				rows: inGroup,
-			})
+		const rows = rowsOf(
+			items.filter(
+				(item) =>
+					group.codes.includes(item.code) &&
+					(group.kind !== 'note' || !item.user || item.user === options.me),
+			),
+		)
+		if (rows.length) {
+			steps.push({ id: group.id, label: group.label, section: 'upgrade', group, rows })
 		}
 	}
 	return steps
