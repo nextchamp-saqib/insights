@@ -205,9 +205,11 @@ function onKeydown(event: KeyboardEvent) {
 						/>
 					</div>
 				</div>
+				<!-- kept in place on every slide, so the reader's dialog doesn't grow on the last -->
 				<div
-					v-if="onLastSlide"
 					class="mt-1 flex items-center gap-2 text-p-sm text-ink-gray-6"
+					:class="onLastSlide ? '' : 'invisible'"
+					:aria-hidden="!onLastSlide"
 				>
 					<Info class="size-4 shrink-0 text-ink-gray-5" stroke-width="1.5" />
 					<span>
