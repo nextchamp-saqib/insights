@@ -46,6 +46,12 @@ const skippedCount = computed(
 )
 const current = computed(() => queue.value[0])
 const handled = computed(() => rows.value.length - queue.value.length)
+const badge = computed<{ theme: 'green' | 'amber' | 'gray'; label: string }>(() => {
+	if (!current.value && !skippedCount.value) return { theme: 'green', label: __('Done') }
+	return group.value?.kind === 'now'
+		? { theme: 'amber', label: __('Needs you now') }
+		: { theme: 'gray', label: __('Nothing to do') }
+})
 const sentence = computed(() =>
 	current.value
 		? sentenceOf(current.value.item, session.user.email, session.user.locale)
@@ -262,11 +268,7 @@ function onKeydown(event: KeyboardEvent) {
 			<!-- A group: what changed, the picture, then one item at a time -->
 			<template v-else-if="group">
 				<div>
-					<Badge
-						size="md"
-						:theme="group.kind === 'now' ? 'amber' : 'gray'"
-						:label="group.kind === 'now' ? __('Needs you now') : __('Nothing to do')"
-					/>
+					<Badge size="md" :theme="badge.theme" :label="badge.label" />
 				</div>
 				<h2 class="-mt-1.5 text-3xl font-semibold text-ink-gray-9">{{ group.title }}</h2>
 				<p class="-mt-1.5 max-w-[620px] text-p-base text-ink-gray-5">
