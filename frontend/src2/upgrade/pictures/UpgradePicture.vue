@@ -151,7 +151,7 @@ const runsAsOwner = ref(true)
 			/>
 		</DialogPicture>
 
-		<div v-else-if="props.name === 'notPermitted'" class="h-28 w-[22rem]">
+		<div v-else-if="props.name === 'notPermitted'" class="h-32 w-[28rem]">
 			<ChartPicture
 				:key="props.doctype"
 				:title="__('Revenue by month')"
@@ -189,7 +189,7 @@ const runsAsOwner = ref(true)
 
 		<DialogPicture
 			v-else-if="props.name === 'runAsOwner'"
-			class="w-[24rem]"
+			class="w-[28rem]"
 			:title="__('Share Chart')"
 		>
 			<div class="flex flex-col gap-4">
@@ -217,7 +217,7 @@ const runsAsOwner = ref(true)
 
 		<DialogPicture
 			v-else-if="props.name === 'chartOwner'"
-			class="w-[24rem]"
+			class="w-[28rem]"
 			:title="__('Share Chart')"
 		>
 			<ShareUserRow
