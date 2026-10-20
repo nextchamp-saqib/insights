@@ -366,26 +366,49 @@ type Build = (
 const SENTENCES: Partial<Record<string, Build>> = {
 	P17(item, d, people) {
 		if (d.user) {
-			const doctypes = [...(d.doctypes ?? []), ...(d.narrowed ?? [])].map(documents)
+			const unreadable = listOf((d.doctypes ?? []).map(documents), 3)
+			const narrowed = listOf((d.narrowed ?? []).map(documents), 3)
 			const self = d.user === people.me
-			const text = d.doctypes?.length
-				? say(
-						__('{0} can’t see charts on {1} any more.'),
-						em(person(people, d.user, true)),
-						em(listOf(doctypes, 3)),
-				  )
-				: say(
-						__('{0} now see only the rows desk gives them of {1}.'),
-						em(person(people, d.user, true)),
-						em(listOf(doctypes, 3)),
-				  )
+			const who = em(person(people, d.user, true))
+			let text: Part[]
+			if (unreadable && narrowed) {
+				text = self
+					? say(
+							__(
+								'You can’t see charts on {0} any more, and see only the rows desk gives you of {1}.',
+							),
+							em(unreadable),
+							em(narrowed),
+					  )
+					: say(
+							__(
+								'{0} can’t see charts on {1} any more, and sees only the rows desk gives them of {2}.',
+							),
+							who,
+							em(unreadable),
+							em(narrowed),
+					  )
+			} else if (unreadable) {
+				text = say(__('{0} can’t see charts on {1} any more.'), who, em(unreadable))
+			} else {
+				text = self
+					? say(__('You now see only the rows desk gives you of {0}.'), em(narrowed))
+					: say(
+							__('{0} now sees only the rows desk gives them of {1}.'),
+							who,
+							em(narrowed),
+					  )
+			}
 			return {
 				text,
-				todo: self
-					? say(__('Give yourself a desk role that can read them.'))
-					: say(__('Give {0} a desk role that can read them.'), {
-							text: people.name(d.user),
-					  }),
+				// a role lets them read a doctype again; rows desk narrows are its rule to keep
+				todo: !unreadable
+					? undefined
+					: self
+					  ? say(__('Give yourself a desk role that can read them.'))
+					  : say(__('Give {0} a desk role that can read them.'), {
+								text: people.name(d.user),
+					    }),
 				action: formAction(
 					item,
 					self ? __('Open your roles') : __('Open {0}’s roles', people.name(d.user)),

@@ -108,6 +108,30 @@ describe('an item sentence', () => {
 	})
 
 	// @feature upgrade.item-sentences
+	it('tells a doctype someone can no longer read from one desk now narrows', () => {
+		const both = item('a', 'P17', {
+			user: BOB,
+			doctypes: ['Customer'],
+			narrowed: ['Sales Invoice'],
+		})
+		expect(text(sentenceOf(both, DAVE).text)).toBe(
+			'Bob can’t see charts on Customers any more, and sees only the rows desk gives them of Sales Invoices.',
+		)
+		expect(text(sentenceOf(both, BOB).text)).toBe(
+			'You can’t see charts on Customers any more, and see only the rows desk gives you of Sales Invoices.',
+		)
+
+		const narrowed = item('b', 'P17', { user: BOB, doctypes: [], narrowed: ['Sales Invoice'] })
+		expect(text(sentenceOf(narrowed, DAVE).text)).toBe(
+			'Bob now sees only the rows desk gives them of Sales Invoices.',
+		)
+		expect(text(sentenceOf(narrowed, BOB).text)).toBe(
+			'You now see only the rows desk gives you of Sales Invoices.',
+		)
+		expect(sentenceOf(narrowed, DAVE).todo).toBeUndefined()
+	})
+
+	// @feature upgrade.item-sentences
 	it('joins the titles of the documents a team let someone edit', () => {
 		const edited = item('a', 'P4', {
 			workbook: 'Sales',
