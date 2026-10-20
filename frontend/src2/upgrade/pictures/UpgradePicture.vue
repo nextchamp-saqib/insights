@@ -68,7 +68,7 @@ const runsAsOwner = ref(true)
 		inert
 		aria-hidden="true"
 		class="flex items-center justify-center text-start"
-		:class="props.name === 'shareNow' ? 'w-full' : ''"
+		:class="props.name === 'shareNow' ? 'w-full min-w-0' : ''"
 	>
 		<div
 			v-if="props.name === 'appDashboards'"
@@ -173,14 +173,14 @@ const runsAsOwner = ref(true)
 		</DialogPicture>
 
 		<div v-else-if="props.name === 'shareNow'" class="flex w-full items-start gap-3">
-			<DialogPicture class="flex-1" :title="__('Manage Workbook Access')">
+			<DialogPicture class="min-w-0 flex-1" :title="__('Manage Workbook Access')">
 				<ShareUserRow
 					:full-name="props.person.full_name"
 					:email="props.person.email"
 					access="edit"
 				/>
 			</DialogPicture>
-			<DialogPicture class="flex-1" :title="__('Share Chart')">
+			<DialogPicture class="min-w-0 flex-1" :title="__('Share Chart')">
 				<VisibilitySelector
 					v-model:visibility="rolesVisibility"
 					v-model:roles="chartRoles"

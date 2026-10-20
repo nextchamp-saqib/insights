@@ -108,8 +108,10 @@ function state(step: Step) {
 				</SettingsNavGroup>
 			</template>
 		</SettingsSidebar>
-		<SettingsContent>
-			<SettingsPanel v-if="step" :value="step.id">
+		<!-- frappe-ui's content and panel take their content's width, so a long
+		     name in a picture would push the step past the dialog's edge -->
+		<SettingsContent class="min-w-0">
+			<SettingsPanel v-if="step" :value="step.id" class="min-w-0">
 				<UpgradeStepView :key="step.id" :step="step" @close="show = false" />
 			</SettingsPanel>
 		</SettingsContent>
