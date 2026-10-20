@@ -207,6 +207,26 @@ describe('an item sentence', () => {
 	})
 
 	// @feature upgrade.item-sentences
+	it('asks for what lets a public chart run as its owner again', () => {
+		const chart = { chart: 'Public revenue', owner: BOB }
+		const disabled = sentenceOf(item('a', 'P12', { ...chart, reason: 'disabled' }), DAVE)
+		expect(text(disabled.todo)).toBe('Enable Bob so guests see it again.')
+		expect(disabled.action).toEqual({
+			kind: 'form',
+			label: 'Open Bob’s user',
+			url: '/desk/user/bob%40fixture.test',
+		})
+		const noRole = sentenceOf(item('b', 'P12', { ...chart, reason: 'no_insights_role' }), DAVE)
+		expect(text(noRole.todo)).toBe('Give Bob an Insights role so guests see it again.')
+		const cannotEdit = sentenceOf(
+			item('c', 'P12', { ...chart, reason: 'cannot_edit' }, { workbook: '25' }),
+			DAVE,
+		)
+		expect(text(cannotEdit.todo)).toBe('Share the workbook with Bob to edit.')
+		expect(cannotEdit.action).toMatchObject({ kind: 'route', label: 'Open workbook sharing' })
+	})
+
+	// @feature upgrade.item-sentences
 	it('falls back to the stored message for an item written before it had data', () => {
 		const old = item('a', 'P17', {})
 		expect(text(sentenceOf(old, DAVE).text)).toBe('P17 message')

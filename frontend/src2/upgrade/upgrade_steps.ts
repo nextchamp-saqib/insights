@@ -338,6 +338,10 @@ function formAction(item: UpgradeItem, label: string): ItemAction | undefined {
 	return item.form_url ? { kind: 'form', label, url: item.form_url } : undefined
 }
 
+function userForm(user: string, label: string): ItemAction {
+	return { kind: 'form', label, url: `/desk/user/${encodeURIComponent(user)}` }
+}
+
 function workbookSharing(item: UpgradeItem, label: string): ItemAction | undefined {
 	if (!item.workbook) return undefined
 	return {
@@ -491,11 +495,26 @@ const SENTENCES: Partial<Record<string, Build>> = {
 							quoted(d.chart),
 							owner,
 				    )
+		// what lets the chart run as its owner again: the owner back, a role, or edit access
+		const ownerName = { text: person(people, d.owner) }
+		if (d.reason === 'disabled' || d.reason === 'no_insights_role') {
+			return {
+				text,
+				todo:
+					d.reason === 'disabled'
+						? say(__('Enable {0} so guests see it again.'), ownerName)
+						: say(__('Give {0} an Insights role so guests see it again.'), ownerName),
+				action: userForm(
+					d.owner,
+					d.owner === people.me
+						? __('Open your user')
+						: __('Open {0}’s user', people.name(d.owner)),
+				),
+			}
+		}
 		return {
 			text,
-			todo: say(__('Share the workbook with {0} to edit.'), {
-				text: person(people, d.owner),
-			}),
+			todo: say(__('Share the workbook with {0} to edit.'), ownerName),
 			action: workbookSharing(item, __('Open workbook sharing')),
 		}
 	},
