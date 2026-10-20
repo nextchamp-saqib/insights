@@ -111,6 +111,8 @@ function open() {
 /** Closes the wizard. It no longer opens by itself, and the sidebar card resumes it. */
 async function close() {
 	showWizard.value = false
+	// one step has nowhere to resume to
+	if (steps.value.length === 1) progressStore().value.finished = true
 	if (!session.user.upgraded_from_v3) return
 	session.user.upgraded_from_v3 = false
 	await call('insights.api.upgrade.mark_upgrade_seen').catch((error: Error) =>
