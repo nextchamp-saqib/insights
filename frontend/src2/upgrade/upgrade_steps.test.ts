@@ -165,6 +165,22 @@ describe('an item sentence', () => {
 	})
 
 	// @feature upgrade.item-sentences
+	it('lists every rule a team had', () => {
+		const team = item('a', 'P17', {
+			team: 'Sales team',
+			members: [ALICE],
+			restrictions: [
+				{ doctype: 'Sales Invoice', field: 'company', value: 'Kaveri Traders' },
+				{ doctype: 'Customer', field: 'customer_group', value: 'Commercial' },
+				{ doctype: 'Item', condition: "item_group like 'Raw%'" },
+			],
+		})
+		expect(text(sentenceOf(team, DAVE).text)).toBe(
+			"The Sales team limited Alice to Sales Invoices where company is Kaveri Traders, Customers where customer group is Commercial and Items where item_group like 'Raw%'. Those rules no longer apply.",
+		)
+	})
+
+	// @feature upgrade.item-sentences
 	it('falls back to the stored message for an item written before it had data', () => {
 		const old = item('a', 'P17', {})
 		expect(text(sentenceOf(old, DAVE).text)).toBe('P17 message')

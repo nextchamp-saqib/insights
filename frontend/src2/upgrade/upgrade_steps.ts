@@ -265,6 +265,15 @@ export function listOf(names: string[], limit = Infinity): string {
 	return __('{0} and {1}', shown.slice(0, -1).join(', '), shown[shown.length - 1])
 }
 
+/** Runs of a sentence read as a list: "a, b and c". */
+function joined(items: Part[][]): Part[] {
+	if (items.length < 2) return items[0] ?? []
+	const head = items
+		.slice(0, -1)
+		.flatMap((part, index) => (index ? [{ text: ', ' }, ...part] : part))
+	return say(__('{0} and {1}'), head, items[items.length - 1])
+}
+
 /** A doctype read as a set of documents: Sales Invoices. English only, where a plural is a suffix. */
 function documents(doctype: string): string {
 	const label = __(doctype)
@@ -416,22 +425,26 @@ const SENTENCES: Partial<Record<string, Build>> = {
 			}
 		}
 		if (d.team) {
-			const restriction = (d.restrictions ?? [])[0] ?? {}
-			const where: Part[] =
-				restriction.field !== undefined
+			const restrictions: Record<string, any>[] = d.restrictions ?? []
+			const limits = restrictions.map((restriction) => [
+				em(documents(restriction.doctype ?? '')),
+				{ text: ' ' },
+				...(restriction.field !== undefined
 					? say(
 							__('where {0} is {1}'),
 							{ text: String(restriction.field).replace(/_/g, ' ') },
 							em(String(restriction.value)),
 					  )
-					: say(__('where {0}'), em(String(restriction.condition ?? '')))
+					: say(__('where {0}'), em(String(restriction.condition ?? '')))),
+			])
 			return {
 				text: say(
-					__('The {0} limited {1} to {2} {3}. That rule no longer applies.'),
+					restrictions.length > 1
+						? __('The {0} limited {1} to {2}. Those rules no longer apply.')
+						: __('The {0} limited {1} to {2}. That rule no longer applies.'),
 					em(d.team),
 					em(names(people, d.members ?? [])),
-					em(documents(restriction.doctype ?? '')),
-					where,
+					joined(limits),
 				),
 				todo: say(__('Set a User Permission in desk instead.')),
 				action: {
