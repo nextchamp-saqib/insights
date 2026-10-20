@@ -24,7 +24,9 @@ describe('the roles a dashboard or chart is visible to', () => {
 	// @feature permissions.visibility
 	it('shows the roles picked, as they were saved', async () => {
 		expect(await rendered(['Sales User'])).toContain('Sales User')
-		expect(await rendered(['Sales User', 'Accounts User'])).toContain('2 selected')
+		expect(await rendered(['Sales User', 'Accounts User'])).toContain(
+			'Sales User, Accounts User',
+		)
 		expect(await rendered([])).toContain('Select roles')
 	})
 })
