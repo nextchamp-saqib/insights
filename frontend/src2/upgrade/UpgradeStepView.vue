@@ -153,7 +153,7 @@ function onKeydown(event: KeyboardEvent) {
 <template>
 	<div
 		data-upgrade-step
-		class="relative flex min-h-0 flex-1 flex-col text-start"
+		class="relative flex min-h-0 min-w-0 flex-1 flex-col text-start"
 		@keydown="onKeydown"
 	>
 		<Button
@@ -166,7 +166,10 @@ function onKeydown(event: KeyboardEvent) {
 			<template #icon><X class="size-4 text-ink-gray-9" stroke-width="1.5" /></template>
 		</Button>
 
-		<div ref="body" class="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto px-8 pb-5 pt-6">
+		<div
+			ref="body"
+			class="flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-y-auto px-8 pb-5 pt-6"
+		>
 			<!-- Welcome: one feature per slide -->
 			<template v-if="props.step.id === 'welcome'">
 				<h2 class="text-3xl font-semibold text-ink-gray-9">
@@ -176,11 +179,7 @@ function onKeydown(event: KeyboardEvent) {
 					<div
 						class="flex h-[300px] w-full items-center justify-center rounded-5 bg-surface-gray-1 p-5"
 					>
-						<UpgradePicture
-							:style="{ zoom: 1.15 }"
-							:name="slides[slide].picture"
-							:person="person"
-						/>
+						<UpgradePicture :name="slides[slide].picture" :person="person" />
 					</div>
 					<div class="mt-1.5 text-2xl font-semibold text-ink-gray-9">
 						{{ slides[slide].label }}
@@ -275,7 +274,7 @@ function onKeydown(event: KeyboardEvent) {
 					v-if="group.picture"
 					class="flex justify-center rounded-[10px] bg-surface-gray-1 p-2.5"
 				>
-					<UpgradePicture :style="{ zoom: 0.9 }" :name="group.picture" :person="person" />
+					<UpgradePicture :name="group.picture" :person="person" />
 				</div>
 
 				<div

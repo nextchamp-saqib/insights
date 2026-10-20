@@ -77,11 +77,11 @@ const runsAsOwner = ref(true)
 		</div>
 
 		<div v-else-if="props.name === 'showInDesk'" class="flex items-center gap-4">
-			<div class="h-44 w-80">
+			<div class="h-44 w-72">
 				<ChartPicture :title="__('Sales by month')" :values="BARS" />
 			</div>
 			<MenuPicture
-				class="w-48"
+				class="w-44"
 				:items="[
 					{ label: __('View SQL'), icon: Scroll },
 					{ label: __('Copy JSON'), icon: Copy },
@@ -91,10 +91,10 @@ const runsAsOwner = ref(true)
 		</div>
 
 		<div v-else-if="props.name === 'drill'" class="flex items-center gap-4">
-			<div class="h-44 w-80">
+			<div class="h-44 w-72">
 				<ChartPicture :title="__('Sales by month')" :values="[40, 84, 50, 62, 58, 70]" />
 			</div>
-			<MenuPicture class="w-52">
+			<MenuPicture class="w-48">
 				<DrillActions can-rows can-break-down />
 			</MenuPicture>
 		</div>
@@ -186,7 +186,7 @@ const runsAsOwner = ref(true)
 
 		<DialogPicture
 			v-else-if="props.name === 'workbookAccess'"
-			class="w-[24rem]"
+			class="w-[34rem]"
 			:title="__('Manage Workbook Access')"
 		>
 			<OrganizationAccessRow />
