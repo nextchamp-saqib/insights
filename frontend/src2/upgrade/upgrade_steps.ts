@@ -81,7 +81,7 @@ export type Group = {
 	title: string
 	/** What changed: a bold lead clause, then the detail. */
 	lead: [string, string]
-	picture: PictureName
+	picture?: PictureName
 }
 
 export type Step =
@@ -166,6 +166,13 @@ export const groups = translatedTable<Group[]>(() => [
 	},
 ])
 
+// The Good to know step of someone who isn't an admin, when it holds more than
+// moved charts: their own items an admin would find in Details for admins.
+const yourNotes = translatedTable<Pick<Group, 'title' | 'lead'>>(() => ({
+	title: __('A few changes to what you made'),
+	lead: [__('The upgrade changed some of your work,'), __('and each change says what it means.')],
+}))
+
 // Items an ordinary admin does not act on in the wizard: nothing breaks if
 // they wait, or they take a developer. Listed apart, in this order.
 export const detailGroups = translatedTable<Record<string, string>>(() => ({
@@ -201,31 +208,50 @@ export function rowsOf(items: UpgradeItem[]): Row[] {
  * The wizard's steps for this reader. A step with nothing in it is left out.
  *
  * A note only tells, so it stays for the person it is addressed to: an admin
- * gets no step for another user's note.
+ * gets no step for another user's note. Someone who isn't an admin finds their
+ * own detail items in Good to know, as Details for admins is not theirs.
  */
 export function wizardSteps(
 	items: UpgradeItem[],
-	options: { sharing: boolean; me: string },
+	options: { sharing: boolean; admin: boolean; me: string },
 ): Step[] {
 	const steps: Step[] = [{ id: 'welcome', label: __('Welcome'), section: 'new' }]
 	if (options.sharing) steps.push({ id: 'sharing', label: __('Sharing'), section: 'new' })
+	const inSteps = new Set(groups().flatMap((group) => group.codes))
 	for (const group of groups()) {
+		const codes =
+			group.kind === 'note' && !options.admin
+				? [
+						...group.codes,
+						...items.map((item) => item.code).filter((code) => !inSteps.has(code)),
+				  ]
+				: group.codes
 		const rows = rowsOf(
 			items.filter(
 				(item) =>
-					group.codes.includes(item.code) &&
+					codes.includes(item.code) &&
 					(group.kind !== 'note' || !item.user || item.user === options.me),
 			),
 		)
-		if (rows.length) {
-			steps.push({ id: group.id, label: group.label, section: 'upgrade', group, rows })
-		}
+		if (!rows.length) continue
+		const onlyItsOwn = rows.every((row) => group.codes.includes(row.item.code))
+		steps.push({
+			id: group.id,
+			label: group.label,
+			section: 'upgrade',
+			group: onlyItsOwn ? group : { ...group, ...yourNotes(), codes, picture: undefined },
+			rows,
+		})
 	}
 	return steps
 }
 
 /** The rows the wizard leaves to Details for admins, grouped and titled. */
-export function detailsOf(items: UpgradeItem[]): { title: string; rows: Row[] }[] {
+export function detailsOf(
+	items: UpgradeItem[],
+	options: { admin: boolean },
+): { title: string; rows: Row[] }[] {
+	if (!options.admin) return []
 	const inWizard = new Set(groups().flatMap((group) => group.codes))
 	const titles = detailGroups()
 	const order = Object.keys(titles)

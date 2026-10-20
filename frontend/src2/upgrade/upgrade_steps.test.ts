@@ -43,16 +43,13 @@ describe('the wizard steps', () => {
 			item('c', 'P7', { workbook: 'Sales', users: [], shared: [], removed: [] }),
 			item('d', 'W2', { workbook: 'Sales Performance', standard: 'Selling', app: 'ERPNext' }),
 		]
-		expect(wizardSteps(items, { sharing: true, me: DAVE }).map((step) => step.id)).toEqual([
-			'welcome',
-			'sharing',
-			'access',
-			'workbooks',
-		])
-		expect(wizardSteps([], { sharing: false, me: DAVE }).map((step) => step.id)).toEqual([
-			'welcome',
-		])
-		expect(detailsOf(items).map((group) => group.title)).toEqual([
+		expect(
+			wizardSteps(items, { sharing: true, admin: true, me: DAVE }).map((step) => step.id),
+		).toEqual(['welcome', 'sharing', 'access', 'workbooks'])
+		expect(
+			wizardSteps([], { sharing: false, admin: true, me: DAVE }).map((step) => step.id),
+		).toEqual(['welcome'])
+		expect(detailsOf(items, { admin: true }).map((group) => group.title)).toEqual([
 			'Copies of Insights 3 templates',
 		])
 	})
@@ -66,7 +63,7 @@ describe('the wizard steps', () => {
 				item('to-alice', 'P10', data, { ...reference, user: ALICE }),
 				item('to-bob', 'P10', data, { ...reference, user: BOB }),
 			],
-			{ sharing: true, me: DAVE },
+			{ sharing: true, admin: true, me: DAVE },
 		)
 		const publicCharts = steps.find((step) => step.id === 'public')!
 		expect('rows' in publicCharts && publicCharts.rows.map((row) => row.names)).toEqual([
@@ -81,12 +78,33 @@ describe('the wizard steps', () => {
 			item('to-alice', 'P11', data, { user: ALICE }),
 			item('to-bob', 'P11', data, { user: BOB }),
 		]
-		const ids = (me: string) => wizardSteps(notes, { sharing: true, me }).map((step) => step.id)
+		const ids = (me: string) =>
+			wizardSteps(notes, { sharing: true, admin: me === DAVE, me }).map((step) => step.id)
 		expect(ids(DAVE)).toEqual(['welcome', 'sharing'])
-		const toAlice = wizardSteps(notes, { sharing: true, me: ALICE }).find(
+		const toAlice = wizardSteps(notes, { sharing: true, admin: false, me: ALICE }).find(
 			(step) => step.id === 'notes',
 		)!
 		expect('rows' in toAlice && toAlice.rows.map((row) => row.names)).toEqual([['to-alice']])
+	})
+})
+
+describe('the wizard steps of someone who is not an admin', () => {
+	// @feature upgrade.wizard
+	it('hold their own detail items in Good to know, and leave Details for admins empty', () => {
+		const items = [
+			item('moved', 'P11', { chart: 'KPIs', publisher: BOB, owner: ALICE }, { user: ALICE }),
+			item('script', 'P20', { title: 'Script rows', author: ALICE }, { user: ALICE }),
+		]
+		const steps = wizardSteps(items, { sharing: true, admin: false, me: ALICE })
+		const notes = steps.find((step) => step.id === 'notes')!
+		expect('rows' in notes && notes.rows.map((row) => row.item.code)).toEqual(['P11', 'P20'])
+		expect('group' in notes && notes.group.title).toBe('A few changes to what you made')
+		expect('group' in notes && notes.group.picture).toBeUndefined()
+		expect(detailsOf(items, { admin: false })).toEqual([])
+
+		const onlyMoved = wizardSteps(items.slice(0, 1), { sharing: true, admin: false, me: ALICE })
+		const movedStep = onlyMoved.find((step) => step.id === 'notes')!
+		expect('group' in movedStep && movedStep.group.picture).toBe('chartOwner')
 	})
 })
 

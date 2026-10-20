@@ -70,10 +70,13 @@ const sharing = computed(() => session.user.is_admin || Boolean(session.user.own
 const steps = computed(() =>
 	wizardSteps([...items.value, ...done.value], {
 		sharing: sharing.value,
+		admin: session.user.is_admin,
 		me: session.user.email,
 	}),
 )
-const details = computed(() => detailsOf([...items.value, ...done.value]))
+const details = computed(() =>
+	detailsOf([...items.value, ...done.value], { admin: session.user.is_admin }),
+)
 
 const doneNames = computed(() => new Set(done.value.map((item) => item.name)))
 const isDone = (name: string) => doneNames.value.has(name)

@@ -271,7 +271,10 @@ function onKeydown(event: KeyboardEvent) {
 					<span class="font-semibold text-ink-gray-9">{{ group.lead[0] }}</span>
 					{{ group.lead[1] }}
 				</p>
-				<div class="flex justify-center rounded-[10px] bg-surface-gray-1 p-2.5">
+				<div
+					v-if="group.picture"
+					class="flex justify-center rounded-[10px] bg-surface-gray-1 p-2.5"
+				>
 					<UpgradePicture :style="{ zoom: 0.9 }" :name="group.picture" :person="person" />
 				</div>
 
