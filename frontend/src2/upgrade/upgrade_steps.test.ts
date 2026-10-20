@@ -181,6 +181,32 @@ describe('an item sentence', () => {
 	})
 
 	// @feature upgrade.item-sentences
+	it('says every change to a workbook’s access: who gained it and each share removed', () => {
+		const one = item('a', 'P7', {
+			workbook: 'Sales',
+			users: [],
+			shared: [],
+			removed: [{ kind: 'chart', title: 'Revenue', write: true }],
+		})
+		expect(text(sentenceOf(one, DAVE).text)).toBe(
+			'Everyone could edit the chart “Revenue”. That share is gone, so only people the workbook “Sales” is shared with can open it.',
+		)
+		const both = item('b', 'P7', {
+			workbook: 'Sales',
+			users: [ALICE, BOB],
+			shared: ['chart', 'dashboard'],
+			removed: [
+				{ kind: 'chart', title: 'Revenue', write: true },
+				{ kind: 'dashboard', title: 'Overview', write: false },
+			],
+		})
+		expect(text(sentenceOf(both, DAVE).text)).toBe(
+			'Alice and Bob can now open the whole workbook “Sales”, as some of its charts and dashboards were shared with them. ' +
+				'Everyone could edit the chart “Revenue” and open the dashboard “Overview”. Those shares are gone, so only people the workbook “Sales” is shared with can open them.',
+		)
+	})
+
+	// @feature upgrade.item-sentences
 	it('falls back to the stored message for an item written before it had data', () => {
 		const old = item('a', 'P17', {})
 		expect(text(sentenceOf(old, DAVE).text)).toBe('P17 message')

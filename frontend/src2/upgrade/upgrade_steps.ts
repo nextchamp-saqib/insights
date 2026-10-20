@@ -501,29 +501,41 @@ const SENTENCES: Partial<Record<string, Build>> = {
 	},
 	P7(item, d, people) {
 		const removed: { kind: string; title: string; write: boolean }[] = d.removed ?? []
-		let text: Part[]
-		if (removed.length) {
-			const first = removed[0]
-			text = say(
-				first.write
-					? __(
-							'Everyone could edit the {0} {1}. That share is gone, so only people the workbook {2} is shared with can open it.',
-					  )
-					: __(
-							'Everyone could open the {0} {1}. That share is gone, so only people the workbook {2} is shared with can open it.',
-					  ),
-				{ text: memberKind(first.kind) },
-				quoted(first.title),
-				quoted(d.workbook),
-			)
-		} else {
-			text = say(
-				__(
-					'{0} can now open the whole workbook {1}, as some of its {2} were shared with them.',
+		const users: string[] = d.users ?? []
+		const text: Part[] = []
+		if (users.length) {
+			text.push(
+				...say(
+					__(
+						'{0} can now open the whole workbook {1}, as some of its {2} were shared with them.',
+					),
+					em(names(people, users, true)),
+					quoted(d.workbook),
+					{ text: listOf((d.shared ?? []).map(memberKinds)) },
 				),
-				em(names(people, d.users ?? [], true)),
-				quoted(d.workbook),
-				{ text: listOf((d.shared ?? []).map(memberKinds)) },
+			)
+		}
+		if (removed.length) {
+			const shares = removed.map((share) =>
+				say(
+					share.write ? __('edit the {0} {1}') : __('open the {0} {1}'),
+					{ text: memberKind(share.kind) },
+					quoted(share.title),
+				),
+			)
+			if (text.length) text.push({ text: ' ' })
+			text.push(
+				...say(
+					removed.length > 1
+						? __(
+								'Everyone could {0}. Those shares are gone, so only people the workbook {1} is shared with can open them.',
+						  )
+						: __(
+								'Everyone could {0}. That share is gone, so only people the workbook {1} is shared with can open it.',
+						  ),
+					joined(shares),
+					quoted(d.workbook),
+				),
 			)
 		}
 		return { text, action: workbookSharing(item, __('Open workbook sharing')) }
