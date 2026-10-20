@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from 'frappe-ui'
 import { ChevronRight, Layers, Rows3 } from 'lucide-vue-next'
 import { __ } from '../../translation'
 

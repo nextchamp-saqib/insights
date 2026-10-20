@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Avatar, Button, Dropdown } from 'frappe-ui'
 import { __ } from '../translation'
 
 // One person in a share list: who they are, and what they may do. The share

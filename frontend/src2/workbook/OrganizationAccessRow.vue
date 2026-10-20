@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Dropdown } from 'frappe-ui'
 import { Building2 } from 'lucide-vue-next'
 import { __ } from '../translation'
 
