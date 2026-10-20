@@ -177,7 +177,7 @@ function onKeydown(event: KeyboardEvent) {
 				</h2>
 				<div class="flex flex-col items-center gap-2.5 text-center">
 					<div
-						class="flex h-[300px] w-full items-center justify-center rounded-5 bg-surface-gray-1 p-5"
+						class="flex h-[300px] w-full items-center justify-center rounded-5 bg-surface-alpha-gray-1 p-5"
 					>
 						<UpgradePicture :name="slides[slide].picture" :person="person" />
 					</div>
@@ -238,7 +238,9 @@ function onKeydown(event: KeyboardEvent) {
 						</span>
 						{{ __('and could let people edit it.') }}
 					</p>
-					<div class="flex justify-center rounded-[10px] bg-surface-gray-1 p-3.5 pb-2.5">
+					<div
+						class="flex justify-center rounded-[10px] bg-surface-alpha-gray-1 p-3.5 pb-2.5"
+					>
 						<UpgradePicture name="shareBefore" :person="person" />
 					</div>
 				</div>
@@ -250,7 +252,9 @@ function onKeydown(event: KeyboardEvent) {
 						</span>
 						{{ __('Sharing a chart or dashboard only lets them read it.') }}
 					</p>
-					<div class="flex justify-center rounded-[10px] bg-surface-gray-1 p-3.5 pb-2.5">
+					<div
+						class="flex justify-center rounded-[10px] bg-surface-alpha-gray-1 p-3.5 pb-2.5"
+					>
 						<UpgradePicture name="shareNow" :person="person" />
 					</div>
 				</div>
@@ -272,7 +276,7 @@ function onKeydown(event: KeyboardEvent) {
 				</p>
 				<div
 					v-if="group.picture"
-					class="flex justify-center rounded-[10px] bg-surface-gray-1 p-2.5"
+					class="flex justify-center rounded-[10px] bg-surface-alpha-gray-1 p-2.5"
 				>
 					<UpgradePicture :name="group.picture" :person="person" />
 				</div>
