@@ -37,7 +37,7 @@ export type Slide = { label: string; text: string; picture: PictureName }
 // the upgrade steps, which are mostly about permissions.
 export const welcomeSlides = translatedTable<Slide[]>(() => [
 	{
-		label: __('Dashboards from ERPNext and HRMS'),
+		label: __('Dashboards from ERPNext and Frappe HR'),
 		text: __(
 			'Selling, Stock, Accounts, Payroll and more come ready to use. Duplicate one to change it.',
 		),

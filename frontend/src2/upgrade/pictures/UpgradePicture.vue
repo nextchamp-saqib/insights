@@ -31,8 +31,8 @@ const SAMPLE_APP_DASHBOARDS = [
 	{ title: 'Selling', app: 'ERPNext' },
 	{ title: 'Stock', app: 'ERPNext' },
 	{ title: 'Accounts', app: 'ERPNext' },
-	{ title: 'Payroll', app: 'HRMS' },
-	{ title: 'Expense Claims', app: 'HRMS' },
+	{ title: 'Payroll', app: 'Frappe HR' },
+	{ title: 'Expense Claims', app: 'Frappe HR' },
 ]
 const dashboardStore = useDashboardStore()
 const appDashboards = computed(() => {
