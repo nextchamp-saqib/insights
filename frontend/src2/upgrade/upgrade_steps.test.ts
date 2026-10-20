@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { UpgradeItem } from './upgrade'
-import { detailsOf, sentenceOf, wizardSteps, type Part } from './upgrade_steps'
+import { detailsOf, sentenceOf, stepIndexOf, wizardSteps, type Part } from './upgrade_steps'
 
 const BOB = 'bob@fixture.test'
 const ALICE = 'alice@fixture.test'
@@ -85,6 +85,28 @@ describe('the wizard steps', () => {
 			(step) => step.id === 'notes',
 		)!
 		expect('rows' in toAlice && toAlice.rows.map((row) => row.names)).toEqual([['to-alice']])
+	})
+})
+
+describe('resuming the wizard', () => {
+	const steps = wizardSteps(
+		[
+			item('a', 'P17', { user: BOB, doctypes: ['Customer'] }),
+			item('b', 'K1', { dashboard: 'Sales', start: '2024-01-01', end: '2024-03-31' }),
+		],
+		{ sharing: true, admin: true, me: DAVE },
+	)
+
+	// @feature upgrade.wizard
+	it('opens at the stored step', () => {
+		expect(steps[stepIndexOf(steps, 'access')].id).toBe('access')
+	})
+
+	// @feature upgrade.wizard
+	it('goes on to the next step when the stored one has no items left', () => {
+		expect(steps[stepIndexOf(steps, 'workbooks')].id).toBe('numbers')
+		expect(steps[stepIndexOf(steps, 'notes')].id).toBe('numbers')
+		expect(steps[stepIndexOf(steps, 'no-such-step')].id).toBe('welcome')
 	})
 })
 

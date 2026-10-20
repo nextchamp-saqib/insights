@@ -3,7 +3,7 @@ import { call } from 'frappe-ui'
 import { computed, reactive, ref } from 'vue'
 import { showErrorToast } from '../helpers'
 import session from '../session'
-import { detailsOf, wizardSteps } from './upgrade_steps'
+import { detailsOf, stepIndexOf, wizardSteps } from './upgrade_steps'
 
 export type UpgradeItem = {
 	name: string
@@ -81,10 +81,7 @@ const details = computed(() =>
 const doneNames = computed(() => new Set(done.value.map((item) => item.name)))
 const isDone = (name: string) => doneNames.value.has(name)
 
-const stepIndex = computed(() => {
-	const index = steps.value.findIndex((step) => step.id === progressStore().value.step)
-	return index < 0 ? 0 : index
-})
+const stepIndex = computed(() => stepIndexOf(steps.value, progressStore().value.step))
 
 const openWizardItems = computed(() =>
 	steps.value

@@ -246,6 +246,17 @@ export function wizardSteps(
 	return steps
 }
 
+/**
+ * Where the wizard opens for a stored step id. A step whose items were all
+ * closed since is gone, and the reader goes on to the step after it.
+ */
+export function stepIndexOf(steps: Step[], id: string): number {
+	const order = ['welcome', 'sharing', ...groups().map((group) => group.id)]
+	const at = order.indexOf(id)
+	const index = steps.findIndex((step) => order.indexOf(step.id) >= at)
+	return index < 0 ? steps.length - 1 : index
+}
+
 /** The rows the wizard leaves to Details for admins, grouped and titled. */
 export function detailsOf(
 	items: UpgradeItem[],
