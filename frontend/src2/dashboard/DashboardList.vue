@@ -231,7 +231,7 @@ watchEffect(() => {
 					v-if="isReader && !isNarrowed && session.user.has_desk_access"
 					class="mt-3"
 					:label="__('Open Desk')"
-					href="/app"
+					href="/desk"
 				/>
 			</div>
 		</div>
