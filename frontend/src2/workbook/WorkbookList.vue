@@ -177,13 +177,14 @@ watchEffect(() => {
 						:aria-label="workbook.title"
 					/>
 					<Tooltip v-if="workbook.shipped_by" :text="workbook.shipped_by">
-						<Avatar
-							class="relative shrink-0"
-							size="sm"
-							shape="square"
-							:label="workbook.shipped_by"
-							:image="workbook.shipped_by_logo ?? undefined"
-						/>
+						<div class="relative flex size-5 shrink-0 items-center justify-center">
+							<Avatar
+								size="xs"
+								shape="square"
+								:label="workbook.shipped_by"
+								:image="workbook.shipped_by_logo ?? undefined"
+							/>
+						</div>
 					</Tooltip>
 					<Tooltip v-else :text="userStore.getName(workbook.owner) || workbook.owner">
 						<Avatar
