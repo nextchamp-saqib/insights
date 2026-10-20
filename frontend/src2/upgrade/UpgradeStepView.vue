@@ -240,9 +240,7 @@ function onKeydown(event: KeyboardEvent) {
 						</span>
 						{{ __('and could let people edit it.') }}
 					</p>
-					<div
-						class="flex justify-center rounded-[10px] bg-surface-alpha-gray-1 p-3.5 pb-2.5"
-					>
+					<div class="flex justify-center rounded-5 bg-surface-alpha-gray-1 p-3.5 pb-2.5">
 						<UpgradePicture name="shareBefore" :person="person" />
 					</div>
 				</div>
@@ -254,9 +252,7 @@ function onKeydown(event: KeyboardEvent) {
 						</span>
 						{{ __('Sharing a chart or dashboard only lets them read it.') }}
 					</p>
-					<div
-						class="flex justify-center rounded-[10px] bg-surface-alpha-gray-1 p-3.5 pb-2.5"
-					>
+					<div class="flex justify-center rounded-5 bg-surface-alpha-gray-1 p-3.5 pb-2.5">
 						<UpgradePicture name="shareNow" :person="person" />
 					</div>
 				</div>
@@ -276,9 +272,11 @@ function onKeydown(event: KeyboardEvent) {
 					<span class="font-semibold text-ink-gray-9">{{ group.lead[0] }}</span>
 					{{ group.lead[1] }}
 				</p>
+				<!-- one height on every step, so the picture neither jumps nor leaves the
+				     lower half of the step empty -->
 				<div
 					v-if="group.picture"
-					class="flex justify-center rounded-[10px] bg-surface-alpha-gray-1 p-2.5"
+					class="flex h-[220px] shrink-0 items-center justify-center rounded-5 bg-surface-alpha-gray-1 p-2.5"
 				>
 					<UpgradePicture
 						:name="group.picture"

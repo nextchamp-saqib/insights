@@ -234,12 +234,15 @@ export function wizardSteps(
 			),
 		)
 		if (!rows.length) continue
-		const onlyItsOwn = rows.every((row) => group.codes.includes(row.item.code))
+		const own = rows.filter((row) => group.codes.includes(row.item.code)).length
 		steps.push({
 			id: group.id,
 			label: group.label,
 			section: 'upgrade',
-			group: onlyItsOwn ? group : { ...group, ...yourNotes(), codes, picture: undefined },
+			group:
+				own === rows.length
+					? group
+					: { ...group, ...yourNotes(), codes, picture: own ? group.picture : undefined },
 			rows,
 		})
 	}

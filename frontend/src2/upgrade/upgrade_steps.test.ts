@@ -121,12 +121,12 @@ describe('the wizard steps of someone who is not an admin', () => {
 		const notes = steps.find((step) => step.id === 'notes')!
 		expect('rows' in notes && notes.rows.map((row) => row.item.code)).toEqual(['P11', 'P20'])
 		expect('group' in notes && notes.group.title).toBe('A few changes to what you made')
-		expect('group' in notes && notes.group.picture).toBeUndefined()
+		expect('group' in notes && notes.group.picture).toBe('chartOwner')
 		expect(detailsOf(items, { admin: false })).toEqual([])
 
-		const onlyMoved = wizardSteps(items.slice(0, 1), { sharing: true, admin: false, me: ALICE })
-		const movedStep = onlyMoved.find((step) => step.id === 'notes')!
-		expect('group' in movedStep && movedStep.group.picture).toBe('chartOwner')
+		const onlyScript = wizardSteps(items.slice(1), { sharing: true, admin: false, me: ALICE })
+		const scriptStep = onlyScript.find((step) => step.id === 'notes')!
+		expect('group' in scriptStep && scriptStep.group.picture).toBeUndefined()
 	})
 })
 
