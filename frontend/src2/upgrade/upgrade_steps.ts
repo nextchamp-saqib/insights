@@ -124,7 +124,7 @@ export const groups = translatedTable<Group[]>(() => [
 		title: __('Some people can open or edit more, or less'),
 		lead: [
 			__('Access now comes from the workbook,'),
-			__('so some people gained or lost access to whole workbooks.'),
+			__('so some people gained or lost whole workbooks.'),
 		],
 		picture: 'workbookAccess',
 	},
