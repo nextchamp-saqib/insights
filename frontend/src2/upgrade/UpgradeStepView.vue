@@ -8,7 +8,14 @@ import { __ } from '../translation'
 import UpgradePicture from './pictures/UpgradePicture.vue'
 import upgrade from './upgrade'
 import UpgradeSentence from './UpgradeSentence.vue'
-import { sentenceOf, welcomeSlides, type ItemAction, type Row, type Step } from './upgrade_steps'
+import {
+	keyAction,
+	sentenceOf,
+	welcomeSlides,
+	type ItemAction,
+	type Row,
+	type Step,
+} from './upgrade_steps'
 
 const Settings = defineAsyncComponent(() => import('../settings/Settings.vue'))
 
@@ -131,22 +138,19 @@ watch(
 
 function onKeydown(event: KeyboardEvent) {
 	const target = event.target as HTMLElement
-	if (target.closest('input, textarea, [contenteditable="true"]')) return
-	if (event.key === 'ArrowLeft') {
-		event.preventDefault()
-		back()
-	} else if (event.key === 'ArrowRight' && props.step.id === 'welcome' && !onLastSlide.value) {
-		event.preventDefault()
-		next()
-	} else if (event.key === 'Enter' && !target.closest('button, a')) {
-		const primary = body.value
-			?.closest('[data-upgrade-step]')
-			?.querySelector<HTMLElement>('[data-primary]')
-		if (primary) {
-			event.preventDefault()
-			primary.click()
-		}
-	}
+	const action = keyAction(event.key, {
+		inField: Boolean(target.closest('input, textarea, [contenteditable="true"]')),
+		onControl: Boolean(target.closest('button, a')),
+		moreSlides: props.step.id === 'welcome' && !onLastSlide.value,
+	})
+	const primary = body.value
+		?.closest('[data-upgrade-step]')
+		?.querySelector<HTMLElement>('[data-primary]')
+	if (!action || (action === 'primary' && !primary)) return
+	event.preventDefault()
+	if (action === 'back') back()
+	else if (action === 'next') next()
+	else primary!.click()
 }
 </script>
 

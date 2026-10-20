@@ -280,6 +280,21 @@ export function detailsOf(
 		.map(([code, rows]) => ({ title: titles[code] ?? __('Other changes'), rows }))
 }
 
+/**
+ * What a key does in the wizard. ← goes back on every step, → pages the welcome
+ * slides, and Enter presses the screen's primary button unless focus is on
+ * another control, which Enter presses itself. Typing in a field is left alone.
+ */
+export function keyAction(
+	key: string,
+	focus: { inField: boolean; onControl: boolean; moreSlides: boolean },
+): 'back' | 'next' | 'primary' | undefined {
+	if (focus.inField) return
+	if (key === 'ArrowLeft') return 'back'
+	if (key === 'ArrowRight' && focus.moreSlides) return 'next'
+	if (key === 'Enter' && !focus.onControl) return 'primary'
+}
+
 // ---------- sentences ----------
 
 /**
