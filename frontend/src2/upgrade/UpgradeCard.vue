@@ -76,9 +76,9 @@ const percent = computed(() => {
 				/>
 				<Button
 					v-if="details"
-					variant="ghost"
+					variant="subtle"
 					size="sm"
-					class="w-full !justify-start text-ink-gray-6"
+					class="w-full"
 					:label="__('Details for admins · {0}', String(details))"
 					@click="upgrade.showDetails = true"
 				/>
