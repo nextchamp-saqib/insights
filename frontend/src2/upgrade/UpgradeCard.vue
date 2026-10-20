@@ -6,6 +6,7 @@ import session from '../session'
 import { __ } from '../translation'
 import upgrade from './upgrade'
 import UpgradeDetailsDialog from './UpgradeDetailsDialog.vue'
+import { needsYou } from './upgrade_steps'
 
 // Where the wizard is picked up again: the step it was left at, or what is
 // left once it was finished.
@@ -17,16 +18,8 @@ watch(
 
 const progress = computed(() => upgrade.progress)
 const left = computed(() => upgrade.openWizardItems.length)
-const needsYou = computed(
-	() => upgrade.openWizardItems.filter((row) => row.item && isNow(row.item.code)).length,
-)
+const now = computed(() => upgrade.openWizardItems.filter((row) => needsYou(row.item)).length)
 const details = computed(() => upgrade.openDetailItems.length)
-
-function isNow(code: string) {
-	return upgrade.steps.some(
-		(step) => 'group' in step && step.group.kind === 'now' && step.group.codes.includes(code),
-	)
-}
 
 const unfinished = computed(() => progress.value.started && !progress.value.finished)
 const show = computed(
@@ -38,8 +31,8 @@ const description = computed(() => {
 		return __('Step {0} of {1}', String(upgrade.stepIndex + 1), String(upgrade.steps.length))
 	}
 	if (!left.value) return __('All done')
-	return needsYou.value
-		? __('{0} left, {1} need you now', String(left.value), String(needsYou.value))
+	return now.value
+		? __('{0} left, {1} need you now', String(left.value), String(now.value))
 		: __('{0} left', String(left.value))
 })
 

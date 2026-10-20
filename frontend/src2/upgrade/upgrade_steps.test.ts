@@ -135,6 +135,24 @@ describe('the wizard steps of someone who is not an admin', () => {
 		const scriptStep = onlyScript.find((step) => step.id === 'notes')!
 		expect('group' in scriptStep && scriptStep.group.picture).toBeUndefined()
 	})
+
+	// @feature upgrade.wizard
+	it('ask for them in Good to know when an item there tells of a failure', () => {
+		const kind = (items: UpgradeItem[]) => {
+			const steps = wizardSteps(items, { sharing: true, admin: false, me: ALICE })
+			const notes = steps.find((step) => step.id === 'notes')!
+			return 'group' in notes && notes.group.kind
+		}
+		const moved = item('moved', 'P11', { chart: 'KPIs', publisher: BOB, owner: ALICE })
+		const script = item('script', 'P20', { title: 'Script rows', author: ALICE })
+		expect(kind([moved, script])).toBe('note')
+		expect(kind([moved, item('fails', 'Q1', { title: 'Raw rows', names: ['sleep'] })])).toBe(
+			'now',
+		)
+		expect(kind([item('import', 'J4', { title: 'Nightly', names: ['sleep'] })])).toBe('now')
+		const unpublished = item('gone', 'P11', { ...moved.data, publisher_disabled: true })
+		expect(kind([unpublished])).toBe('now')
+	})
 })
 
 describe('an item sentence', () => {

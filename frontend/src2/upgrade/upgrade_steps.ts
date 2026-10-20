@@ -187,6 +187,21 @@ export const detailGroups = translatedTable<Record<string, string>>(() => ({
 	N5: __('Number cards that show a day now'),
 }))
 
+// Detail items that tell of something failing until someone acts: a script or
+// import that will fail, a script without its secret.
+const FAILURES = new Set(['P21', 'Q1', 'J4', 'Q5'])
+
+/**
+ * Whether an item needs its reader: its group asks for a decision, or it tells
+ * of a failure, as a moved chart whose publisher is disabled does.
+ */
+export function needsYou(item: UpgradeItem): boolean {
+	if (FAILURES.has(item.code) || (item.code === 'P11' && item.data?.publisher_disabled)) {
+		return true
+	}
+	return groups().some((group) => group.kind === 'now' && group.codes.includes(item.code))
+}
+
 /** One row per thing. Two items with the same code, reference and data say the same sentence. */
 export function rowsOf(items: UpgradeItem[]): Row[] {
 	const rows = new Map<string, Row>()
@@ -235,14 +250,22 @@ export function wizardSteps(
 		)
 		if (!rows.length) continue
 		const own = rows.filter((row) => group.codes.includes(row.item.code)).length
+		// a step asks for the reader when any of its items does
+		const kind = rows.some((row) => needsYou(row.item)) ? 'now' : 'note'
 		steps.push({
 			id: group.id,
 			label: group.label,
 			section: 'upgrade',
 			group:
 				own === rows.length
-					? group
-					: { ...group, ...yourNotes(), codes, picture: own ? group.picture : undefined },
+					? { ...group, kind }
+					: {
+							...group,
+							...yourNotes(),
+							codes,
+							kind,
+							picture: own ? group.picture : undefined,
+					  },
 			rows,
 		})
 	}
