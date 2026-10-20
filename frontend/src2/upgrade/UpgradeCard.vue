@@ -61,10 +61,10 @@ const percent = computed(() => {
 				<span>{{ description }}</span>
 				<span
 					v-if="unfinished || left"
-					class="block h-1 overflow-hidden rounded bg-surface-gray-3"
+					class="block h-1 overflow-hidden rounded-1 bg-surface-gray-3"
 				>
 					<span
-						class="block h-full rounded bg-surface-blue-7"
+						class="block h-full rounded-1 bg-surface-blue-7"
 						:style="{ width: `${percent}%` }"
 					/>
 				</span>

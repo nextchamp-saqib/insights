@@ -174,7 +174,7 @@ function onKeydown(event: KeyboardEvent) {
 				</h2>
 				<div class="flex flex-col items-center gap-2.5 text-center">
 					<div
-						class="flex h-[300px] w-full items-center justify-center rounded-xl bg-surface-gray-1 p-5"
+						class="flex h-[300px] w-full items-center justify-center rounded-5 bg-surface-gray-1 p-5"
 					>
 						<UpgradePicture
 							:style="{ zoom: 1.15 }"
@@ -277,7 +277,7 @@ function onKeydown(event: KeyboardEvent) {
 
 				<div
 					v-if="current && sentence"
-					class="flex flex-col gap-3 rounded-xl border border-outline-gray-2 bg-surface-base px-4 py-3.5 shadow-sm"
+					class="flex flex-col gap-3 rounded-5 border border-outline-gray-2 bg-surface-base px-4 py-3.5 shadow-sm"
 					aria-live="polite"
 				>
 					<div class="flex items-center gap-2.5 text-xs text-ink-gray-5 tabular-nums">
@@ -285,10 +285,10 @@ function onKeydown(event: KeyboardEvent) {
 							__('{0} of {1}', String(handled + 1), String(rows.length))
 						}}</span>
 						<div
-							class="h-1 max-w-[120px] flex-1 overflow-hidden rounded bg-surface-gray-3"
+							class="h-1 max-w-[120px] flex-1 overflow-hidden rounded-1 bg-surface-gray-3"
 						>
 							<div
-								class="h-full rounded bg-surface-blue-7"
+								class="h-full rounded-1 bg-surface-blue-7"
 								:style="{ width: `${Math.round((handled / rows.length) * 100)}%` }"
 							/>
 						</div>
@@ -347,7 +347,7 @@ function onKeydown(event: KeyboardEvent) {
 
 				<div
 					v-else
-					class="flex flex-col gap-3 rounded-xl border border-dashed border-outline-gray-2 bg-surface-gray-1 px-4 py-3.5"
+					class="flex flex-col gap-3 rounded-5 border border-dashed border-outline-gray-2 bg-surface-gray-1 px-4 py-3.5"
 				>
 					<p class="text-p-md text-ink-gray-8">
 						{{
