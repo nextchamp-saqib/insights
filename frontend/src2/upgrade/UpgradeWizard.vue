@@ -33,6 +33,8 @@ const show = computed({
 const steps = computed(() => upgrade.steps)
 const step = computed(() => steps.value[upgrade.stepIndex])
 // One or two steps read as a single page, with no list of steps beside them.
+// The steps are known once the items load, so the dialog waits for them rather
+// than swap its frame while open.
 const withRail = computed(() => steps.value.length > 2)
 const tab = computed({
 	get: () => step.value?.id,
@@ -54,7 +56,7 @@ function state(step: Step) {
 
 <template>
 	<SettingsDialog
-		v-if="withRail"
+		v-if="upgrade.loaded && withRail"
 		v-model:open="show"
 		v-model:tab="tab"
 		size="4xl"
@@ -113,7 +115,7 @@ function state(step: Step) {
 		</SettingsContent>
 	</SettingsDialog>
 
-	<Dialog v-else-if="step" v-model:open="show" size="2xl" bare>
+	<Dialog v-else-if="upgrade.loaded && step" v-model:open="show" size="2xl" bare>
 		<UpgradeStepView :step="step" @close="show = false" />
 	</Dialog>
 </template>
