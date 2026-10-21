@@ -115,7 +115,7 @@ insights.desk.chart_form = ({ keep, props, chart_types, height }) => {
 			`<a href="${href}" target="_blank" rel="noopener">${text}</a>`;
 
 		const sharing = __(
-			"Who sees it follows the chart's sharing in Insights.",
+			"Users with an Insights role see it when the chart's sharing in Insights allows them.",
 		);
 		frm.set_df_property(
 			"insights_chart",
