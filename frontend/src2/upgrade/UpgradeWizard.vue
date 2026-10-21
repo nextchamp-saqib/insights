@@ -110,7 +110,7 @@ function state(step: Step) {
 		</SettingsSidebar>
 		<!-- frappe-ui's content and panel take their content's width, so a long
 		     name in a picture would push the step past the dialog's edge -->
-		<SettingsContent class="min-w-0">
+		<SettingsContent data-upgrade-wizard class="min-w-0">
 			<SettingsPanel v-if="step" :value="step.id" class="min-w-0">
 				<UpgradeStepView :key="step.id" :step="step" @close="show = false" />
 			</SettingsPanel>
@@ -121,3 +121,12 @@ function state(step: Step) {
 		<UpgradeStepView :step="step" @close="show = false" />
 	</Dialog>
 </template>
+
+<style>
+/* frappe-ui's SettingsDialog grows with the window up to 860px and has no height prop */
+@media (min-width: 640px) {
+	[data-slot='content'] > div:has(> [data-upgrade-wizard]) {
+		height: min(640px, calc(100vh - 8rem));
+	}
+}
+</style>
