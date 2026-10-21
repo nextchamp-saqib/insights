@@ -168,7 +168,8 @@ async function markDone(row: Row) {
 	pending.value = false
 }
 
-// The primary button takes focus on every screen, so Enter presses it.
+// The primary button takes focus on every screen, and back from the done list's
+// toggle, so Enter presses it.
 const body = ref<HTMLElement>()
 function focusPrimary() {
 	nextTick(() => {
@@ -180,7 +181,13 @@ function focusPrimary() {
 }
 onMounted(focusPrimary)
 watch(
-	() => [props.step.id, slide.value, current.value?.item.name, queue.value.length],
+	() => [
+		props.step.id,
+		slide.value,
+		current.value?.item.name,
+		queue.value.length,
+		showDone.value,
+	],
 	focusPrimary,
 )
 
