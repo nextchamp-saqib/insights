@@ -76,11 +76,7 @@ const currentAction = computed(() =>
 )
 
 const showDone = ref(false)
-const doneList = ref<HTMLElement>()
-function toggleDone() {
-	showDone.value = !showDone.value
-	if (showDone.value) nextTick(() => doneList.value?.scrollIntoView({ block: 'nearest' }))
-}
+const doneOpen = computed(() => showDone.value && doneCount.value > 0)
 
 // Who the share rows in a picture show: the person the current item is about,
 // else the one the reader's items name most, else the reader.
@@ -319,9 +315,48 @@ function onKeydown(event: KeyboardEvent) {
 				</p>
 				<!-- The picture grows into the room the dialog leaves, and the item below
 				     keeps one height through the step, so nothing moves from item to item
-				     and no band is left empty. An item without a picture takes its place. -->
+				     and no band is left empty. An item without a picture takes its place.
+				     The open done list takes the picture's place too, and scrolls inside it. -->
+				<div v-if="doneOpen" class="relative shrink-0 grow basis-[220px]">
+					<div
+						class="absolute inset-x-0 top-0 max-h-full overflow-y-auto rounded-5 border border-outline-gray-2"
+					>
+						<div class="flex flex-col divide-y divide-outline-gray-1">
+							<div
+								v-for="{ row, said, action } in doneEntries"
+								:key="row.item.name"
+								class="flex items-center gap-2 py-1.5 pl-3 pr-1.5"
+							>
+								<p class="flex-1 text-p-sm text-ink-gray-5">
+									<UpgradeSentence :parts="said.text" muted />
+								</p>
+								<Button
+									v-if="action"
+									variant="ghost"
+									size="sm"
+									:label="action.label"
+									@click="openAction(action)"
+								>
+									<template v-if="action.kind === 'form'" #suffix>
+										<ExternalLink
+											class="size-3.5 text-ink-gray-7"
+											stroke-width="1.5"
+										/>
+									</template>
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									:label="__('Undo')"
+									:tooltip="__('Put it back in the list')"
+									@click="upgrade.reopen(row.names)"
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div
-					v-if="picture"
+					v-else-if="picture"
 					class="flex shrink-0 grow basis-[220px] items-center justify-center rounded-5 bg-surface-alpha-gray-1 p-2.5"
 				>
 					<UpgradePicture
@@ -333,7 +368,7 @@ function onKeydown(event: KeyboardEvent) {
 
 				<div
 					class="flex flex-col gap-2"
-					:class="picture || current ? 'min-h-[196px] shrink-0' : 'grow'"
+					:class="picture || current || doneOpen ? 'min-h-[196px] shrink-0' : 'grow'"
 				>
 					<div
 						v-if="current && sentence"
@@ -448,8 +483,8 @@ function onKeydown(event: KeyboardEvent) {
 							variant="ghost"
 							size="xs"
 							class="-my-1 -ml-1.5 !text-ink-gray-5"
-							:aria-expanded="showDone"
-							@click="toggleDone"
+							:aria-expanded="doneOpen"
+							@click="showDone = !showDone"
 						>
 							<template #prefix>
 								<Check class="size-3 text-ink-green-7" stroke-width="2" />
@@ -458,7 +493,7 @@ function onKeydown(event: KeyboardEvent) {
 							<template #suffix>
 								<ChevronDown
 									class="size-3 transition-transform"
-									:class="showDone ? 'rotate-180' : ''"
+									:class="doneOpen ? 'rotate-180' : ''"
 									stroke-width="2"
 								/>
 							</template>
@@ -467,43 +502,6 @@ function onKeydown(event: KeyboardEvent) {
 						<template v-if="skippedCount">{{
 							__('{0} skipped', String(skippedCount))
 						}}</template>
-					</div>
-
-					<div
-						v-if="showDone && doneCount"
-						ref="doneList"
-						class="flex flex-col divide-y divide-outline-gray-1 rounded-5 border border-outline-gray-2"
-					>
-						<div
-							v-for="{ row, said, action } in doneEntries"
-							:key="row.item.name"
-							class="flex items-center gap-2 py-1.5 pl-3 pr-1.5"
-						>
-							<p class="flex-1 text-p-sm text-ink-gray-5">
-								<UpgradeSentence :parts="said.text" muted />
-							</p>
-							<Button
-								v-if="action"
-								variant="ghost"
-								size="sm"
-								:label="action.label"
-								@click="openAction(action)"
-							>
-								<template v-if="action.kind === 'form'" #suffix>
-									<ExternalLink
-										class="size-3.5 text-ink-gray-7"
-										stroke-width="1.5"
-									/>
-								</template>
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								:label="__('Undo')"
-								:tooltip="__('Put it back in the list')"
-								@click="upgrade.reopen(row.names)"
-							/>
-						</div>
 					</div>
 				</div>
 			</template>
