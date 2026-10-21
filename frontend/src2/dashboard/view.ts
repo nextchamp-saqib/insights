@@ -242,10 +242,10 @@ export type DashboardView = {
 	loading: boolean
 	// the reference names no dashboard
 	notFound: boolean
-	// the reader may not read the dashboard. `message` is the server's, which
-	// names the roles the dashboard is shared with. `doctypes` names what its
-	// charts read when the reader may read the dashboard but none of its charts' data
-	noAccess?: NotPermitted & { message?: string }
+	// the reader may not read the dashboard. `sharedWith` is the server's line
+	// naming the roles it is shared with. `doctypes` names what its charts read
+	// when the reader may read the dashboard but none of its charts' data
+	noAccess?: NotPermitted & { sharedWith?: string }
 	// the request failed for another reason, so a retry may succeed
 	failed: boolean
 	name: string
@@ -563,7 +563,13 @@ function makeDashboardPage(
 				state.notFound = refusal === 'notFound'
 				state.noAccess =
 					refusal === 'noAccess'
-						? { doctypes: [], message: error.messages?.at(-1) }
+						? {
+								doctypes: [],
+								sharedWith:
+									error.exc_type === 'SharedWithRoles'
+										? error.messages?.at(-1)
+										: undefined,
+						  }
 						: undefined
 				state.failed = !refusal
 			})

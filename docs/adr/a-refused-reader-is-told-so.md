@@ -14,7 +14,7 @@ A View answered Not Found both for a reference that names nothing and for conten
 
 - A reference that names nothing answers Not Found (`frappe.DoesNotExistError`).
 - Content the reader may not read answers No Access (`frappe.PermissionError`): "You don't have access to this dashboard" or "this chart". The reader learns that it exists, and nothing else: not its title, its workbook or its charts.
-- A dashboard shared with roles names them when a signed-in reader holds none of them: "It's shared with the Stock User role. Ask your administrator for it." Who may read a board says nothing about what it shows, and the reader learns what to ask for. Added in `v4-release` ticket 66, so a Stock Manager refused the shipped Stock board knows the role it needs.
+- A dashboard shared with roles names them when a signed-in reader holds none of them under "You don't have access to this dashboard": "Shared with Stock User". Who may read a board says nothing about what it shows, and the reader learns what to ask for. Added in `v4-release` ticket 66, so a Stock Manager refused the shipped Stock board knows the role it needs.
 - A dashboard the reader may read, on which no chart would run for them, answers No Access with the doctypes its charts need. They may read the dashboard, so naming the doctypes reveals nothing, as on a Not Permitted card. A user who may write it still opens it.
 
 ## Considered Options

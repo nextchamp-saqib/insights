@@ -4,6 +4,7 @@ from insights.insights.doctype.insights_team.insights_team import clear_cache as
 from insights.resolver import (
     CHART,
     DASHBOARD,
+    SharedWithRoles,
     resolve,
     resolve_for_read,
 )
@@ -108,13 +109,9 @@ class TestInsightsResolver(InsightsIntegrationTestCase):
         dashboard.append("visible_to_roles", {"role": "Report Manager"})
         dashboard.save(ignore_permissions=True)
 
-        with self.as_user(USER_2), self.assertRaises(frappe.PermissionError) as raised:
+        with self.as_user(USER_2), self.assertRaises(SharedWithRoles) as raised:
             resolve_for_read(DASHBOARD, dashboard.name)
-        self.assertEqual(
-            str(raised.exception),
-            "You don't have access to this dashboard. It's shared with the Report Manager and "
-            "Website Manager roles. Ask your administrator for one of them.",
-        )
+        self.assertEqual(str(raised.exception), "Shared with Report Manager, Website Manager")
 
         # a guest is asked to sign in, not to get a role
         with self.as_user("Guest"), self.assertRaises(frappe.PermissionError) as raised:

@@ -19,7 +19,6 @@ internal key wins, and nothing internal references a route.
 import frappe
 from frappe import _
 from frappe.permissions import has_user_permission
-from frappe.utils import comma_and
 
 from insights.not_permitted import refuse, refused_doctypes
 from insights.permissions import has_doc_permission, reach
@@ -97,6 +96,10 @@ def not_found():
     frappe.throw(_("Not Found"), exc=frappe.DoesNotExistError)
 
 
+class SharedWithRoles(frappe.PermissionError):
+    """No Access to a dashboard, whose message names the roles it is shared with."""
+
+
 def no_access(doc):
     """The answer for content the caller may not read.
 
@@ -106,19 +109,9 @@ def no_access(doc):
     """
     if doc.doctype != DASHBOARD:
         frappe.throw(_("You don't have access to this chart"), exc=frappe.PermissionError)
-
-    roles = roles_to_ask_for(doc)
-    if not roles:
-        message = _("You don't have access to this dashboard")
-    elif len(roles) == 1:
-        message = _(
-            "You don't have access to this dashboard. It's shared with the {0} role. Ask your administrator for it."
-        ).format(roles[0])
-    else:
-        message = _(
-            "You don't have access to this dashboard. It's shared with the {0} roles. Ask your administrator for one of them."
-        ).format(comma_and(roles, add_quotes=False))
-    frappe.throw(message, exc=frappe.PermissionError)
+    if roles := roles_to_ask_for(doc):
+        frappe.throw(_("Shared with {0}").format(", ".join(roles)), exc=SharedWithRoles)
+    frappe.throw(_("You don't have access to this dashboard"), exc=frappe.PermissionError)
 
 
 def roles_to_ask_for(doc) -> list[str]:

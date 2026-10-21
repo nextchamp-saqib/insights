@@ -95,11 +95,16 @@ function exportImage() {
 			v-else-if="dashboard.noAccess"
 			class="flex w-full flex-1 flex-col items-center justify-center gap-1 p-4 text-center"
 		>
-			<p class="max-w-md text-base-medium text-ink-gray-8">
-				{{ dashboard.noAccess.message || __("You don't have access to this dashboard") }}
+			<p class="text-base-medium text-ink-gray-8">
+				{{ __("You don't have access to this dashboard") }}
 			</p>
-			<p v-if="dashboard.noAccess.doctypes.length" class="text-p-sm text-ink-gray-5">
-				{{ refusalDetail(dashboard.noAccess.doctypes, '') }}
+			<p
+				v-if="dashboard.noAccess.doctypes.length || dashboard.noAccess.sharedWith"
+				class="text-p-sm text-ink-gray-5"
+			>
+				{{
+					refusalDetail(dashboard.noAccess.doctypes, dashboard.noAccess.sharedWith ?? '')
+				}}
 			</p>
 		</div>
 
