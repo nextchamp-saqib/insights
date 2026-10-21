@@ -170,8 +170,8 @@ export const groups = translatedTable<Group[]>(() => [
 		codes: ['W2'],
 		title: __('Some workbooks are copies of a shipped dashboard'),
 		lead: [
-			__('ERPNext and Frappe HR now ship their dashboards,'),
-			__('so copies of their Insights v3 templates get no more updates.'),
+			__('ERPNext and Frappe HR now ship dashboards,'),
+			__('so copies of their templates get no updates.'),
 		],
 		picture: 'appDashboards',
 	},
