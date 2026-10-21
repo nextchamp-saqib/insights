@@ -496,6 +496,7 @@ One row per thing a user can do or rely on. Slugs are `<area>.<feature>` in the 
 | upgrade.alerts-keep-running | After the upgrade, an alert whose enabler may not edit its workbook runs as the workbook's owner instead of stopping, and an admin is told. One nobody may run is reported before it stops. |
 | upgrade.template-links-open | A link to an Insights v3 template opens the site's copy of it, else the standard workbook that replaced it, else the workbooks list. |
 | upgrade.left-to-do-reported | After the upgrade, an admin sees what Insights v4 cannot carry over for them: team grants that no longer let members edit, public charts whose owner can no longer run them, scripts that use names the sandbox refuses, code only admins may change, template copies a standard workbook replaces, and a blank Fiscal Year Start. An author sees the items about their own work. |
+| upgrade.newer-frappe-required | Installing or migrating Insights v4 on a Frappe without desk islands stops and asks to update Frappe first. |
 
 ## tooling
 

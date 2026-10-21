@@ -92,7 +92,8 @@ doctype_js = {
 # Installation
 # ------------
 
-# before_install = "insights.install.before_install"
+before_install = "insights.migrate.check_frappe"
+before_migrate = "insights.migrate.check_frappe"
 after_install = "insights.migrate.after_migrate"
 after_migrate = "insights.migrate.after_migrate"
 after_app_install = "insights.migrate.after_app_install"

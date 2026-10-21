@@ -2,7 +2,24 @@
 # See license.txt
 
 
+from importlib.util import find_spec
+
 import frappe
+
+
+def check_frappe():
+    """Refuse to install or migrate on a Frappe without desk islands, which
+    Insights v4 draws desk dashboards with.
+
+    The Frappe pin in `pyproject.toml` only warns: bench carries on, and Frappe
+    Cloud compares the major version. A module is checked, not a field, because
+    `before_migrate` runs before the schema sync.
+    """
+    if not find_spec("frappe.utils.island"):
+        frappe.throw(
+            frappe._("Insights v4 needs a newer Frappe. Update Frappe, then try again."),
+            title=frappe._("Frappe too old"),
+        )
 
 
 def after_migrate():
