@@ -616,7 +616,9 @@ class TestNativeSQL(InsightsIntegrationTestCase):
             ("sqlite", "select value from json_each('[1, 2]')"),
         ):
             with self.subTest(raw_sql=raw_sql):
-                self.builder._validate_native_sql(raw_sql, use_live_connection=True, dialect=dialect)
+                self.builder._validate_native_sql(
+                    raw_sql, use_live_connection=True, data_source=self.data_source, dialect=dialect
+                )
 
     # @feature query.native-sql
     def test_json_table_runs_on_the_site_database(self):
@@ -644,7 +646,9 @@ class TestNativeSQL(InsightsIntegrationTestCase):
             ("duckdb", "select * from postgres_query('db', 'select 1')"),
         ):
             with self.subTest(raw_sql=raw_sql), self.assertRaises(QueryRefused):
-                self.builder._validate_native_sql(raw_sql, use_live_connection=True, dialect=dialect)
+                self.builder._validate_native_sql(
+                    raw_sql, use_live_connection=True, data_source=self.data_source, dialect=dialect
+                )
 
     # --- the format button ---
 
