@@ -14,7 +14,6 @@ async function fetchSources() {
 		...source,
 		created_from_now: useTimeAgo(source.creation),
 		modified_from_now: useTimeAgo(source.modified),
-		title: source.is_site_db && source.title == 'Site DB' ? window.location.hostname : source.title,
 	}))
 	loading.value = false
 	return sources.value
@@ -55,6 +54,15 @@ export function getDataSourceList() {
 		fetchSources()
 	}
 	return sources
+}
+
+/**
+ * A table's name as its users know it. A Frappe database names a doctype's
+ * table `tab` and the doctype, so `tabSales Invoice` reads as Sales Invoice.
+ */
+export function tableLabel(table: { data_source: string; table_name: string }) {
+	const source = getDataSourceList().value.find((s) => s.name === table.data_source)
+	return source?.is_frappe_db ? table.table_name.replace(/^tab/, '') : table.table_name
 }
 
 export function getDataSourceOptions() {
@@ -114,7 +122,5 @@ export function getDatabaseLogo(database_type: DatabaseType, size: 'sm' | 'md' =
 	if (size == 'sm' && database_type === 'ClickHouse') {
 		sizeClass = 'size-4'
 	}
-	return comp
-		? h(comp, { class: sizeClass })
-		: null
+	return comp ? h(comp, { class: sizeClass }) : null
 }

@@ -15,27 +15,24 @@ wheneverChanges(
 	query,
 	() => {
 		if (query.value) {
-			const q = useQuery(query.value)
-			if (q && !q.result.executedSQL) {
-				q.execute()
-			}
+			useQuery(query.value)?.ensureResult()
 		}
 	},
-	{ immediate: true }
+	{ immediate: true },
 )
 </script>
 
 <template>
-	<InlineFormControlLabel label="Query">
-		<Autocomplete
-			:showFooter="true"
+	<InlineFormControlLabel :label="__('Query')">
+		<Combobox
+			class="w-full"
 			:options="props.queries"
 			:modelValue="query"
-			@update:modelValue="query = $event?.value"
+			@update:modelValue="query = $event"
 		>
 			<template #prefix>
-				<Table2 class="mr-1.5 h-4 w-4 text-gray-700" stroke-width="1.5" />
+				<Table2 class="mr-1.5 h-4 w-4 text-ink-gray-6" stroke-width="1.5" />
 			</template>
-		</Autocomplete>
+		</Combobox>
 	</InlineFormControlLabel>
 </template>
